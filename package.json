@@ -13,7 +13,8 @@
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "agent": "tsx --env-file=.env scripts/agent.ts",
-    "openapi": "tsx scripts/openapi.ts"
+    "openapi": "tsx scripts/openapi.ts",
+    "bench": "tsx --env-file-if-exists=.env bench/run.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

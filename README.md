@@ -1,45 +1,46 @@
 # Cordada API
 
-Backend for **Cordada**, our entry to the Sherpas x UPV hackathon ("Bring the plan to life"): a voice guide that walks a family through their Sherpas financial plan, then keeps them on track with one next step at a time.
+Backend de **Cordada**, nuestra propuesta para la hackathon Sherpas x UPV ("Bring the plan to life"): una guía por voz que acompaña a una familia por su plan financiero de Sherpas y después la ayuda a avanzar con un único siguiente paso cada vez.
 
-The front end lives in a separate repo ([MCP_Capital](https://github.com/francomarqueza05/MCP_Capital)) and talks to this API over HTTP.
+El front está en otro repositorio ([MCP_Capital](https://github.com/francomarqueza05/MCP_Capital)) y habla con esta API por HTTP.
 
-## Run it
+## Arrancarlo
 
-Node 22 or later.
+Node 22 o superior.
 
 ```bash
 npm install
-cp .env.example .env   # fill in the keys
+cp .env.example .env   # rellena las claves
 npm run dev            # http://localhost:8787
 ```
 
-- API docs (try every call from the browser): http://localhost:8787/docs
-- OpenAPI document: http://localhost:8787/openapi.json
-- Tests: `npm test`. Type-check: `npm run typecheck`.
+- Documentación de la API (se puede probar cada llamada desde el navegador): http://localhost:8787/docs
+- Documento OpenAPI: http://localhost:8787/openapi.json
+- Tests: `npm test`. Comprobación de tipos: `npm run typecheck`.
+- Benchmarks de modelos: `npm run bench` (ver [bench/README.md](bench/README.md)).
 
-With no `DATABASE_URL`, the API runs an embedded Postgres (PGlite) in `./.data`, so it works with zero setup. Set `DATABASE_URL` (Neon, Supabase…) to use a hosted Postgres; the schema is the same and migrations run on start.
+Sin `DATABASE_URL`, la API arranca un Postgres embebido (PGlite) en `./.data`, así que funciona sin configurar nada. Con `DATABASE_URL` (Neon, Supabase…) usa un Postgres alojado; el esquema es el mismo y las migraciones se aplican al arrancar.
 
-## How it works
+## Cómo funciona
 
-1. **Phase engine** (`src/engine`). Code, not the language model, decides what the conversation covers and in what order: discovery, where you stand, what stands out, the tension, the road ahead, the first step, the commitment. The family's worry steers the focus. Each phase is a *packet*: its goal, the only figures the guide may quote, the plan's own words, a visual, an exit condition and a fallback script.
-2. **Live voice** (ElevenLabs agent, opened by the front end). The agent only talks. When a phase is done it calls its `phase_done` tool; the front end forwards that to `POST /v1/sessions/{id}/phase-done`, and the engine answers with the next phase. Off-script questions go through `lookup`.
-3. **Figures** come only from the plan's labelled facts (`key_metrics.facts` in each case), so the guide cannot invent numbers. A test checks every figure in every packet against the plan.
-4. **Spanish by default**, English supported. What the family sees is translated once and cached; a translation that changes any figure is discarded.
-5. **Follow-up**: goals with check-ins, a next step, and a brief for the advisor.
+1. **Motor de fases** (`src/engine`). El código, no el modelo de lenguaje, decide qué se cuenta y en qué orden: descubrimiento, dónde estás, lo que más destaca, la tensión, el camino por delante, el primer paso y el compromiso. La preocupación de la familia decide el foco. Cada fase es un *paquete*: su objetivo, las únicas cifras que la guía puede decir, las palabras del propio plan, un visual, cuándo se da por terminada y un guion de reserva.
+2. **Voz en vivo** (agente de ElevenLabs, que abre el front). El agente solo habla. Cuando termina una fase llama a su herramienta `phase_done`; el front la reenvía a `POST /v1/sessions/{id}/phase-done` y el motor responde con la fase siguiente. Las preguntas fuera de guion pasan por `lookup`.
+3. **Cifras**: salen solo de los datos etiquetados del plan (`key_metrics.facts` de cada caso), así que la guía no puede inventar números. Un test comprueba cada cifra de cada paquete contra el plan.
+4. **Español por defecto**, con inglés disponible. Lo que ve la familia se traduce una vez y se guarda; si una traducción cambia alguna cifra, se descarta.
+5. **Seguimiento**: metas con avances, un siguiente paso y un resumen para el asesor.
 
-## For the front end
+## Para el front
 
-All calls except `/v1/topics` and `/v1/demo/households` need the member's token: `Authorization: Bearer <token>`. In the demo, tokens come from `GET /v1/demo/households`; in the product, each person gets a personal link from their advisor.
+Todas las llamadas, salvo `/v1/topics` y `/v1/demo/households`, necesitan el token de la persona: `Authorization: Bearer <token>`. En la demo, los tokens salen de `GET /v1/demo/households`; en el producto, cada persona recibe un enlace personal de su asesor.
 
-A live call:
+Una llamada en vivo:
 
 ```ts
 const view = await api("POST /v1/sessions", { lang: "es" });          // persona, packet, agentBrief
 const { signedUrl } = await api("POST /v1/voice/agent-session");
 conversation.startSession({
   signedUrl,
-  connectionType: "websocket",             // streams per-character timing for exact captions
+  connectionType: "websocket",             // envía el tiempo de cada letra: subtítulos exactos
   overrides: { agent: { language: "es" } },
   dynamicVariables: { name, language_name, household, level, worry, motivation, decision_style, previous_conversation, phase_brief: view.agentBrief },
   clientTools: {
@@ -49,25 +50,26 @@ conversation.startSession({
 });
 ```
 
-Show `packet.visual` while the guide talks (`ridge` uses `GET /v1/visuals/ridge`), and `packet.ask[].chips` as tappable answers.
+Mientras la guía habla, muestra `packet.visual` (`ridge` se dibuja con `GET /v1/visuals/ridge`) y `packet.ask[].chips` como respuestas pulsables.
 
-## Layout
+## Estructura
 
 ```
 src/
-  app.ts          routes, validation, OpenAPI
-  api/            auth middleware, schemas (the contract), service
-  engine/         phase engine, topics, lookup, figure formatting
-  cases/          loads the four Sherpas cases from ./cases
-  i18n/           Spanish for the screen, brief for the agent
-  llm/            model router over the Sherpas proxy (tiers with fallback)
-  voice/          ElevenLabs: agent session URL, cached speech
-  store/          Postgres / PGlite, migrations, owner-scoped queries
-scripts/agent.ts  creates or updates the ElevenLabs agent from code (npm run agent)
-cases/            the four synthetic households from the Sherpas hackathon repo
+  app.ts          rutas, validación, OpenAPI
+  api/            autenticación, esquemas (el contrato), servicio
+  engine/         motor de fases, temas, lookup, formato de cifras
+  cases/          carga los cuatro casos de Sherpas desde ./cases
+  i18n/           español para la pantalla, instrucciones para el agente
+  llm/            router de modelos sobre el proxy de Sherpas (niveles con respaldo)
+  voice/          ElevenLabs: URL de sesión del agente, voz con caché
+  store/          Postgres / PGlite, migraciones, consultas por persona
+scripts/agent.ts  crea o actualiza el agente de ElevenLabs desde código (npm run agent)
+bench/            benchmarks de calidad, tiempo y precio de los modelos
+cases/            las cuatro familias sintéticas del repositorio de la hackathon
 ```
 
-## Security
+## Seguridad
 
-- Personal links are HMAC-signed `(household, member)` pairs; every query filters on them, so nobody can read another person's conversation or goals (covered by tests).
-- `APP_SECRET` is required in production. Keys stay on the server; the ElevenLabs agent is private and only opens with a signed URL from this API.
+- Los enlaces personales son pares `(familia, persona)` firmados con HMAC; cada consulta filtra por ellos, así que nadie puede leer la conversación ni las metas de otra persona (cubierto por tests).
+- `APP_SECRET` es obligatorio en producción. Las claves se quedan en el servidor; el agente de ElevenLabs es privado y solo se abre con una URL firmada por esta API.

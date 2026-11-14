@@ -32,7 +32,7 @@ function persist() {
 }
 
 /** Every number in a string, so a translation can be checked figure by figure. */
-const figures = (s: string) => (s.match(/\d[\d,.]*/g) ?? []).map((n) => n.replace(/[,.]$/, "")).sort().join("|");
+export const figures = (s: string) => (s.match(/\d[\d,.]*/g) ?? []).map((n) => n.replace(/[,.]$/, "")).sort().join("|");
 
 const FIXED: Record<string, string> = {
   "Before the numbers": "Antes de los números",
@@ -64,19 +64,18 @@ const FIXED: Record<string, string> = {
   "Financial health score": "Puntuación de salud financiera",
 };
 
+export const TRANSLATE_PROMPT =
+  "You translate a personal financial plan for a family in the US into natural Spanish (Spain), warm and plain. " +
+  "Keep every number, $ amount, percentage, age, month and year exactly as written. Keep names unchanged. " +
+  "Address the reader as tú. Reply only with a JSON array of strings, same length and order as the input.";
+
 /** Translate many strings at once; anything that fails stays in English. */
 export async function toSpanish(texts: string[]): Promise<string[]> {
   const c = cache();
   const todo = [...new Set(texts.filter((t) => t && !FIXED[t] && !(t in c)))];
   if (todo.length) {
     const reply = await ask("fast", [
-      {
-        role: "system",
-        content:
-          "You translate a personal financial plan for a family in the US into natural Spanish (Spain), warm and plain. " +
-          "Keep every number, $ amount, percentage, age, month and year exactly as written. Keep names unchanged. " +
-          "Address the reader as tú. Reply only with a JSON array of strings, same length and order as the input.",
-      },
+      { role: "system", content: TRANSLATE_PROMPT },
       { role: "user", content: JSON.stringify(todo) },
     ]);
     try {

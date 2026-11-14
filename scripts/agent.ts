@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 // Creates or updates the ElevenLabs agent that runs the live conversation.
 //   npx tsx --env-file=../.env scripts/agent.ts
 // Prints ELEVENLABS_AGENT_ID on first run: put it in ../.env. Later runs update that agent,
@@ -111,8 +112,10 @@ const placeholders = {
   phase_brief: "Discovery: learn what worries them and how much detail they want. Quote no figures.",
 };
 
-const body = {
-  name: "Cordada guide",
+/** The full agent definition. Benchmarks reuse it with another LLM and name. */
+export function agentBody(opts: { llm?: string; name?: string } = {}) {
+  return {
+  name: opts.name ?? "Cordada guide",
   tags: ["sherpas-hackathon"],
   conversation_config: {
     agent: {
@@ -121,7 +124,7 @@ const body = {
       dynamic_variables: { dynamic_variable_placeholders: placeholders },
       prompt: {
         prompt: PROMPT,
-        llm: LLM,
+        llm: opts.llm ?? LLM,
         temperature: 0.4,
         tools,
       },
@@ -140,8 +143,9 @@ const body = {
     },
   },
 };
+}
 
-async function call(path: string, method: string, payload?: unknown) {
+export async function call(path: string, method: string, payload?: unknown) {
   const res = await fetch(`https://api.elevenlabs.io${path}`, {
     method,
     headers: { "xi-api-key": KEY!, "Content-Type": "application/json" },
@@ -154,15 +158,17 @@ async function call(path: string, method: string, payload?: unknown) {
 
 async function main() {
   if (AGENT) {
-    await call(`/v1/convai/agents/${AGENT}`, "PATCH", body);
+    await call(`/v1/convai/agents/${AGENT}`, "PATCH", agentBody());
     console.log(`Updated agent ${AGENT}`);
   } else {
-    const r = await call("/v1/convai/agents/create", "POST", body);
+    const r = await call("/v1/convai/agents/create", "POST", agentBody());
     console.log(`Created agent. Add this line to ../.env:\nELEVENLABS_AGENT_ID=${r.agent_id}`);
   }
 }
 
-main().catch((e) => {
-  console.error(e.message);
-  process.exit(1);
-});
+// Run only when executed directly, not when imported by the benchmarks.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  main().catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });

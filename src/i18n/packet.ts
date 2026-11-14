@@ -4,9 +4,8 @@
 import type { Packet } from "../engine/engine";
 import { toSpanish, type Lang } from "./translate";
 
-export async function localize(p: Packet, lang: Lang): Promise<Packet> {
-  if (lang === "en") return p;
-  const out: Packet = structuredClone(p);
+/** Every string in a packet that the family sees or hears, with a way to replace it. */
+export function screenStrings(out: Packet) {
   const slots: { get: () => string; set: (v: string) => void }[] = [];
   const add = (get: () => string, set: (v: string) => void) => get() && slots.push({ get, set });
 
@@ -27,6 +26,13 @@ export async function localize(p: Packet, lang: Lang): Promise<Packet> {
     add(() => v.detail, (x) => (v.detail = x));
   }
 
+  return slots;
+}
+
+export async function localize(p: Packet, lang: Lang): Promise<Packet> {
+  if (lang === "en") return p;
+  const out: Packet = structuredClone(p);
+  const slots = screenStrings(out);
   const translated = await toSpanish(slots.map((s) => s.get()));
   slots.forEach((s, i) => s.set(translated[i]));
   return out;
