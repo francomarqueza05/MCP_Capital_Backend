@@ -26,6 +26,10 @@ export function screenStrings(out: Packet) {
     add(() => v.detail, (x) => (v.detail = x));
   }
 
+  for (const st of out.steps ?? []) {
+    add(() => st.name, (x) => (st.name = x));
+    if (st.say) add(() => st.say!, (x) => (st.say = x));
+  }
   return slots;
 }
 
@@ -58,6 +62,11 @@ export function agentBrief(p: Packet, lang: Lang): string {
   if (p.planSays.length) lines.push("WHAT THE PLAN SAYS (paraphrase, keep figures):", ...p.planSays.map((t) => `- ${t.replace(/\s+/g, " ").slice(0, 900)}`));
   if (p.analogy) lines.push(`ANALOGY YOU CAN USE: ${p.analogy}`);
   if (p.ask.length) lines.push("ASK, one at a time, and wait for the answer:", ...p.ask.map((a) => `- ${a.question} (options shown on screen: ${a.chips.join(" / ")})`));
+  if (p.steps.length)
+    lines.push(
+      "ON SCREEN, in this order. Call show_block with the id just before you talk about each one, then say it in your own words:",
+      ...p.steps.map((st) => `- ${st.block} (${st.name})${st.say ? `: ${st.say}` : ""}`),
+    );
   lines.push(`DONE WHEN: ${p.exit}`);
   if (p.avoid.length) lines.push(...p.avoid);
   lines.push(

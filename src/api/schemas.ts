@@ -36,6 +36,17 @@ export const Visual = z
     description: "What to show while the guide talks. `ridge` is drawn with GET /v1/visuals/ridge (savings by age).",
   });
 
+export const Step = z
+  .object({
+    block: z.string().openapi({ example: "savings-line", description: "Block id from GET /v1/catalog; the front end draws it with data from GET /v1/plan." }),
+    name: z.string(),
+    depth: z.enum(["plain", "detailed"]).openapi({ description: "Draw the plain or the detailed version of the block." }),
+    level: z.number().int().min(1).max(3).openapi({ description: "1 core idea, 2 what they get when they ask for more, 3 detail." }),
+    say: z.string().nullable().openapi({ description: "What the guide says with this block, in the family's language." }),
+    who: z.string().openapi({ description: "Member id, for blocks that differ per person." }),
+  })
+  .openapi("Step", { description: "One block on screen, in order. The live agent calls show_block(id) just before talking about it." });
+
 export const PhaseId = z.enum(["discovery", "today", "focus", "tension", "route", "step", "commit"]);
 
 export const Packet = z
@@ -57,6 +68,7 @@ export const Packet = z
     avoid: z.array(z.string()),
     fallback: z.array(z.string()).openapi({ description: "Lines a scripted guide can say, in the family's language." }),
     maxTurns: z.number(),
+    steps: z.array(Step).openapi({ description: "The blocks for this phase, chosen by the director for this family and person." }),
   })
   .openapi("Packet", { description: "One phase of the conversation, decided by the engine." });
 

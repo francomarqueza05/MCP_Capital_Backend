@@ -50,7 +50,25 @@ conversation.startSession({
 });
 ```
 
-Mientras la guía habla, muestra `packet.visual` (`ridge` se dibuja con `GET /v1/visuals/ridge`) y `packet.ask[].chips` como respuestas pulsables.
+### Bloques: el director decide, el front dibuja
+
+El catálogo de bloques de la biblioteca del front (`web/components/blocks/registry.tsx`) vive también aquí, sin la parte visual, en `src/director/catalog.ts`. El **director** (`src/director/director.ts`) elige qué bloques salen en cada fase, en qué orden y a qué profundidad, para esta familia y esta persona:
+
+- Cada fase tiene una escalera de 3 niveles: 1 (la idea, en claro), 2 (lo que recibe quien pide más), 3 (el detalle y el análisis del propio plan).
+- La fase "lo que más destaca" usa la escalera del tema principal: su preocupación primero, si no el riesgo más grave del plan (O1…).
+- Un experto empieza un nivel más abajo; cada "cuéntame más" baja un nivel (hasta dos veces); si no entiende, se le vuelve a contar una vez con bloques más sencillos (`hundred`, `card-bite`, `terms`…).
+- Las parejas ven bloques para dos personas (`family-lanes`, `who-holds`, `risk-spectrum`, `account-returns`). Ningún bloque se repite en la conversación.
+
+Cada paquete trae `packet.steps`: la lista ordenada de bloques con `block` (id del catálogo), `depth` (`plain` o `detailed`), `level`, `say` (lo que dice la guía, ya en el idioma de la familia) y `who`.
+
+| Llamada | Para qué |
+|---|---|
+| `GET /v1/plan` | Todas las cifras que dibujan los bloques (el mismo objeto que construía `buildPlan` en el front) |
+| `GET /v1/catalog` | Secciones y bloques que el director puede elegir |
+
+El agente tiene una herramienta nueva, **`show_block({ block })`**: la llama justo antes de hablar de cada bloque. El front, al recibirla, muestra ese bloque. Así voz y pantalla van a la vez.
+
+Mientras la guía habla, muestra el bloque activo de `packet.steps` y `packet.ask[].chips` como respuestas pulsables. `packet.visual` (y `GET /v1/visuals/ridge`) se mantienen para la pantalla anterior.
 
 ## Estructura
 
@@ -60,6 +78,8 @@ src/
   api/            autenticación, esquemas (el contrato), servicio
   engine/         motor de fases, temas, lookup, formato de cifras
   cases/          carga los cuatro casos de Sherpas desde ./cases
+  director/       catálogo de bloques (compartido con el front) y director de fases
+  plan/           todas las cifras del plan para dibujar bloques (buildPlan)
   i18n/           español para la pantalla, instrucciones para el agente
   llm/            router de modelos sobre el proxy de Sherpas (niveles con respaldo)
   voice/          ElevenLabs: URL de sesión del agente, voz con caché

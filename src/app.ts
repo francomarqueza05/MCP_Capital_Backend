@@ -14,6 +14,8 @@ import { ApiError } from "./api/errors";
 import { memberAuth, serverAuth, type Env } from "./api/auth";
 import * as S from "./api/schemas";
 import { getStore } from "./store/store";
+import { sections } from "./director/catalog";
+import { planFor } from "./director/director";
 import { agentSignedUrl, speech } from "./voice/speech";
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
@@ -163,6 +165,51 @@ export function createApp() {
       responses: { 200: json(z.array(z.object({ id: S.Topic, label: z.string() })), "The closed list of topics") },
     }),
     (c) => c.json(TOPICS.map((t) => ({ id: t.id, label: t.label })), 200),
+  );
+
+  // ---------- Plan data and block catalog (for drawing blocks) ----------
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/v1/plan",
+      tags: ["Visuals"],
+      summary: "Every figure the blocks draw, for this family",
+      description:
+        "The whole Sherpas analysis of the family (score, cash flow, cushion, projection, retirement, assets, debt, savings, college, protection, investments, persona), " +
+        "derived from the plan files. The same object the block library renders; nothing is typed in by hand.",
+      ...member,
+      responses: { 200: json(z.record(z.string(), z.unknown()), "The plan data"), ...errors },
+    }),
+    (c) => c.json(planFor(c.get("caller").caseData.id) as unknown as Record<string, unknown>, 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/v1/catalog",
+      tags: ["Visuals"],
+      summary: "The block catalog",
+      description: "Every block the director can pick, by section, with the profile signals that make it a good pick.",
+      responses: {
+        200: json(
+          z.array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              about: z.string(),
+              blocks: z.array(z.object({ id: z.string(), name: z.string(), wide: z.boolean(), picks: z.array(z.string()) })),
+            }),
+          ),
+          "Sections and blocks",
+        ),
+      },
+    }),
+    (c) =>
+      c.json(
+        sections.map((s) => ({ id: s.id, name: s.name, about: s.about, blocks: s.blocks.map((b) => ({ id: b.id, name: b.name, wide: Boolean(b.wide), picks: b.picks })) })),
+        200,
+      ),
   );
 
   // ---------- Visuals ----------

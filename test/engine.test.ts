@@ -81,20 +81,6 @@ test("their worry steers the focus", () => {
   assert.match(kids.packets.find((p) => p.phase === "focus")!.goal, /insurance|life/i);
 });
 
-test("wanting more goes one level deeper, once, then moves on", () => {
-  const c = getCase("michael-carter")!;
-  let s = advance(c, startState(c, c.members[0]), { answers: { worry: "retiring at 58" } }).state;
-  s = advance(c, s, {}).state; // today -> focus
-  assert.equal(s.plan[s.phase], "focus");
-  const before = packet(c, s).facts.length;
-  s = advance(c, s, { wantsMore: true }).state;
-  assert.equal(s.plan[s.phase], "focus");
-  assert.equal(s.depth, 1);
-  assert.ok(packet(c, s).facts.length >= before);
-  s = advance(c, s, { wantsMore: true }).state;
-  assert.notEqual(s.plan[s.phase], "focus", "never loops on one phase");
-});
-
 test("lookup answers every topic from the plan only", () => {
   for (const id of ids) {
     const c = getCase(id)!;

@@ -4,6 +4,7 @@
 // script. The model only talks; it reports back with phaseDone and the engine moves on.
 import type { CaseData, Fact, Member } from "../cases/load";
 import type { Concern, Tension } from "../cases/persona";
+import { stepsFor, usedBefore, type Mode, type Step } from "../director/director";
 import { sentence, spoken, type SpokenFact } from "./format";
 import { classify, concernTopic, TOPICS, topicById, topicFacts, topicNotes, type TopicId } from "./topics";
 
@@ -43,6 +44,8 @@ export type Packet = {
   avoid: string[];
   fallback: string[];
   maxTurns: number;
+  /** The blocks to show in this phase, in order, chosen by the director. */
+  steps: Step[];
 };
 
 export type PhaseLog = { phase: PhaseId; understood?: boolean; emotion?: string; wantsMore?: boolean; at: string };
@@ -50,6 +53,8 @@ export type PhaseLog = { phase: PhaseId; understood?: boolean; emotion?: string;
 export type SessionState = {
   phase: number;
   depth: number;
+  /** How the current phase is being retold: in more depth, or in simpler words. */
+  mode?: Mode;
   turns: number;
   plan: PhaseId[];
   profile: Profile;
@@ -160,6 +165,7 @@ export function packet(c: CaseData, s: SessionState): Packet {
     depth: s.depth,
     avoid: later.length ? [`Do not get ahead of the plan: ${later.join(", ")} come later.`] : [],
     maxTurns: MAX_TURNS,
+    steps: stepsFor(c, p, id, topic, s.depth, s.mode ?? null, usedBefore(c, p, s.plan, s.phase, topic)),
   };
 
   switch (id) {
@@ -328,16 +334,25 @@ export function advance(c: CaseData, prev: SessionState, input: DoneInput): Adva
   s.log.push({ phase: id, understood: input.understood, emotion: input.emotion?.slice(0, 40), wantsMore: input.wantsMore, at: new Date().toISOString() });
   s.turns++;
 
-  // Go deeper once if they want more or did not follow; otherwise move on. Never loop.
-  const deeper = (input.wantsMore || input.understood === false) && s.depth === 0 && s.turns < MAX_TURNS && id !== "discovery" && id !== "commit";
-  if (deeper) {
+  // Stay in the phase while it helps, never forever:
+  //  - did not follow: retell it once in simpler words and blocks;
+  //  - wants more: go one level deeper, up to two levels.
+  const canStay = s.turns < MAX_TURNS && id !== "discovery" && id !== "commit";
+  if (canStay && input.understood === false && s.mode !== "simpler") {
     s.depth = 1;
+    s.mode = "simpler";
+    return { state: s, accepted: null };
+  }
+  if (canStay && input.wantsMore && s.mode !== "simpler" && s.depth < 2) {
+    s.depth++;
+    s.mode = "more";
     return { state: s, accepted: null };
   }
 
   if (id === "discovery") s.plan = buildPlan(c, s.profile);
   s.phase++;
   s.depth = 0;
+  s.mode = null;
   s.turns = 0;
   if (s.phase >= s.plan.length) {
     s.done = true;

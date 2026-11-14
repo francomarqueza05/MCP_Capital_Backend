@@ -78,6 +78,18 @@ const tools = [
   },
   {
     type: "client",
+    name: "show_block",
+    description:
+      "Show one of the current phase's blocks on the person's screen. Call it with the block id just before you start talking about that block, in the order the brief lists them.",
+    expects_response: false,
+    parameters: {
+      type: "object",
+      properties: { block: str("block id from the ON SCREEN list of the current phase") },
+      required: ["block"],
+    },
+  },
+  {
+    type: "client",
     name: "lookup",
     description:
       "Get figures and the plan's own words on one topic when they ask about something the current brief does not cover.",
