@@ -10,7 +10,7 @@ const VOICE = process.env.VOICE_ID ?? "eZxqQzb5CuYo3Kl6EXfZ"; // Sofia: soft, na
 // eleven_flash_v2_5 answers faster but sounds flatter.
 const TTS_MODEL = process.env.TTS_MODEL ?? "eleven_v3_conversational";
 const VOICE_EN = process.env.VOICE_ID_EN ?? "EXAVITQu4vr4xnSDxMaL"; // Sarah, for English
-const LLM = process.env.AGENT_LLM ?? "gemini-3.5-flash"; // fast, good Spanish, parallel tool calls
+const LLM = process.env.AGENT_LLM ?? "gemini-3.1-flash-lite"; // chosen by bench/ 2026-11-14: follows the phases, 0.75 s to first token
 if (!KEY) throw new Error("ELEVENLABS_API_KEY missing: run with --env-file=../.env");
 
 // Layer 0: fixed rules. Layers 1 and 2 arrive as dynamic variables and contextual updates.
