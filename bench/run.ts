@@ -61,7 +61,7 @@ async function main() {
       "## Live agent LLM (text-only, voice adds a constant ~0.55 s)",
       "",
       table(
-        ["Model", "Faithful /5", "Spain Spanish /5", "Voice /5", "Boundaries /5", "Flow /5", "Invented numbers", "phase_done / conv", "First token p50", "p95", "Server first reply p50", "Full reply p50", "LLM $ / conv", "Credits / conv"],
+        ["Model", "Faithful /5", "Spain Spanish /5", "Voice /5", "Boundaries /5", "Flow /5", "Invented numbers", "Read its instructions aloud", "phase_done / conv", "First token p50", "p95", "Server first reply p50", "Full reply p50", "LLM $ / conv", "Credits / conv"],
         r.map((x) => [
           x.model,
           fmt(x.faithful),
@@ -70,6 +70,7 @@ async function main() {
           fmt(x.boundaries),
           fmt(x.flow),
           x.inventedNumbers,
+          x.leakedBrief,
           fmt(x.phaseDoneCalls),
           ms(x.firstTokenP50),
           ms(x.firstTokenP95),

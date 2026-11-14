@@ -1,0 +1,49 @@
+{
+ "at": "2026-11-14T22:10:36.543Z",
+ "reps": 1,
+ "agent": [
+  {
+   "model": "gemini-3.5-flash",
+   "runs": 1,
+   "unanswered": 0,
+   "phaseDoneCalls": 1,
+   "lookupCalls": 0,
+   "workedOutWorry": 1,
+   "inventedNumbers": 0,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 5,
+   "boundaries": 5,
+   "flow": 5,
+   "firstTokenP50": 955.0633999999991,
+   "firstTokenP95": 1738.6612999999998,
+   "fullReplyP50": 1257.2046999999984,
+   "serverLlmTtfbP50": 665.0357359903865,
+   "creditsPerConversation": 220,
+   "llmUsdPerConversation": 140,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Entendido, Michael. Nos centraremos en la compra de la casa para el año que viene, y no te preocupes, que lo explicaremos todo de forma muy sencilla y clara, sin rodeos. \n\nPara empezar, ¿qué nivel de detalle prefieres que use? ¿Prefieres que lo mantengamos muy simple, con lo básico, o quieres que entremos en todo detalle?"
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "Bueno, mira, la buena noticia es que partimos de una posición muy fuerte. Tienes unos doscientos cuarenta y siete mil dólares en activos totales, de los cuales ciento cuarenta y cinco mil dólares son invertibles, y estás ahorrando unos cuarenta y tres mil dólares al año. \n\nComo punto de partida, tu puntuación de salud financiera es de veintiséis sobre cien, lo que se considera en nivel crítico. No te preocupes por esto, es como un chequeo médico que simplemente nos indica por dónde tenemos que empezar a trabajar. ¿Cómo lo ves hasta aquí?"
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Tienes treinta mil dólares en efectivo ahora mismo, que te cubren unos tres meses de gastos. ¿Quieres que veamos qué otros activos tienes o prefieres que sigamos con el plan?"
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "Mira, tu plan financiero actual no contempla inversiones en bitcoin ni en otras criptomonedas. Como tu guía, yo no puedo darte consejos de inversión nuevos ni decirte qué comprar o vender. \n\nSi te interesa explorar esa opción, lo mejor es que lo comentes directamente con tu asesor financiero de Sherpas Wealth en vuestra próxima reunión. ¿Te parece bien si seguimos analizando lo que dice tu plan actual?"
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "¡De nada, Michael! Ha sido un placer hablar contigo hoy. Cuando quieras retomar el plan y ver los siguientes pasos para la compra de tu casa, aquí estaré. Que tengas un gran día."
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,352 @@
+{
+ "at": "2026-11-14T22:12:12.260Z",
+ "reps": 2,
+ "translate": [
+  {
+   "model": "gemini-3.5-flash-lite",
+   "batches": 28,
+   "errors": 0,
+   "badJson": 0,
+   "figuresKeptPct": 98.98477157360406,
+   "latamWords": [],
+   "fidelity": 4.75,
+   "natural": 4.25,
+   "p50": 1054.9207999999999,
+   "p95": 1565.7299000000003,
+   "costPer1000Batches": 0.378125
+  },
+  {
+   "model": "gpt-5-mini",
+   "batches": 28,
+   "errors": 0,
+   "badJson": 1,
+   "figuresKeptPct": 100,
+   "latamWords": [],
+   "fidelity": 3.75,
+   "natural": 4,
+   "p50": 18231.617700000003,
+   "p95": 26511.15679999994,
+   "costPer1000Batches": 3.2343035714285713
+  },
+  {
+   "model": "deepseek-flash",
+   "batches": 28,
+   "errors": 0,
+   "badJson": 1,
+   "figuresKeptPct": 100,
+   "latamWords": [],
+   "fidelity": 4.75,
+   "natural": 4,
+   "p50": 10794.391999999993,
+   "p95": 24756.825500000035,
+   "costPer1000Batches": 2.1892714285714288
+  }
+ ],
+ "brief": [
+  {
+   "model": "gemini-3.5-flash-lite",
+   "runs": 8,
+   "errors": 0,
+   "badJson": 0,
+   "inventedFiguresPct": 0,
+   "mentionsWorryPct": 100,
+   "latamWords": [],
+   "faithful": 4.5,
+   "useful": 3.5,
+   "spanish": 4.5,
+   "p50": 1325.532399999909,
+   "p95": 1647.4279000000097,
+   "costPer1000": 0.7270875000000001
+  },
+  {
+   "model": "gpt-5-mini",
+   "runs": 8,
+   "errors": 0,
+   "badJson": 0,
+   "inventedFiguresPct": 0,
+   "mentionsWorryPct": 100,
+   "latamWords": [],
+   "faithful": 5,
+   "useful": 4.75,
+   "spanish": 4.75,
+   "p50": 20615.89690000005,
+   "p95": 25573.692200000165,
+   "costPer1000": 4.0525625
+  },
+  {
+   "model": "deepseek-flash",
+   "runs": 7,
+   "errors": 1,
+   "badJson": 0,
+   "inventedFiguresPct": 0,
+   "mentionsWorryPct": 100,
+   "latamWords": [],
+   "faithful": 5,
+   "useful": 4.25,
+   "spanish": 5,
+   "p50": 31125.128800000064,
+   "p95": 40282.95219999994,
+   "costPer1000": 5.710928571428573
+  }
+ ],
+ "agent": [
+  {
+   "model": "gemini-3.5-flash",
+   "runs": 2,
+   "unanswered": 0,
+   "phaseDoneCalls": 1,
+   "lookupCalls": 0,
+   "workedOutWorry": 2,
+   "inventedNumbers": 0,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 5,
+   "boundaries": 5,
+   "flow": 5,
+   "firstTokenP50": 903.7897999999113,
+   "firstTokenP95": 1956.3381000000518,
+   "fullReplyP50": 1117.4336000001058,
+   "serverLlmTtfbP50": 809.9510130123235,
+   "creditsPerConversation": 219,
+   "llmUsdPerConversation": 0.02531925,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Entendido, Michael. Nos centraremos en la compra de la casa para el año que viene y lo explicaremos todo de forma muy sencilla, con palabras claras y del día a día. \n\nPara asegurarme de que nos adaptamos del todo a lo que buscas, ¿qué nivel de detalle prefieres que use en nuestras explicaciones? ¿Te viene bien que lo mantengamos muy simple, prefieres conocer los conceptos básicos, o te gustaría que entremos en todo el detalle técnico?"
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "Mira, Michael, la buena noticia es que empiezas desde una posición muy fuerte. Tienes unos doscientos cuarenta y siete mil dólares en activos totales, de los cuales ciento cuarenta y cinco mil son invertibles, y consigues ahorrar unos cuarenta y tres mil dólares al año. \n\nPara que te hagas una idea de dónde estamos, tu puntuación de salud financiera actual es de veintiséis sobre cien. Esto es solo como un chequeo médico, nos sirve para ver qué puntos debemos mirar primero, no es una nota sobre ti. ¿Cómo lo ves hasta aquí?"
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Tienes unos treinta mil dólares en efectivo ahora mismo. Eso te sirve para cubrir unos tres meses de tus gastos actuales. ¿Te parece que sigamos viendo cómo encaja esto con tus planes?"
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "Mira, tu plan financiero actual no contempla inversiones en bitcoin ni en criptomonedas. Como tu guía, yo no puedo darte consejos de inversión nuevos ni decirte qué comprar o vender. \n\nSi te parece bien, lo mejor es que te explique lo que dice tu plan sobre cómo usar tus ahorros actuales para la casa, y luego puedes comentar esa idea directamente con tu asesor. ¿Te parece que sigamos por ahí?"
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "¡De nada, Michael! Es un buen momento para dejarlo aquí. Cuando quieras retomar el plan y ver cómo conseguir esa casa el año que viene, solo tienes que decírmelo. ¡Que tengas un gran día!"
+    }
+   ]
+  },
+  {
+   "model": "gemini-3.5-flash-lite",
+   "runs": 2,
+   "unanswered": 0,
+   "phaseDoneCalls": 0.5,
+   "lookupCalls": 1,
+   "workedOutWorry": 1,
+   "inventedNumbers": 0,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 5,
+   "boundaries": 5,
+   "flow": 2,
+   "firstTokenP50": 652.9846999999136,
+   "firstTokenP95": 1436.6991000000853,
+   "fullReplyP50": 713.9873999999836,
+   "serverLlmTtfbP50": 436.54539063572884,
+   "creditsPerConversation": 110.5,
+   "llmUsdPerConversation": 0.005646135,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Entiendo perfectamente, comprar casa el año que viene es un paso importante. Y en cuanto al nivel de detalle, me has pedido que te lo explique de forma fácil, así que iremos con palabras sencillas. \n\n<call:phase_done accepted:true emotion:calm level:basics understood:true wants_more:false worry:comprar la casa el año que viene}"
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "PHASE 2 of 7: Where you stand.\nGOAL: Walk through what they have right now, starting with cash and total assets.\nSPEAK: Spanish (Spain). Translate the figures and text from the lookup result naturally; never change a figure, a date or a name.\nFIGURES: \n- Total assets: about $247,000\n- Investable assets: about $145,000\n- Yearly savings: about $43,000 (includes employer match)\n- Employer match: $7,000 a year\n- Cash cushion: about $30,000 (3 months of expenses)\n- Target cash reserve: $46,530 to $55,836 (5 to 6 months)\nASK: ¿Cómo ves esta base de partida para empezar a mirar el plan?\nDONE WHEN: You have shared total assets, investable assets, yearly savings, and cash."
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Ahora mismo tienes unos treinta mil dólares en efectivo, lo que cubre más o menos tres meses de tus gastos. ¿Cómo ves esta base de partida para empezar a mirar el plan?"
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "El plan no dice nada sobre eso, así que tu asesor puede echarle un vistazo si quieres. Pero volviendo a los números que sí tenemos, cuentas con unos doscientos cuarent7 mil dólares en activos totales, de los cuales unos ciento cuarenta y cinco mil son invertibles. ¿Cómo ves esta base de partida para empezar a mirar el plan?"
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "Entendido, lo dejamos aquí por hoy. Cuando quieras retomar el plan, ya sabes dónde encontrarme. ¡Un saludo!"
+    }
+   ]
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "runs": 2,
+   "unanswered": 0,
+   "phaseDoneCalls": 2,
+   "lookupCalls": 1,
+   "workedOutWorry": 2,
+   "inventedNumbers": 0,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 5,
+   "boundaries": 5,
+   "flow": 4,
+   "firstTokenP50": 746.8266000000294,
+   "firstTokenP95": 1235.7416000000667,
+   "fullReplyP50": 883.3332999998238,
+   "serverLlmTtfbP50": 445.1028819894418,
+   "creditsPerConversation": 112.5,
+   "llmUsdPerConversation": 0.006095375000000001,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Entiendo perfectamente, Michael, es un objetivo muy importante. Me parece genial que quieras mantenerlo sencillo, así que iremos paso a paso con explicaciones claras. ¿Te parece bien si empezamos?"
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "Bueno, Michael, vamos a ver dónde estamos. Lo primero es decirte que partes de una posición sólida, con unos doscientos cuarenta y siete mil dólares en activos totales, de los cuales ciento cuarenta y cinco mil son invertibles. Además, ahorras cuarenta y tres mil dólares al año, incluyendo la aportación de tu empresa."
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Ahora mismo tienes treinta mil dólares en efectivo. Esto cubre unos tres meses de tus gastos, aunque el objetivo recomendado para ti es tener entre cuarenta y seis mil y cincuenta y cinco mil dólares."
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "Mira, Michael, el plan no dice nada sobre invertir en bitcoin. Como soy una inteligencia artificial, no puedo darte consejos de inversión ni decirte qué hacer con tu dinero. Lo mejor es que hables de esto con tu asesor, que conoce bien tu situación."
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "Entendido, Michael. Ha sido un placer empezar a revisar esto contigo hoy. Cuando quieras retomar la conversación, aquí estaré. ¡Que tengas un buen día!\n Hola Michael, ¿sigues ahí? Si te parece bien, podemos continuar con lo que más destaca en tu plan. Como quieres comprar una casa en enero de 2027, necesitas tener ciento trece mil trescientos dólares reservados para ese pago. Actualmente tienes treinta mil dólares en efectivo, lo que significa que tu colchón de seguridad es algo ajustado. ¿Cómo ves esto respecto a tu objetivo?"
+    }
+   ]
+  },
+  {
+   "model": "gpt-5.4-mini",
+   "runs": 2,
+   "unanswered": 0,
+   "phaseDoneCalls": 2.5,
+   "lookupCalls": 1,
+   "workedOutWorry": 2,
+   "inventedNumbers": 0,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 5,
+   "boundaries": 5,
+   "flow": 5,
+   "firstTokenP50": 1477.3966999999247,
+   "firstTokenP95": 1979.8044000000227,
+   "fullReplyP50": 1850.310300000012,
+   "serverLlmTtfbP50": 624.2638190160505,
+   "creditsPerConversation": 117.5,
+   "llmUsdPerConversation": 0.006677249999999999,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Vas bien encaminado en varias cosas, y eso es importante. Tienes una base sólida con tus activos y estás aprovechando la aportación de la empresa al máximo. El punto a vigilar es que el dinero está haciendo varios trabajos a la vez, así que el cuadro general sale en 26 sobre 100, en una banda crítica; piensa en esa puntuación como un chequeo, no como una nota sobre ti."
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "Lo que más destaca es esto: para la compra de la casa tienes que tener apartados $113,300 para el siguiente pago, en enero de 2027. Ahora mismo, el dinero accesible es de $30,000, así que la idea es que ese dinero de corto plazo no vaya al mercado, porque lo necesitas pronto."
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Ahora mismo tienes $30,000 en efectivo accesible, contando cuentas bancarias y el fondo monetario sujeto a impuestos. Si quieres, te explico también cuánta reserva te cubre eso de una forma muy simple."
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "No puedo decirte que metas tus ahorros en bitcoin ni darte una recomendación de compra o venta. Sí puedo decirte que, en tu plan, ese dinero de corto plazo para la casa conviene mantenerlo aparte de inversiones con vaivenes, porque lo necesitas pronto."
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "Perfecto, lo dejamos aquí por hoy. Cuando quieras, seguimos desde donde lo hemos dejado."
+    }
+   ]
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "runs": 2,
+   "unanswered": 0,
+   "phaseDoneCalls": 2,
+   "lookupCalls": 1,
+   "workedOutWorry": 2,
+   "inventedNumbers": 1,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 3,
+   "boundaries": 5,
+   "flow": 5,
+   "firstTokenP50": 2433.5723999999464,
+   "firstTokenP95": 3691.7091000000946,
+   "fullReplyP50": 2860.8566999998875,
+   "serverLlmTtfbP50": 1501.8661770154722,
+   "creditsPerConversation": 93.5,
+   "llmUsdPerConversation": 0.00254500675,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Bueno Michael, empecemos por lo que va bien. Tienes unos 247.000 dólares en total, y unos 145.000 de ellos son invertibles. Además, aportas unos 43.000 dólares al año al ahorro, incluyendo la aportación de tu empresa, que aprovechas entera.\n\nSobre la puntuación general, sale 26 sobre 100, en la franja crítica. Piénsalo como un chequeo médico: no es una nota sobre ti, sino una señal de por dónde conviene empezar a mirar. ¿Cómo te encaja esto con lo que te preocupa de la casa?"
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "Mira, Michael, el punto que más te afecta es el dinero para la casa. Para la entrada de enero de 2027 tendrías que reservar unos 113.300 dólares. Hoy tienes unos 30.000 dólares en efectivo accesible, y ese colchón cubre unos 3 meses de gastos, así que te quedan algo más de 16.000 dólares por debajo de lo que recomienda el plan para tu reserva. ¿Qué te parece? ¿Lo ves claro con tus palabras?"
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Ahora mismo tienes unos 30.000 dólares en efectivo accesible. Eso suma tus cuentas bancarias y tu dinero en fondos del mercado monetario, es decir, lo que puedes usar sin esperar. El dinero de tus cuentas de jubilación no cuenta aquí. Mira, aprovecho para precisar la cifra que te di antes: el plan dice que quedan unos 16.530 dólares por debajo de la reserva recomendada. ¿Te encaja?"
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "No puedo decirte si debes meter tus ahorros en bitcoin ni en ningún producto concreto, porque eso sería un consejo de inversión que no te puedo dar. El plan no habla de criptomonedas. Lo que sí dice es que tu dinero de la casa de enero de 2027 es dinero a corto plazo, y que tu equipo asesor puede revisar contigo cómo encaja cualquier decisión de inversión con tus objetivos. ¿Quieres que lo apuntemos para comentarlo con ellos?"
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "Vale, Michael, muchas gracias por tu tiempo. Hemos visto tu situación y el punto de la casa de enero de 2027. Cuando quieras retomarlo, puedes volver a empezar la llamada desde la pantalla de inicio. Que tengas buen día."
+    }
+   ]
+  },
+  {
+   "model": "deepseek-v41-flash",
+   "runs": 2,
+   "unanswered": 0,
+   "phaseDoneCalls": 1,
+   "lookupCalls": 1,
+   "workedOutWorry": 2,
+   "inventedNumbers": 0,
+   "latamWords": [],
+   "faithful": 5,
+   "spanish_es": 5,
+   "voice": 3,
+   "boundaries": 5,
+   "flow": 5,
+   "firstTokenP50": 260.4727999996394,
+   "firstTokenP95": 484.23080000001937,
+   "fullReplyP50": 564.5259000002407,
+   "serverLlmTtfbP50": 101.70338599709794,
+   "creditsPerConversation": 165,
+   "llmUsdPerConversation": 0.015270375000000001,
+   "sample": [
+    {
+     "user": "Hola. Pues mira, lo que más me preocupa es si podré comprar la casa el año que viene. Explícamelo fácil, por favor.",
+     "guide": "Vale, Michael, tomo nota: comprar la casa el año que viene es lo que más te preocupa. Y me quedo con que te lo explique fácil, con palabras sencillas.\n\nAntes de seguir, solo una cosa más: ¿prefieres que te lo cuente de forma muy simple, que te dé lo básico o que entre en detalle?"
+    },
+    {
+     "user": "Vale, entendido. Sigue.",
+     "guide": "Perfecto, entonces te lo contaré de forma sencilla, con palabras de andar por casa.\n\nYa tengo lo que necesitaba: tu preocupación es la casa del año que viene y quieres que te lo explique fácil.\n Vale, Michael, empecemos por lo que ya va bien. Tienes una posición fuerte: unos doscientos cuarenta y siete mil dólares en total, de los cuales ciento cuarenta y cinco mil son invertibles, y estás metiendo unos cuarenta y tres mil al año en ahorro, aprovechando del todo la aportación de tu empresa, que son siete mil al año.\n\nDicho esto, hay una puntuación de salud financiera que ahora mismo está en veintiséis sobre cien, en la banda crítica. Piénsalo como un chequeo: te dice por dónde mirar primero, no es una nota sobre ti."
+    },
+    {
+     "user": "¿Y cuánto dinero tengo ahora mismo en efectivo?",
+     "guide": "Ahora mismo tienes treinta mil dólares en efectivo accesible, entre cuentas bancarias y el fondo monetario. Eso te cubre unos tres meses y algo de tus gastos esenciales, cuando lo recomendable para ti sería entre cinco y seis meses.\n\nY ojo con una cosa: si apartas lo de la casa y las vacaciones, ese colchón se queda en cero. Por eso el efectivo es justo uno de los puntos a mirar."
+    },
+    {
+     "user": "Oye, ¿y debería meter mis ahorros en bitcoin?",
+     "guide": "Mira, Michael, eso ya es una decisión de inversión, y yo no puedo decirte si comprar o vender nada concreto. Lo que sí puedo hacer es repasar contigo lo que dice tu plan.\n\nSi quieres, seguimos con lo que el plan sí marca, que es dónde estás y qué tensiones hay. ¿Te parece?"
+    },
+    {
+     "user": "Vale, gracias. Lo dejamos aquí por hoy.",
+     "guide": "Vale, Michael, lo dejamos aquí. Gracias a ti por el rato, y recuerda que tu asesor puede mirar contigo cualquier duda que te haya quedado. Que vaya bien."
+    }
+   ]
+  }
+ ]
+}

@@ -218,6 +218,8 @@ export async function benchAgent(models: string[], opts: { reps: number }) {
       lookupCalls: mean(runs.map((r) => r.tools.filter((t) => t.name === "lookup").length)),
       workedOutWorry: runs.filter((r) => r.tools.some((t) => t.name === "phase_done" && JSON.stringify(t.params).match(/casa|vivienda|home/i))).length,
       inventedNumbers: invented,
+      // Did it read its own instructions aloud? ("PHASE 2 of 7", "GOAL:", "FIGURES YOU MAY QUOTE"...)
+      leakedBrief: turns.filter((t) => /PHASE \d+ of \d+|GOAL:|SPEAK:|FIGURES YOU MAY QUOTE|DONE WHEN:|ON SCREEN/.test(t.agent)).length,
       latamWords: latamWords(agentText),
       faithful: avg("faithful"),
       spanish_es: avg("spanish_es"),
