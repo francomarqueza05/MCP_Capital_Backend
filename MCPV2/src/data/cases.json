@@ -1,0 +1,761 @@
+{
+ "daniel-emily-johnson": {
+  "id": "daniel-emily-johnson",
+  "household": {
+   "names": [
+    "Daniel",
+    "Emily"
+   ],
+   "couple": true,
+   "kids": [
+    "Oliver",
+    "Sophia"
+   ],
+   "housing": "own"
+  },
+  "score": {
+   "value": 52,
+   "band": "vulnerable",
+   "pillars": [
+    {
+     "name": "Ahorro",
+     "score": 54,
+     "points": "16/30"
+    },
+    {
+     "name": "Deudas",
+     "score": 76,
+     "points": "15/20"
+    },
+    {
+     "name": "Inversiones",
+     "score": 51,
+     "points": "8/15"
+    },
+    {
+     "name": "Reserva",
+     "score": 85,
+     "points": "13/15"
+    },
+    {
+     "name": "Seguros",
+     "score": 0,
+     "points": "0/20"
+    }
+   ],
+   "caps": []
+  },
+  "topics": [
+   {
+    "id": "cashflow",
+    "title": "Dinero de cada año",
+    "status": "warn",
+    "label": "Justo, con muchas cosas que pagar",
+    "scene": "split-pull",
+    "headline": "Te quedan $15,032 al año para repartir entre varias metas.",
+    "numbers": {
+     "flow": 15032.01,
+     "saveRate": 0.0929,
+     "income": 280000
+    }
+   },
+   {
+    "id": "emergency",
+    "title": "Fondo de emergencia",
+    "status": "bad",
+    "label": "Vulnerable",
+    "scene": "umbrella-small",
+    "headline": "Cubres 1.4 meses de gastos; lo recomendado es 8–9.",
+    "numbers": {
+     "months": 1.4,
+     "after": 1.1,
+     "min": 8,
+     "max": 9
+    }
+   },
+   {
+    "id": "debt",
+    "title": "Deudas",
+    "status": "bad",
+    "label": "Tarjeta cara que no baja",
+    "scene": "hamster-wheel",
+    "headline": "Debes $18,000 en tarjetas y el pago apenas cubre los intereses.",
+    "numbers": {
+     "balance": 18000,
+     "monthly": 450,
+     "interest": 373.5,
+     "capped": "false"
+    }
+   },
+   {
+    "id": "retirement",
+    "title": "Jubilación",
+    "status": "bad",
+    "label": "Lo ahorrado no alcanza",
+    "scene": "two-mountains",
+    "headline": "Faltan $1,427,456 para jubilarte como planeas.",
+    "numbers": {
+     "gap": 1427455.89,
+     "extraSave": 34164.77,
+     "runOut": "Not applicable",
+     "draw": 5.5,
+     "incomeShare": 49,
+     "shortYears": 0,
+     "retireAge": 62,
+     "projected": 523442.34
+    }
+   },
+   {
+    "id": "education",
+    "title": "Universidad",
+    "status": "warn",
+    "label": "Falta dinero",
+    "scene": "piggy-banks",
+    "headline": "Faltan $106,552 para la universidad.",
+    "numbers": {
+     "gap": 106552.38,
+     "extraSave": 1927.57,
+     "need": 136552.38,
+     "have": 30000
+    }
+   },
+   {
+    "id": "life",
+    "title": "Seguro de vida",
+    "status": "bad",
+    "label": "Le falta mucho",
+    "scene": "net-holes",
+    "headline": "Daniel: le falta mucho · Emily: le falta mucho",
+    "numbers": {
+     "shortfall": 1350000,
+     "coShortfall": 1000000,
+     "people": [
+      {
+       "name": "Daniel",
+       "has": 250000,
+       "need": 1600000
+      },
+      {
+       "name": "Emily",
+       "has": 200000,
+       "need": 1200000
+      }
+     ]
+    }
+   },
+   {
+    "id": "umbrella",
+    "title": "Seguro ante demandas",
+    "status": "bad",
+    "label": "No tiene",
+    "scene": "umbrella-lightning",
+    "headline": "Recomendado: $1,000,000 de cobertura.",
+    "numbers": {
+     "recommended": 1000000
+    }
+   },
+   {
+    "id": "investments",
+    "title": "Inversiones",
+    "status": "bad",
+    "label": "Demasiado prudente",
+    "scene": "balance-scale",
+    "headline": "54% en acciones; lo ideal para ti es 66%.",
+    "numbers": {
+     "equity": 54,
+     "target": 66,
+     "sector": "Technology",
+     "leveraged": ""
+    }
+   }
+  ],
+  "moves": [
+   {
+    "title": "Raise mortality coverage",
+    "effort": "low",
+    "before": 52,
+    "after": 57,
+    "liftsCap": false
+   },
+   {
+    "title": "Add umbrella cover",
+    "effort": "low",
+    "before": 52,
+    "after": 56,
+    "liftsCap": false
+   },
+   {
+    "title": "Raise annual savings",
+    "effort": "medium",
+    "before": 52,
+    "after": 55,
+    "liftsCap": false
+   }
+  ]
+ },
+ "michael-carter": {
+  "id": "michael-carter",
+  "household": {
+   "names": [
+    "Michael"
+   ],
+   "couple": false,
+   "kids": [],
+   "housing": "rent"
+  },
+  "score": {
+   "value": 26,
+   "band": "critical",
+   "pillars": [
+    {
+     "name": "Ahorro",
+     "score": 0,
+     "points": "0/25"
+    },
+    {
+     "name": "Deudas",
+     "score": 78,
+     "points": "8/10"
+    },
+    {
+     "name": "Inversiones",
+     "score": 42,
+     "points": "11/25"
+    },
+    {
+     "name": "Reserva",
+     "score": 22,
+     "points": "4/20"
+    },
+    {
+     "name": "Seguros",
+     "score": 18,
+     "points": "4/20"
+    }
+   ],
+   "caps": []
+  },
+  "topics": [
+   {
+    "id": "cashflow",
+    "title": "Dinero de cada año",
+    "status": "bad",
+    "label": "Gastas más de lo que entra",
+    "scene": "bucket-leak",
+    "headline": "Este año salen $8,336 más de lo que entra.",
+    "numbers": {
+     "flow": -8336,
+     "saveRate": 0.2389,
+     "income": 180000
+    }
+   },
+   {
+    "id": "emergency",
+    "title": "Fondo de emergencia",
+    "status": "warn",
+    "label": "No alcanza",
+    "scene": "umbrella-partial",
+    "headline": "Cubres 3.2 meses de gastos; lo recomendado es 5–6.",
+    "numbers": {
+     "months": 3.2,
+     "after": 0,
+     "min": 5,
+     "max": 6
+    }
+   },
+   {
+    "id": "near-goal",
+    "title": "Gasto grande cercano",
+    "status": "bad",
+    "label": "Se come tu reserva",
+    "scene": "timeline-drain",
+    "headline": "Comprar casa (enero de 2027) deja tu reserva en 0 meses.",
+    "numbers": {
+     "months": 3.2,
+     "after": 0,
+     "goal": "Comprar casa",
+     "amount": 113300,
+     "when": "enero de 2027"
+    }
+   },
+   {
+    "id": "debt",
+    "title": "Deudas",
+    "status": "good",
+    "label": "Bajo control",
+    "scene": "praise",
+    "headline": "Tus deudas están bajo control.",
+    "numbers": {
+     "dti": 0.2537
+    }
+   },
+   {
+    "id": "retirement",
+    "title": "Jubilación",
+    "status": "bad",
+    "label": "El dinero se acaba antes de tiempo",
+    "scene": "hourglass",
+    "headline": "Tus ahorros se agotarían a los 85 años.",
+    "numbers": {
+     "gap": 1177585.95,
+     "extraSave": 20231.12,
+     "runOut": "85",
+     "draw": 5.6,
+     "incomeShare": 34,
+     "shortYears": 0,
+     "retireAge": 58,
+     "projected": 789636.22
+    }
+   },
+   {
+    "id": "life",
+    "title": "Seguro de vida",
+    "status": "warn",
+    "label": "Le falta un poco",
+    "scene": "net-holes",
+    "headline": "Michael: le falta un poco",
+    "numbers": {
+     "shortfall": 720000,
+     "coShortfall": 0,
+     "people": [
+      {
+       "name": "Michael",
+       "has": 180000,
+       "need": 900000
+      }
+     ]
+    }
+   },
+   {
+    "id": "umbrella",
+    "title": "Seguro ante demandas",
+    "status": "bad",
+    "label": "No tiene",
+    "scene": "umbrella-lightning",
+    "headline": "Recomendado: $1,000,000 de cobertura.",
+    "numbers": {
+     "recommended": 1000000
+    }
+   },
+   {
+    "id": "investments",
+    "title": "Inversiones",
+    "status": "warn",
+    "label": "Demasiado prudente",
+    "scene": "balance-scale",
+    "headline": "59% en acciones; lo ideal para ti es 67%.",
+    "numbers": {
+     "equity": 59,
+     "target": 67,
+     "sector": "Technology",
+     "leveraged": ""
+    }
+   }
+  ],
+  "moves": [
+   {
+    "title": "Add umbrella cover",
+    "effort": "low",
+    "before": 26,
+    "after": 31,
+    "liftsCap": false
+   },
+   {
+    "title": "Lower the withdrawal rate",
+    "effort": "high",
+    "before": 26,
+    "after": 62,
+    "liftsCap": false
+   },
+   {
+    "title": "Raise growth allocation toward glide",
+    "effort": "high",
+    "before": 26,
+    "after": 31,
+    "liftsCap": false
+   }
+  ]
+ },
+ "samantha-lewis": {
+  "id": "samantha-lewis",
+  "household": {
+   "names": [
+    "Samantha"
+   ],
+   "couple": false,
+   "kids": [
+    "Ethan",
+    "Ava"
+   ],
+   "housing": "own"
+  },
+  "score": {
+   "value": 82,
+   "band": "strong",
+   "pillars": [
+    {
+     "name": "Ahorro",
+     "score": 75,
+     "points": "22/30"
+    },
+    {
+     "name": "Deudas",
+     "score": 100,
+     "points": "20/20"
+    },
+    {
+     "name": "Inversiones",
+     "score": 66,
+     "points": "10/15"
+    },
+    {
+     "name": "Reserva",
+     "score": 100,
+     "points": "15/15"
+    },
+    {
+     "name": "Seguros",
+     "score": 71,
+     "points": "14/20"
+    }
+   ],
+   "caps": []
+  },
+  "topics": [
+   {
+    "id": "cashflow",
+    "title": "Dinero de cada año",
+    "status": "bad",
+    "label": "Gastas más de lo que entra",
+    "scene": "bucket-leak",
+    "headline": "Este año salen $6,418 más de lo que entra.",
+    "numbers": {
+     "flow": -6417.99,
+     "saveRate": 0.24,
+     "income": 250000
+    }
+   },
+   {
+    "id": "emergency",
+    "title": "Fondo de emergencia",
+    "status": "warn",
+    "label": "Te sobra",
+    "scene": "umbrella-huge",
+    "headline": "Cubres 7.9 meses de gastos; lo recomendado es 5–6.",
+    "numbers": {
+     "months": 7.9,
+     "after": 6.1,
+     "min": 5,
+     "max": 6
+    }
+   },
+   {
+    "id": "debt",
+    "title": "Deudas",
+    "status": "good",
+    "label": "Sin deuda de tarjeta",
+    "scene": "praise",
+    "headline": "Tus deudas están bajo control.",
+    "numbers": {
+     "dti": 0.054
+    }
+   },
+   {
+    "id": "retirement",
+    "title": "Jubilación",
+    "status": "bad",
+    "label": "El dinero se acaba antes de tiempo",
+    "scene": "hourglass",
+    "headline": "Tus ahorros se agotarían a los 73 años.",
+    "numbers": {
+     "gap": 0,
+     "extraSave": 0,
+     "runOut": "73",
+     "draw": 12.2,
+     "incomeShare": 25,
+     "shortYears": 1,
+     "retireAge": 65,
+     "projected": 0
+    }
+   },
+   {
+    "id": "education",
+    "title": "Universidad",
+    "status": "warn",
+    "label": "Falta dinero",
+    "scene": "piggy-banks",
+    "headline": "Faltan $98,838 para la universidad.",
+    "numbers": {
+     "gap": 98837.55,
+     "extraSave": -179275.57,
+     "need": 98837.55,
+     "have": 0
+    }
+   },
+   {
+    "id": "life",
+    "title": "Seguro de vida",
+    "status": "good",
+    "label": "Bien",
+    "scene": "net-full",
+    "headline": "Samantha: bien",
+    "numbers": {
+     "shortfall": 0,
+     "coShortfall": 0,
+     "people": [
+      {
+       "name": "Samantha",
+       "has": 2000000,
+       "need": 1250000
+      }
+     ]
+    }
+   },
+   {
+    "id": "umbrella",
+    "title": "Seguro ante demandas",
+    "status": "good",
+    "label": "Bien",
+    "scene": "praise",
+    "headline": "Tienes un seguro que cubre demandas.",
+    "numbers": {
+     "current": 2000000
+    }
+   },
+   {
+    "id": "investments",
+    "title": "Inversiones",
+    "status": "good",
+    "label": "Bien equilibradas",
+    "scene": "praise",
+    "headline": "68% en acciones; lo ideal para ti es 65%.",
+    "numbers": {
+     "equity": 68,
+     "target": 65,
+     "sector": "Technology",
+     "leveraged": ""
+    }
+   }
+  ],
+  "moves": [
+   {
+    "title": "Close a coverage gap",
+    "effort": "medium",
+    "before": 82,
+    "after": 84,
+    "liftsCap": false
+   },
+   {
+    "title": "Reduce single-name concentration",
+    "effort": "high",
+    "before": 82,
+    "after": 83,
+    "liftsCap": false
+   },
+   {
+    "title": "Reduce growth allocation toward glide",
+    "effort": "high",
+    "before": 82,
+    "after": 83,
+    "liftsCap": false
+   }
+  ]
+ },
+ "timothy-melanie-weah": {
+  "id": "timothy-melanie-weah",
+  "household": {
+   "names": [
+    "Timothy",
+    "Melanie"
+   ],
+   "couple": true,
+   "kids": [
+    "Liam",
+    "Josh"
+   ],
+   "housing": "own"
+  },
+  "score": {
+   "value": 60,
+   "band": "stable",
+   "pillars": [
+    {
+     "name": "Ahorro",
+     "score": 86,
+     "points": "26/30"
+    },
+    {
+     "name": "Deudas",
+     "score": 58,
+     "points": "12/20"
+    },
+    {
+     "name": "Inversiones",
+     "score": 56,
+     "points": "8/15"
+    },
+    {
+     "name": "Reserva",
+     "score": 100,
+     "points": "15/15"
+    },
+    {
+     "name": "Seguros",
+     "score": 37,
+     "points": "7/20"
+    }
+   ],
+   "caps": [
+    "High revolving balance with high APR",
+    "Mortality coverage ratio below threshold with dependents"
+   ]
+  },
+  "topics": [
+   {
+    "id": "cashflow",
+    "title": "Dinero de cada año",
+    "status": "good",
+    "label": "Te sobra dinero",
+    "scene": "idle-money",
+    "headline": "Te sobran $36,961 al año.",
+    "numbers": {
+     "flow": 36960.75,
+     "saveRate": 0.2278,
+     "income": 270000
+    }
+   },
+   {
+    "id": "emergency",
+    "title": "Fondo de emergencia",
+    "status": "bad",
+    "label": "Te sobra mucho",
+    "scene": "cash-inflation",
+    "headline": "Cubres 16 meses de gastos; lo recomendado es 8–9.",
+    "numbers": {
+     "months": 16,
+     "after": 15.4,
+     "min": 8,
+     "max": 9
+    }
+   },
+   {
+    "id": "debt",
+    "title": "Deudas",
+    "status": "bad",
+    "label": "Tarjeta cara que no baja",
+    "scene": "hamster-wheel",
+    "headline": "Debes $18,000 en tarjetas y el pago apenas cubre los intereses.",
+    "numbers": {
+     "balance": 18000,
+     "monthly": 300,
+     "interest": 270,
+     "capped": "true"
+    }
+   },
+   {
+    "id": "retirement",
+    "title": "Jubilación",
+    "status": "good",
+    "label": "Vas bien",
+    "scene": "praise",
+    "headline": "Tu jubilación va por buen camino.",
+    "numbers": {
+     "gap": 0,
+     "extraSave": 0,
+     "runOut": "Not applicable",
+     "draw": 1,
+     "incomeShare": 93,
+     "shortYears": 0,
+     "retireAge": 62,
+     "projected": 1425552.5
+    }
+   },
+   {
+    "id": "education",
+    "title": "Universidad",
+    "status": "warn",
+    "label": "Falta dinero",
+    "scene": "piggy-banks",
+    "headline": "Faltan $113,509 para la universidad.",
+    "numbers": {
+     "gap": 113508.6,
+     "extraSave": 4609.22,
+     "need": 113508.6,
+     "have": 0
+    }
+   },
+   {
+    "id": "life",
+    "title": "Seguro de vida",
+    "status": "bad",
+    "label": "Le falta mucho",
+    "scene": "net-holes",
+    "headline": "Timothy: le falta mucho · Melanie: le falta mucho",
+    "numbers": {
+     "shortfall": 610000,
+     "coShortfall": 490000,
+     "people": [
+      {
+       "name": "Timothy",
+       "has": 140000,
+       "need": 750000
+      },
+      {
+       "name": "Melanie",
+       "has": 110000,
+       "need": 600000
+      }
+     ]
+    }
+   },
+   {
+    "id": "umbrella",
+    "title": "Seguro ante demandas",
+    "status": "bad",
+    "label": "No tiene",
+    "scene": "umbrella-lightning",
+    "headline": "Recomendado: $1,000,000 de cobertura.",
+    "numbers": {
+     "recommended": 1000000
+    }
+   },
+   {
+    "id": "investments",
+    "title": "Inversiones",
+    "status": "bad",
+    "label": "Producto muy arriesgado",
+    "scene": "leverage-drop",
+    "headline": "45% en acciones; lo ideal para ti es 40%.",
+    "numbers": {
+     "equity": 45,
+     "target": 40,
+     "sector": "Technology",
+     "leveraged": "UPRO"
+    }
+   }
+  ],
+  "moves": [
+   {
+    "title": "Pay down revolving card",
+    "effort": "medium",
+    "before": 60,
+    "after": 62,
+    "liftsCap": true
+   },
+   {
+    "title": "Add life cover",
+    "effort": "low",
+    "before": 60,
+    "after": 60,
+    "liftsCap": true
+   },
+   {
+    "title": "Add umbrella cover",
+    "effort": "low",
+    "before": 60,
+    "after": 60,
+    "liftsCap": false
+   }
+  ]
+ }
+}

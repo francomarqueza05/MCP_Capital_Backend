@@ -1,0 +1,1330 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ tokens
+   Alpine night, drawn flat like the Sherpas login mountains. The mountain carries the colour;
+   the interface stays out of its way. One warm light, dawn, belongs to Cordi and to the part
+   of the route already walked. Status colours appear only on the camp pennants and labels. */
+:root {
+  --sky: #0b1033;
+  --sky-2: #141a4c;
+  --lit: #252e72;
+  --shade: #151b4c;
+  --snow: #aeb8ee;
+  --ink: #eef0ff;
+  --ink-2: rgba(238, 240, 255, 0.74);
+  --lichen: #9aa6f0;
+  --line: rgba(154, 166, 240, 0.18);
+  --dawn: #ffb98a;
+  --good: #8ee3bf;
+  --warn: #f4c873;
+  --bad: #f59aaa;
+  --t-xs: 0.8125rem;
+  --t-sm: 0.9375rem;
+  --t-md: 1.0625rem;
+  --t-lg: 1.375rem;
+  --t-xl: 2rem;
+  --t-2xl: 3rem;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky);
+  color: var(--ink);
+  font-family: var(--font), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  background: linear-gradient(180deg, #070a24 0%, #0d1240 46%, #1a2160 100%);
+}
+button,
+select {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid var(--dawn);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.t-good {
+  color: var(--good);
+}
+.t-warn {
+  color: var(--warn);
+}
+.t-bad {
+  color: var(--bad);
+}
+.t-goal {
+  color: var(--dawn);
+}
+
+/* ------------------------------------------------------------------ stage and world */
+.stage {
+  position: fixed;
+  inset: 0;
+}
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  display: block;
+}
+.world.pointing {
+  cursor: pointer;
+}
+/* in front of Cordi: the peak copy it rises behind, and the nearest hills */
+.world-front {
+  z-index: 41;
+  pointer-events: none;
+}
+.strata {
+  fill: none;
+  stroke: rgba(154, 166, 240, 0.07);
+  stroke-width: 2;
+}
+.snow {
+  fill: var(--snow);
+  opacity: 0.88;
+}
+.yak {
+  opacity: 0.92;
+}
+
+.trail {
+  fill: none;
+  stroke: rgba(238, 240, 255, 0.42);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 12;
+}
+.trail-walked {
+  fill: none;
+  stroke: var(--dawn);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* the glow is a wide faint stroke underneath: no filter to recompute every frame */
+.trail-glow {
+  fill: none;
+  stroke: var(--dawn);
+  stroke-width: 16;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.14;
+}
+
+/* the opening: everything waits in the dark until the climb starts */
+.world.pre .build,
+.world.pre .spark {
+  opacity: 0;
+}
+.camp-in {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.spark-core {
+  fill: #fff4ea;
+}
+
+/* camps */
+.camp {
+  cursor: pointer;
+  color: var(--lichen);
+}
+.camp.t-good {
+  color: var(--good);
+}
+.camp.t-warn {
+  color: var(--warn);
+}
+.camp.t-bad {
+  color: var(--bad);
+}
+.camp.t-goal {
+  color: var(--dawn);
+}
+.camp-hit {
+  fill: transparent;
+}
+.flag line {
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.pennant {
+  fill: currentColor;
+  opacity: 0.6;
+  transition: opacity 0.4s;
+}
+.camp.reached .pennant,
+.camp:hover .pennant {
+  opacity: 1;
+}
+@keyframes wave {
+  to {
+    transform: skewY(-10deg) scaleX(0.9);
+  }
+}
+.camp-dot {
+  fill: var(--sky);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.camp.reached .camp-dot {
+  fill: var(--dawn);
+  stroke: var(--dawn);
+}
+.tent path {
+  fill: var(--ink);
+}
+.tent .tent-door {
+  fill: var(--sky);
+}
+.camp-pulse {
+  fill: none;
+  stroke: var(--dawn);
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: pulse 2s var(--ease) infinite;
+}
+@keyframes pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+.camp-label {
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+.camp-label.show {
+  opacity: 1;
+}
+.camp-num {
+  fill: var(--lichen);
+  font-size: 17px;
+  font-weight: 500;
+}
+.camp-title {
+  fill: var(--ink);
+  font-size: 26px;
+  font-weight: 700;
+  font-stretch: 125%;
+  letter-spacing: -0.01em;
+}
+.camp-num,
+.camp-title {
+  paint-order: stroke;
+  stroke: var(--sky);
+  stroke-width: 6px;
+  stroke-linejoin: round;
+}
+
+/* a wash of night on the left so the narration reads over the mountain */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(7, 10, 36, 0.86) 0%, rgba(7, 10, 36, 0.55) 30%, transparent 52%);
+  opacity: 0;
+  transition: opacity 1.2s;
+}
+.exp.phase-tour .scrim,
+.exp.phase-overview .scrim {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ Cordi */
+.orb {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 88px;
+  height: 88px;
+  z-index: 40;
+  opacity: 0;
+  user-select: none;
+  will-change: transform;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  --h: 232;
+  --s: 70;
+}
+.orb::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+}
+.orb:focus-visible {
+  border-radius: 50%;
+}
+.orb-halo {
+  position: absolute;
+  inset: -34%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, hsla(var(--h), calc(var(--s) * 1%), 80%, 0.2) 0%, hsla(var(--h), calc(var(--s) * 1%), 75%, 0.06) 40%, transparent 66%);
+}
+.orb-jelly {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.orb-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 34% 28%, #ffffff 0%, rgba(255, 255, 255, 0.92) 18%, transparent 46%),
+    radial-gradient(circle at 50% 50%, hsl(var(--h), calc(var(--s) * 1%), 96%) 0%, hsl(var(--h), calc(var(--s) * 1%), 88%) 62%, hsl(var(--h), calc(var(--s) * 0.8%), 74%) 100%);
+  box-shadow:
+    inset -7px -9px 16px hsla(var(--h), 45%, 48%, 0.38),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.6),
+    0 0 8px hsla(var(--h), calc(var(--s) * 1%), 80%, 0.25);
+}
+.orb-body svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.orb-eye {
+  fill: var(--sky);
+}
+.orb-shine {
+  fill: #fff;
+}
+.orb-arc {
+  fill: none;
+  stroke: var(--sky);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+.orb-blush {
+  fill: #f6a5c0;
+}
+.orb-mouth {
+  stroke: var(--sky);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.orb-shadow {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ actions
+   Square-shouldered like trail signs, not pills. One solid action per moment. */
+.act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid rgba(238, 240, 255, 0.28);
+  border-radius: 6px;
+  background: rgba(11, 16, 51, 0.5);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s var(--ease);
+}
+.act:hover {
+  border-color: var(--ink);
+}
+.act:active {
+  transform: translateY(1px);
+}
+.act:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.act-main {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sky);
+}
+.act-main:hover {
+  background: #fff;
+}
+.act-quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--lichen);
+  padding-inline: 0.6rem;
+}
+.act-quiet:hover {
+  color: var(--ink);
+  border-color: transparent;
+}
+.act-large {
+  padding: 0.95rem 1.6rem;
+  font-size: var(--t-md);
+}
+
+/* ------------------------------------------------------------------ start */
+.start {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+.start-inner {
+  max-width: 40rem;
+  display: grid;
+  justify-items: center;
+}
+.start-mark {
+  margin: 0;
+  font-size: clamp(3.5rem, 10vw, 7.5rem);
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+}
+.start-tag {
+  margin: 1.4rem 0 2.2rem;
+  max-width: 32ch;
+  font-size: var(--t-lg);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  align-items: center;
+}
+.skip {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 58;
+}
+
+/* ------------------------------------------------------------------ top bar */
+.topbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.75rem;
+  pointer-events: none;
+  animation: fade 1s ease 0.3s both;
+}
+.topbar > * {
+  pointer-events: auto;
+}
+.stage:has(.detail) .topbar-right {
+  opacity: 0;
+  pointer-events: none;
+}
+.topbar-right {
+  transition: opacity 0.3s;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.wordmark {
+  font-weight: 800;
+  font-stretch: 125%;
+  font-size: var(--t-lg);
+  letter-spacing: -0.03em;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.family select {
+  appearance: none;
+  padding: 0.45rem 2rem 0.45rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(11, 16, 51, 0.6)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa6f0' stroke-width='2.4'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 0.7rem center;
+  font-size: var(--t-xs);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ narration */
+.narr {
+  position: fixed;
+  left: clamp(3.5rem, 7vw, 7rem);
+  top: 50%;
+  z-index: 30;
+  width: min(30rem, 40vw);
+  translate: 0 -50%;
+  transition:
+    opacity 0.4s,
+    translate 0.5s var(--ease);
+}
+.narr.hidden {
+  opacity: 0;
+  pointer-events: none;
+  translate: -24px -50%;
+}
+/* during the opening it speaks under itself, centred on the summit */
+.narr.intro {
+  left: 50%;
+  top: auto;
+  bottom: 14vh;
+  width: min(36rem, calc(100vw - 32px));
+  translate: -50% 0;
+  text-align: center;
+}
+.narr-head {
+  margin-bottom: 1.25rem;
+  animation: rise 0.7s var(--ease) both;
+}
+.narr-where {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--lichen);
+  font-variant-numeric: tabular-nums;
+}
+.narr-title {
+  margin: 0.2rem 0 0;
+  font-size: clamp(2rem, 3.6vw, var(--t-2xl));
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+.narr-label {
+  margin: 0.55rem 0 0;
+  font-size: var(--t-lg);
+  font-weight: 600;
+  font-stretch: 110%;
+}
+.narr-text {
+  margin: 0;
+  font-size: clamp(1.15rem, 1.5vw, 1.35rem);
+  line-height: 1.45;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.narr.intro .narr-text {
+  text-shadow: 0 2px 14px rgba(7, 10, 36, 0.95), 0 0 2px rgba(7, 10, 36, 0.8);
+  font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+  font-weight: 500;
+  text-wrap: balance;
+}
+.narr-text .w {
+  display: inline-block;
+  white-space: pre;
+  opacity: 0;
+  animation: word 0.55s var(--ease) both;
+}
+@keyframes word {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.narr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+  animation: rise 0.6s var(--ease) 0.4s both;
+}
+
+/* ------------------------------------------------------------------ the whole mountain */
+.phase-overview .camp-label {
+  pointer-events: auto;
+}
+.phase-overview .camp-title {
+  font-size: 34px;
+  transform: translateY(14px);
+}
+.phase-overview .camp-num {
+  font-size: 20px;
+  transform: translateY(-6px);
+}
+.phase-overview .camp:hover .camp-title {
+  fill: #fff;
+}
+.phase-overview .camp-label {
+  transition:
+    opacity 0.6s,
+    transform 0.3s var(--ease);
+}
+.phase-overview .pennant {
+  opacity: 1;
+}
+.overview {
+  position: fixed;
+  left: clamp(3.5rem, 7vw, 7rem);
+  top: 15vh;
+  z-index: 30;
+  width: min(26rem, 34vw);
+  animation: rise 0.8s var(--ease) both;
+}
+.overview-title {
+  margin: 0;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+.overview-text {
+  margin: 0.9rem 0 1.1rem;
+  font-size: var(--t-md);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.overview-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0 0 1.6rem;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-xs);
+}
+.overview-key li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.overview-key li::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 10px solid currentColor;
+}
+
+
+/* a short summary beside each flag: no plate, no frame, just the words on the mountain */
+.notes {
+  position: fixed;
+  inset: 0;
+  z-index: 32;
+  pointer-events: none;
+}
+.note {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  justify-items: start;
+  padding: 0.2rem 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--lichen);
+  text-align: left;
+  white-space: nowrap;
+  translate: 12px -50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  text-shadow:
+    0 1px 2px rgba(7, 10, 36, 0.9),
+    0 0 14px rgba(7, 10, 36, 0.85);
+}
+.note.left {
+  justify-items: end;
+  text-align: right;
+  translate: calc(-100% - 12px) -50%;
+}
+.note.below {
+  justify-items: center;
+  text-align: center;
+  translate: -50% 0;
+}
+.notes.all .note {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.6s ease calc(var(--i) * 60ms + 150ms);
+}
+.note.on {
+  opacity: 1;
+}
+.note.t-good {
+  color: var(--good);
+}
+.note.t-warn {
+  color: var(--warn);
+}
+.note.t-bad {
+  color: var(--bad);
+}
+.note.t-goal {
+  color: var(--dawn);
+}
+.note-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: color 0.2s;
+}
+.note-fig {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  font-stretch: 115%;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.note-text {
+  max-height: 0;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  color: rgba(238, 240, 255, 0.6);
+  opacity: 0;
+  transition:
+    max-height 0.3s var(--ease),
+    opacity 0.25s;
+}
+.note:hover .note-text,
+.note.on .note-text,
+.note:focus-visible .note-text {
+  max-height: 1.2em;
+  opacity: 1;
+}
+.note:hover .note-title,
+.note.on .note-title,
+.note:focus-visible .note-title {
+  color: var(--ink);
+}
+.note:focus-visible {
+  outline: none;
+}
+.note:focus-visible .note-fig {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* the hairline from the camp to the open panel */
+.leader-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 44;
+  pointer-events: none;
+  opacity: 0;
+}
+.leader-layer.on {
+  opacity: 1;
+}
+.leader {
+  fill: none;
+  stroke: var(--dawn);
+  stroke-width: 1.2;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  opacity: 0.8;
+}
+.leader-layer.on .leader {
+  animation: ink 1s cubic-bezier(0.76, 0, 0.18, 1) 0.35s forwards;
+}
+.leader-dot {
+  fill: var(--dawn);
+  opacity: 0;
+}
+.leader-layer.on .leader-dot {
+  opacity: 1;
+  animation: fade 0.4s ease 0.3s both;
+}
+@keyframes ink {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ detail */
+.detail-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, currentColor 16%, transparent), transparent 60%);
+  color: var(--lichen);
+}
+.detail.k-good .detail-glow {
+  color: var(--good);
+}
+.detail.k-warn .detail-glow {
+  color: var(--warn);
+}
+.detail.k-bad .detail-glow {
+  color: var(--bad);
+}
+.detail.k-goal .detail-glow {
+  color: var(--dawn);
+}
+.rise-slot {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+.rise-word {
+  display: inline-block;
+  transform-origin: 0 100%;
+}
+.figure {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.25rem 0 1.75rem;
+  padding-bottom: 1.4rem;
+}
+.figure-num {
+  font-size: clamp(3.4rem, 6vw, 5.2rem);
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+.figure-cap {
+  max-width: 34ch;
+  font-size: var(--t-md);
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+.figure-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.5;
+  transform-origin: 0 50%;
+}
+.scene-wait {
+  min-height: 320px;
+}
+.detail-scene .scene-title {
+  font-size: var(--t-md);
+}
+.detail {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 45;
+  will-change: clip-path;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 46vw);
+  background: #0e1340;
+  border-left: 1px solid var(--line);
+  box-shadow: -30px 0 60px rgba(3, 5, 20, 0.45);
+}
+.detail-head {
+  position: relative;
+  padding: 2rem 2rem 1.25rem;
+}
+.detail-title {
+  margin: 0.25rem 0 0;
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.detail-close {
+  position: absolute;
+  right: 1.25rem;
+  top: 1.5rem;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--lichen);
+}
+.detail-close:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+}
+.detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 2rem 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(154, 166, 240, 0.25) transparent;
+}
+.detail-lede {
+  margin: 0 0 1.5rem;
+  font-size: var(--t-md);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 46ch;
+}
+.detail-fix {
+  margin: 1.5rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+.detail-fix b {
+  color: var(--good);
+}
+.detail-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 2rem 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.stretches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stretches li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.stretch-name {
+  font-weight: 600;
+}
+.stretch-pts {
+  color: var(--lichen);
+  font-variant-numeric: tabular-nums;
+}
+.stretch-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(154, 166, 240, 0.16);
+  overflow: hidden;
+}
+.stretch-bar span {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  transform-origin: 0 50%;
+}
+.climbs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.climbs li {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  gap: 0.15rem 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.climb-gain {
+  grid-row: span 2;
+  font-size: 2.4rem;
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  color: var(--good);
+  font-variant-numeric: tabular-nums;
+}
+.climb-name {
+  font-weight: 600;
+}
+.climb-meta {
+  font-size: var(--t-xs);
+  color: var(--lichen);
+}
+
+/* scenes from the first build, without their card */
+.scene {
+  margin: 0;
+}
+.scene-title {
+  margin: 0;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  font-stretch: 112%;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.scene-sub {
+  margin: 0.35rem 0 0;
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+.scene-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 1rem;
+  overflow: visible;
+}
+.scene-controls {
+  margin-top: 1rem;
+}
+.scene-note {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--lichen);
+}
+.svg-label {
+  fill: var(--lichen);
+  font-size: 14px;
+  font-weight: 500;
+}
+.svg-small {
+  fill: var(--lichen);
+  font-size: 12.5px;
+}
+.svg-figure {
+  fill: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  font-stretch: 115%;
+}
+.svg-pill {
+  fill: var(--sky);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.river-flow {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 2 16;
+  animation: flow 1.4s linear infinite;
+  stroke-opacity: 0.55;
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+.btn {
+  display: inline-flex;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgba(238, 240, 255, 0.28);
+  border-radius: 6px;
+  background: none;
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+.slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 1rem;
+  align-items: baseline;
+}
+.slider label {
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+.slider output {
+  font-size: var(--t-lg);
+  font-weight: 700;
+  font-stretch: 115%;
+  font-variant-numeric: tabular-nums;
+}
+.slider input {
+  grid-column: 1 / -1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: grab;
+}
+.slider input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--dawn) calc(var(--k) * 100%), rgba(154, 166, 240, 0.2) 0);
+}
+.slider input::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--dawn) calc(var(--k) * 100%), rgba(154, 166, 240, 0.2) 0);
+}
+.slider input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 4px solid var(--dawn);
+}
+.slider input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 4px solid var(--dawn);
+}
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.seg button {
+  padding: 0.45rem 0.9rem;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--lichen);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--sky);
+}
+
+/* ------------------------------------------------------------------ bubble and ask */
+.bubble {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 55;
+  max-width: min(300px, 74vw);
+  padding: 0.7rem 0.95rem;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--ink);
+  color: var(--sky);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: 0 14px 34px rgba(3, 5, 20, 0.45);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.bubble.show {
+  opacity: 1;
+}
+.ask {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 56;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  width: min(580px, calc(100vw - 32px));
+  border-radius: 10px;
+  background: rgba(14, 19, 64, 0.94);
+  border: 1px solid rgba(238, 240, 255, 0.22);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 40px rgba(3, 5, 20, 0.5);
+  animation: rise 0.4s var(--ease) both;
+}
+.ask input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--t-sm);
+  padding: 0.5rem 0.75rem;
+}
+.ask input::placeholder {
+  color: rgba(238, 240, 255, 0.45);
+}
+.ask-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  opacity: 0.8;
+}
+.ask-icon:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+.ask-icon.solid {
+  background: var(--ink);
+  color: var(--sky);
+  opacity: 1;
+}
+.ask-talk {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: 7px;
+  border: 0;
+  background: var(--ink);
+  color: var(--sky);
+  font-weight: 600;
+  font-size: var(--t-sm);
+}
+
+/* ------------------------------------------------------------------ small screens */
+@media (max-width: 760px) {
+  .topbar {
+    padding: 0.85rem 1rem;
+  }
+
+  .scrim {
+    background: linear-gradient(0deg, rgba(7, 10, 36, 0.94) 0%, rgba(7, 10, 36, 0.75) 42%, transparent 62%);
+  }
+  .narr {
+    left: 1.25rem;
+    right: 1.25rem;
+    top: auto;
+    bottom: 1.5rem;
+    width: auto;
+    translate: 0 0;
+  }
+  .narr.hidden {
+    translate: 0 0;
+  }
+  .narr.intro {
+    left: 50%;
+    right: auto;
+    bottom: 8vh;
+    translate: -50% 0;
+  }
+  .narr-head {
+    margin-bottom: 0.75rem;
+  }
+  .narr-title {
+    font-size: 1.85rem;
+  }
+  .narr-text {
+    font-size: 1.05rem;
+  }
+  .narr-actions {
+    margin-top: 1.1rem;
+    gap: 0.4rem;
+  }
+  .narr-actions .act {
+    padding: 0.6rem 0.8rem;
+    font-size: var(--t-xs);
+  }
+  .topbar .act-quiet {
+    font-size: var(--t-xs);
+    white-space: nowrap;
+  }
+  .wordmark {
+    font-size: var(--t-md);
+  }
+  .overview {
+    left: 1.25rem;
+    right: 1.25rem;
+    top: auto;
+    bottom: 1.5rem;
+    width: auto;
+  }
+  .note-text {
+    display: none;
+  }
+  .note-title {
+    font-size: 0.625rem;
+  }
+  .note-fig {
+    font-size: 0.8125rem;
+  }
+  .detail {
+    top: auto;
+    width: 100%;
+    height: 72vh;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 14px 14px 0 0;
+  }
+  .detail-head,
+  .detail-body,
+  .detail-foot {
+    padding-inline: 1.25rem;
+  }
+  .detail-head {
+    padding-top: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
