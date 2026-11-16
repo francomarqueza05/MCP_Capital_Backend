@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cordada · Orbe premium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Palette sampled by eye from the Sherpas hackathon banner. */
+  :root { --navy: #0b1030; --navy-2: #141a45; --lav: #a9b4f5; --lav-dim: rgba(169,180,245,.35); --white: #fff; --h: 232; --s: 75; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; color: var(--white);
+    font-family: "Poppins", system-ui, sans-serif;
+    background: radial-gradient(110% 80% at 50% 35%, var(--navy-2) 0%, var(--navy) 60%, #070a22 100%);
+  }
+  #fx, #scene { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  /* above the orb so the mountain hides it while it rises like a sunrise */
+  #scene { z-index: 11; }
+  #scene .bx { transform-box: fill-box; }
+  #yakBody, #flag { transform-origin: 50% 100%; }
+  #waypoints circle { transform-origin: 50% 50%; }
+  #cloth { transform-origin: 0% 50%; }
+  #skip {
+    position: fixed; right: 20px; bottom: 20px; z-index: 30; padding: 8px 16px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .4s;
+  }
+  #skip.show { opacity: .7; pointer-events: auto; }
+  #skip.show:hover { opacity: 1; }
+
+  /* ---------- orb ---------- */
+  #orb {
+    position: absolute; left: 0; top: 0; width: 88px; height: 88px; z-index: 10; opacity: 0; user-select: none;
+    transform-origin: 50% 50%; will-change: transform; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  #orb .squash { position: absolute; inset: 0; }
+  /* a tap target a bit bigger than the body, so it is easy to catch */
+  #orb::after { content: ""; position: absolute; inset: -22%; border-radius: 50%; }
+  #orb .halo {
+    position: absolute; inset: -80%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, hsla(var(--h), calc(var(--s) * 1%), 82%, .42) 0%, hsla(var(--h), calc(var(--s) * 1%), 75%, .12) 34%, transparent 62%);
+  }
+  #orb .body {
+    position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 36% 30%, #fff 0%, #fff 32%, hsl(var(--h), calc(var(--s) * 1%), 93%) 70%, hsl(var(--h), calc(var(--s) * 1%), 84%) 100%);
+    box-shadow: 0 0 22px hsla(var(--h), calc(var(--s) * 1%), 80%, .75), inset -6px -8px 14px hsla(var(--h), 50%, 60%, .35);
+  }
+  #face { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #face .eye { fill: var(--navy); }
+  #face .shine { fill: #fff; }
+  #face .arc { fill: none; stroke: var(--navy); stroke-width: 3.2; stroke-linecap: round; }
+  #face .blush { fill: #f6a5c0; }
+  #face #mouth { stroke: var(--navy); stroke-width: .8; stroke-linejoin: round; }
+
+  /* ---------- caption (replaces the game-style dialog box) ---------- */
+  #caption {
+    position: fixed; left: 50%; top: calc(36vh + 80px); transform: translateX(-50%); z-index: 20;
+    width: min(600px, calc(100vw - 32px)); text-align: center; user-select: none;
+  }
+  #caption[hidden] { display: none; }
+  #ctext { margin: 0; font-size: clamp(19px, 2.6vw, 26px); font-weight: 600; line-height: 1.4; letter-spacing: -.01em; min-height: 1.4em; }
+  #ctext .w { display: inline-block; opacity: 0; transform: translateY(6px); filter: blur(6px); transition: opacity .45s ease, transform .45s ease, filter .45s ease; }
+  #ctext .w.in { opacity: 1; transform: none; filter: none; }
+  #chint { margin-top: 14px; font-size: 13px; font-weight: 500; color: var(--lav); opacity: 0; transition: opacity .4s; letter-spacing: .04em; }
+  #chint.show { opacity: .85; }
+  #cchoices { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+  #cchoices:empty { display: none; }
+
+  .pill {
+    font: 600 16px "Poppins", system-ui, sans-serif; padding: 12px 24px; border-radius: 999px; cursor: pointer;
+    color: var(--white); background: transparent; border: 1.5px solid var(--lav-dim);
+    transition: background .2s, border-color .2s, transform .2s, opacity .3s;
+  }
+  .pill:hover { border-color: var(--lav); background: rgba(169,180,245,.08); }
+  .pill:active { transform: scale(.97); }
+  .pill.primary { background: var(--white); color: var(--navy); border-color: var(--white); }
+  .pill.primary:hover { background: #e9ecff; }
+  .pill .sub { display: block; font-size: 11px; font-weight: 500; opacity: .6; }
+
+  #continue { position: fixed; left: 50%; bottom: 10vh; transform: translate(-50%, 10px); opacity: 0; pointer-events: none; z-index: 20; transition: opacity .5s, transform .5s; }
+  #continue.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+
+  /* ---------- bubble that follows the orb ---------- */
+  #bubble {
+    position: absolute; left: 0; top: 0; z-index: 15; max-width: min(280px, 70vw); padding: 10px 14px;
+    background: var(--white); color: var(--navy); border-radius: 14px; font-weight: 500; font-size: 14px; line-height: 1.4;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35); pointer-events: none; opacity: 0; transition: opacity .25s;
+  }
+  #bubble.show { opacity: 1; }
+
+  /* ---------- ask panel ---------- */
+  #ask {
+    position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); z-index: 20;
+    display: flex; align-items: center; gap: 6px; padding: 6px; width: min(560px, calc(100vw - 32px));
+    background: rgba(20,26,69,.85); border: 1px solid var(--lav-dim); border-radius: 999px; backdrop-filter: blur(10px);
+  }
+  #ask[hidden] { display: none; }
+  #ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--white); font: 500 15px "Poppins", sans-serif; padding: 8px 12px; }
+  #ask input::placeholder { color: rgba(255,255,255,.45); }
+  #ask .icon { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--white); font-size: 16px; cursor: pointer; opacity: .75; }
+  #ask .icon:hover { opacity: 1; background: rgba(255,255,255,.06); }
+  #ask .icon.primary { background: var(--white); color: var(--navy); opacity: 1; }
+  #ask .icon { display: grid; place-items: center; }
+  #ask svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #askMic { display: flex !important; gap: 8px; justify-content: center; align-items: center; }
+  #askMic { flex: 1 !important; width: auto !important; border-radius: 999px !important; font: 600 15px "Poppins", sans-serif !important; }
+
+  /* ---------- summary screen ---------- */
+  :root { --good: #6fd8a8; --warn: #f5c76b; --bad: #f2879a; --card: rgba(255,255,255,.045); --line: rgba(169,180,245,.16); }
+  #summary {
+    position: fixed; inset: 0; z-index: 5; overflow-y: auto; padding: 28px 24px 110px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-content: start;
+    max-width: 1240px; margin: 0 auto; opacity: 0; pointer-events: none; transition: opacity .6s;
+  }
+  #summary.show { opacity: 1; pointer-events: auto; }
+  #summary .hero { grid-column: 1 / -1; display: flex; gap: 28px; align-items: center; flex-wrap: wrap; padding: 22px 26px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
+  .hero .who { color: var(--lav); font-size: 14px; font-weight: 500; }
+  .hero .score { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
+  .hero .score small { font-size: 20px; font-weight: 500; opacity: .5; }
+  .hero .band { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--navy); }
+  .hero .pillars { flex: 1; min-width: 260px; display: grid; gap: 9px; }
+  .pillar { display: grid; grid-template-columns: 96px 1fr 44px; gap: 10px; align-items: center; font-size: 13px; }
+  .pillar .track { height: 8px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .pillar .fill { height: 100%; width: 0; border-radius: 6px; transition: width 1.2s cubic-bezier(.2,.7,.2,1); }
+  .pillar b { text-align: right; font-weight: 600; opacity: .8; }
+  .caps { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+  .cap { padding: 6px 12px; border-radius: 10px; font-size: 12.5px; background: rgba(242,135,154,.12); border: 1px solid rgba(242,135,154,.35); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; align-content: start; }
+  .card {
+    position: relative; padding: 16px 18px 18px; border-radius: 18px; background: var(--card); border: 1px solid var(--line);
+    cursor: pointer; opacity: 0; transform: translateY(14px); transition: opacity .5s, transform .5s, filter .35s, box-shadow .3s;
+  }
+  .card.in { opacity: 1; transform: none; }
+  .card:hover { box-shadow: 0 0 0 1px rgba(169,180,245,.4); }
+  .card h3 { margin: 0; font-size: 14px; font-weight: 600; opacity: .75; }
+  .card .label { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; font-size: 17px; font-weight: 600; }
+  .card .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .card .viz { height: 54px; }
+  .card .viz svg { width: 100%; height: 100%; overflow: visible; }
+  .card .viz { transition: height .5s cubic-bezier(.2,.7,.2,1); }
+  .card .more { max-height: 0; opacity: 0; overflow: hidden; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.85); transition: max-height .5s cubic-bezier(.2,.7,.2,1), opacity .4s .1s, margin .5s; }
+  .card .close { position: absolute; top: 12px; right: 12px; background: none; border: 0; color: #fff; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .cards.dim .card:not(.focus) { filter: blur(3px); opacity: .35; }
+  .card.focus { box-shadow: 0 0 0 2px var(--lav); }
+  /* grows in place: takes two columns of the grid and opens its explanation */
+  .card.expanded { grid-column: span 2; background: #141a45; cursor: default; z-index: 3; }
+  .card.expanded .viz { height: 0; overflow: hidden; }
+  /* the topic's big animation (web/orb/scenes.js) */
+  .card .scene { display: none; }
+  .card.expanded .scene { display: block; margin-top: 4px; animation: sceneIn .5s ease both; }
+  @keyframes sceneIn { from { opacity: 0; transform: scale(.97); } }
+  .scene-svg { width: 100%; height: 220px; display: block; overflow: visible; }
+  .scene-slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--lav); }
+  .scene-slider b { color: #fff; font-weight: 600; min-width: 92px; text-align: right; }
+  .scene-slider input { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 6px; background: rgba(169,180,245,.25); outline: none; }
+  .scene-slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px rgba(169,180,245,.8); cursor: pointer; }
+  .scene-slider input::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; cursor: pointer; }
+  .scene-note { margin: 6px 0 0; font-size: 11.5px; opacity: .55; }
+  .scene-toggle { margin-top: 10px; padding: 9px 16px; font-size: 14px; }
+  .card.expanded .more { max-height: 320px; opacity: 1; margin-top: 14px; }
+  .card.expanded .close { opacity: .7; pointer-events: auto; }
+  @media (max-width: 640px) { .card.expanded { grid-column: auto; } }
+  /* dark, thin scrollbar so it doesn't break the scene */
+  #summary { scrollbar-width: thin; scrollbar-color: rgba(169,180,245,.25) transparent; }
+  #summary::-webkit-scrollbar { width: 8px; }
+  #summary::-webkit-scrollbar-track { background: transparent; }
+  #summary::-webkit-scrollbar-thumb { background: rgba(169,180,245,.25); border-radius: 8px; }
+  html, body { scrollbar-color: rgba(169,180,245,.25) transparent; }
+  .card .ask { margin-top: 16px; }
+
+  .side { align-self: start; position: sticky; top: 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+  .side { transition: box-shadow .3s; }
+  .side.focus { box-shadow: 0 0 0 2px var(--lav); }
+  .side h4 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--lav); letter-spacing: .06em; text-transform: uppercase; }
+  .side ul { margin: 0 0 18px; padding-left: 18px; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; }
+  .move { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); margin-bottom: 8px; font-size: 13.5px; }
+  .move b { color: var(--good); }
+
+  #explain { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 20; }
+  #tourbar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 30; display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: 999px; background: #141a45; border: 1px solid var(--line); }
+  #tourbar[hidden], #explain[hidden] { display: none; }
+  #tourbar span { font-size: 14px; font-weight: 500; margin-right: 6px; }
+  #tourbar .pill { padding: 9px 16px; font-size: 14px; }
+  @media (max-width: 860px) { #summary { grid-template-columns: 1fr; padding: 20px 16px 110px; } .side { position: static; } }
+
+  /* ---------- start screen: the tap that unlocks sound ---------- */
+  #start {
+    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(110% 80% at 50% 35%, var(--navy-2) 0%, var(--navy) 60%, #070a22 100%);
+  }
+  #start .dot {
+    width: 14px; height: 14px; margin: 0 auto 28px; border-radius: 50%; background: #fff;
+    box-shadow: 0 0 18px 6px rgba(169,180,245,.55); animation: breathe 2.6s ease-in-out infinite;
+  }
+  #start .mark { font-size: clamp(38px, 7vw, 56px); font-weight: 600; letter-spacing: -.03em; }
+  #start .tag { margin: 6px 0 34px; color: var(--lav); font-size: 15px; font-weight: 500; }
+  #start .link { display: block; margin: 16px auto 0; background: none; border: 0; color: var(--lav); font: 500 13px "Poppins", sans-serif; cursor: pointer; opacity: .75; }
+  #start .link:hover { opacity: 1; text-decoration: underline; }
+  @keyframes breathe { 50% { transform: scale(1.35); box-shadow: 0 0 26px 10px rgba(169,180,245,.7); } }
+
+  #debug { position: fixed; left: 12px; top: 12px; z-index: 50; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100vw - 24px); }
+  #debug button { font: 500 12px "Poppins", sans-serif; padding: 4px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.06); color: #fff; cursor: pointer; }
+  #debug button.on { background: var(--white); color: var(--navy); }
+  #debug[hidden] { display: none; }
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<svg id="scene" aria-hidden="true">
+  <defs>
+    <radialGradient id="dawnGrad">
+      <stop offset="0" stop-color="#a9b4f5" stop-opacity=".5"/>
+      <stop offset=".45" stop-color="#a9b4f5" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#a9b4f5" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <mask id="routeMask" maskUnits="userSpaceOnUse">
+      <path id="routeReveal" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <circle id="dawn" fill="url(#dawnGrad)" opacity="0"/>
+  <!-- flat layered ranges with zigzag snow caps, after the Sherpas login page -->
+  <g id="layerBack" opacity="0"><path id="backFill" fill="#10153f"/><path id="backCaps" fill="#232b70"/></g>
+  <g id="layerMid" opacity="0"><path id="midFill" fill="#151b4b"/><path id="midCaps" fill="#2c3585"/></g>
+  <g id="mist" opacity="0" filter="url(#soft)">
+    <ellipse id="mist1" fill="#fff" fill-opacity=".07"/>
+    <ellipse id="mist2" fill="#fff" fill-opacity=".05"/>
+  </g>
+  <!-- the plan: a dotted route up to the summit, with milestones -->
+  <path id="route" fill="none" stroke="#a9b4f5" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="0.1 7" mask="url(#routeMask)"/>
+  <g id="waypoints"></g>
+  <g id="layerFront" opacity="0"><path id="frontFill" fill="#1a2156"/></g>
+  <g id="flag" class="bx" opacity="0">
+    <line id="pole" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+    <path id="cloth" class="bx" fill="#a9b4f5"/>
+  </g>
+  <g id="yak" opacity="0">
+    <g id="yakBody" class="bx">
+    <!-- traced from the Sherpas login page yak (scratchpad trace of a screenshot) -->
+    <path fill="#fff" d="M140.0,0.0 L156.0,0.0 L164.5,1.0 L165.5,3.0 L169.5,4.0 L176.5,4.0 L180.0,4.5 L180.0,5.5 L183.0,7.0 L189.0,9.0 L192.5,11.0 L193.5,13.0 L196.5,14.5 L201.5,15.5 L204.0,16.5 L204.0,17.5 L205.0,18.0 L207.0,18.0 L209.0,19.0 L211.0,21.0 L227.5,22.0 L258.5,22.0 L275.0,23.0 L277.0,25.0 L281.0,26.0 L287.0,26.0 L291.0,27.0 L293.0,29.0 L297.0,30.5 L303.0,31.5 L307.5,34.0 L310.5,38.0 L313.0,40.0 L315.0,40.0 L317.0,41.0 L319.0,43.0 L320.0,45.0 L320.0,47.0 L321.0,48.0 L323.0,48.0 L324.0,49.0 L324.0,51.0 L325.5,53.0 L328.5,55.0 L330.5,58.5 L331.5,63.5 L333.0,66.5 L335.0,67.5 L336.5,72.0 L337.5,80.0 L339.0,85.0 L341.0,87.0 L342.0,90.0 L342.0,94.0 L343.0,97.0 L345.0,99.0 L346.0,101.5 L346.0,104.5 L347.5,107.0 L350.5,109.0 L352.0,114.0 L352.0,122.0 L352.5,126.0 L353.5,126.0 L354.0,128.0 L354.0,132.0 L354.5,134.0 L355.5,134.0 L356.0,135.5 L356.0,138.5 L356.5,140.0 L357.5,140.0 L358.5,144.0 L359.5,152.0 L361.0,156.5 L363.0,157.5 L364.0,164.0 L364.0,176.0 L363.0,182.5 L361.0,183.5 L359.5,189.0 L358.5,199.0 L357.0,204.0 L355.0,204.0 L353.5,205.5 L352.5,208.5 L351.0,209.0 L349.0,207.0 L348.0,207.0 L348.0,209.0 L347.0,211.0 L345.0,213.0 L344.5,216.5 L345.5,221.5 L347.0,224.0 L349.0,224.0 L350.0,225.5 L350.0,228.5 L350.5,230.0 L351.5,230.0 L352.0,235.5 L352.0,246.5 L351.5,252.0 L350.5,252.0 L350.0,253.5 L350.0,256.5 L349.5,258.0 L348.5,258.0 L347.5,259.5 L346.5,262.5 L339.5,264.0 L326.5,264.0 L319.5,263.5 L318.5,262.5 L319.0,259.0 L321.0,253.0 L323.5,248.5 L326.5,245.5 L328.0,241.5 L328.0,236.5 L326.5,233.0 L323.5,231.0 L322.0,229.0 L322.0,227.0 L321.0,226.0 L319.0,226.0 L317.0,225.0 L315.0,223.0 L313.0,223.0 L311.0,225.0 L308.5,226.0 L305.5,226.0 L304.0,227.5 L304.0,230.5 L303.0,232.0 L301.0,232.0 L300.0,237.5 L300.0,248.5 L299.0,255.0 L297.0,257.0 L289.0,258.0 L275.0,258.0 L268.0,257.0 L268.0,255.0 L269.0,253.5 L271.0,252.5 L272.0,250.5 L272.0,247.5 L272.5,246.0 L273.5,246.0 L274.5,244.0 L275.5,240.0 L277.0,238.0 L279.0,238.0 L280.0,236.0 L280.0,232.0 L281.0,230.0 L283.0,230.0 L284.0,229.0 L284.0,227.0 L281.0,226.0 L275.0,226.0 L272.0,226.5 L272.0,227.5 L269.5,227.5 L264.5,226.5 L262.0,226.5 L262.0,227.5 L259.5,228.0 L254.5,228.0 L252.0,229.5 L252.0,232.5 L251.0,234.0 L249.0,234.0 L248.0,233.0 L248.0,231.0 L247.0,230.0 L245.0,230.0 L243.5,231.5 L242.5,234.5 L239.5,235.0 L234.5,233.0 L231.5,233.0 L230.5,235.0 L226.5,235.5 L219.5,234.5 L215.5,235.0 L214.5,237.0 L213.0,238.0 L211.0,238.0 L210.0,237.0 L210.0,235.0 L208.5,233.5 L205.5,232.5 L204.0,231.5 L204.0,230.5 L203.5,230.0 L202.5,230.0 L202.0,231.0 L202.0,233.0 L200.5,234.0 L197.5,234.0 L194.5,232.0 L191.5,228.0 L189.5,226.0 L188.5,226.0 L188.0,227.0 L188.0,229.0 L186.5,230.0 L183.5,230.0 L181.0,229.0 L179.0,227.0 L178.0,227.0 L178.0,229.0 L176.5,230.0 L173.5,230.0 L171.0,231.0 L169.0,233.0 L168.0,235.0 L168.0,237.0 L166.5,238.0 L163.5,238.0 L161.5,237.0 L160.5,235.0 L159.0,235.0 L157.0,237.0 L154.5,238.0 L151.5,238.0 L150.0,242.5 L150.0,251.5 L149.5,256.0 L148.5,256.0 L147.5,258.0 L146.5,262.0 L138.5,264.0 L123.5,264.0 L115.5,263.5 L114.5,262.5 L114.0,260.0 L114.0,256.0 L115.0,253.5 L117.0,252.5 L118.0,250.5 L118.0,247.5 L119.0,245.5 L121.0,244.5 L121.5,241.0 L120.5,235.0 L118.0,232.5 L114.0,233.5 L111.5,233.0 L110.5,231.0 L108.5,230.0 L105.5,230.0 L104.0,231.0 L104.0,233.0 L101.5,234.0 L96.5,234.0 L93.5,232.0 L92.5,228.0 L90.0,224.5 L86.0,221.5 L83.5,218.0 L82.5,214.0 L80.0,210.5 L76.0,207.5 L74.0,205.0 L74.0,203.0 L73.0,202.0 L71.0,202.0 L69.0,203.0 L67.0,205.0 L61.5,206.0 L52.5,206.0 L45.5,203.5 L40.5,198.5 L37.5,192.5 L36.5,185.5 L37.5,180.5 L40.5,177.5 L42.0,168.5 L42.0,153.5 L41.0,146.0 L39.0,146.0 L37.5,142.5 L36.5,135.5 L35.0,131.5 L33.0,130.5 L32.0,128.5 L32.0,125.5 L31.0,124.0 L29.0,124.0 L25.0,121.0 L19.0,115.0 L15.0,112.0 L13.0,112.0 L11.5,110.5 L10.5,107.5 L9.0,105.5 L7.0,104.5 L6.0,103.0 L6.0,101.0 L5.0,99.5 L3.0,98.5 L1.5,92.0 L0.5,80.0 L1.0,74.0 L3.0,74.0 L5.0,77.0 L7.0,83.0 L10.0,88.0 L14.0,92.0 L18.0,94.0 L22.0,94.0 L24.0,94.5 L24.0,95.5 L26.0,96.5 L30.0,97.5 L34.0,95.5 L38.0,90.5 L41.0,88.0 L43.0,88.0 L44.0,87.0 L44.0,85.0 L45.0,83.0 L47.0,81.0 L50.0,79.5 L54.0,78.5 L59.5,74.5 L66.5,67.5 L71.0,64.0 L73.0,64.0 L75.0,63.0 L77.0,61.0 L78.0,59.0 L78.0,57.0 L80.0,55.0 L84.0,53.0 L86.0,51.0 L86.0,49.0 L87.5,47.0 L90.5,45.0 L92.0,43.0 L92.0,41.0 L93.5,40.0 L96.5,40.0 L99.0,37.5 L101.0,32.5 L103.5,29.5 L106.5,28.5 L108.0,27.0 L108.0,25.0 L109.0,23.0 L111.0,21.0 L112.0,18.0 L112.0,14.0 L113.0,11.0 L115.0,9.0 L117.0,8.0 L119.0,8.0 L120.5,7.0 L121.5,5.0 L124.0,4.0 L128.0,4.0 L130.5,3.0 L131.5,1.0 Z"/>
+    <path id="yakHorn" fill="#0b1030" d="M159.5,58.0 L158.5,58.0 L158.0,59.5 L158.0,62.5 L157.0,64.0 L155.0,64.0 L154.0,65.5 L154.0,68.5 L153.5,70.0 L152.5,70.0 L151.5,72.0 L150.5,76.0 L149.0,78.0 L147.0,78.0 L146.0,79.0 L146.0,81.0 L145.0,82.0 L143.0,82.0 L142.0,83.0 L142.0,85.0 L140.0,86.5 L136.0,87.5 L133.5,89.0 L132.5,91.0 L127.5,92.0 L118.5,92.0 L114.0,93.0 L114.0,95.0 L112.0,96.0 L108.0,96.0 L106.0,97.0 L106.0,99.0 L110.5,101.5 L119.5,104.5 L124.0,105.5 L124.0,104.5 L125.5,104.0 L128.5,104.0 L131.0,102.5 L133.0,99.5 L136.0,98.0 L140.0,98.0 L142.5,96.5 L143.5,93.5 L145.5,91.5 L148.5,90.5 L150.0,88.5 L150.0,85.5 L151.0,84.0 L153.0,84.0 L154.0,82.0 L154.0,78.0 L155.0,76.0 L157.0,76.0 L158.0,75.0 L158.0,73.0 L159.0,71.5 L161.0,70.5 L162.0,67.0 L162.0,61.0 L161.5,58.0 L160.5,58.0 Z"/>
+    </g>
+  </g>
+</svg>
+
+<div id="orb" role="button" aria-label="Asistente">
+  <div class="squash">
+    <div class="halo"></div>
+    <div class="body">
+      <svg id="face" viewBox="-50 -50 100 100" aria-hidden="true">
+        <g id="faceG">
+          <ellipse class="blush" id="blushL" cx="-21" cy="11" rx="5.5" ry="3"/>
+          <ellipse class="blush" id="blushR" cx="21" cy="11" rx="5.5" ry="3"/>
+          <rect class="eye" id="eyeL"/><path class="arc" id="arcL"/><circle class="shine" id="shineL" r="0"/>
+          <rect class="eye" id="eyeR"/><path class="arc" id="arcR"/><circle class="shine" id="shineR" r="0"/>
+          <path class="eye" id="mouth"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+<div id="bubble"></div>
+
+<main id="summary" aria-hidden="true">
+  <section class="hero">
+    <div>
+      <div class="who" id="sumWho"></div>
+      <div class="score"><span id="sumScore">0</span><small> / 100</small></div>
+      <span class="band" id="sumBand"></span>
+    </div>
+    <div class="pillars" id="sumPillars"></div>
+  </section>
+  <div class="caps" id="sumCaps"></div>
+  <section class="cards" id="sumCards"></section>
+  <aside class="side">
+    <h4>Lo importante</h4>
+    <ul id="sumKey"></ul>
+    <h4>Lo que más te ayuda</h4>
+    <div id="sumMoves"></div>
+  </aside>
+</main>
+<button id="explain" class="pill primary" hidden>Explícame el resumen</button>
+<div id="tourbar" hidden>
+  <span>¿Se entendió?</span>
+  <button class="pill" id="tourAgain">Explícalo otra vez</button>
+  <button class="pill primary" id="tourNext">Sí, sigue</button>
+</div>
+
+<div id="caption" hidden aria-live="polite">
+  <p id="ctext"></p>
+  <div id="cchoices"></div>
+  <div id="chint">Toca para continuar</div>
+</div>
+
+<button id="continue" class="pill primary">Ver mi resumen →</button>
+<button id="skip" class="pill">Saltar intro</button>
+
+<div id="ask" hidden>
+  <button id="askMode" class="icon" title="Cambiar modo"></button>
+  <input id="askInput" placeholder="Escribe tu pregunta…" autocomplete="off">
+  <button id="askMic" class="icon primary"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg>Toca para hablar</button>
+  <button id="askSend" class="icon primary" title="Enviar"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></button>
+  <button id="askClose" class="icon" title="Cerrar"><svg viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol>
+    <symbol id="i-keys" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 13.5h.01M18 13.5h.01M9 14.5h6"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  </svg>
+</div>
+<div id="debug" hidden></div>
+<div id="start">
+  <div>
+    <div class="dot"></div>
+    <div class="mark">cordada</div>
+    <div class="tag">Tu plan, cobrando vida.</div>
+    <button id="go" class="pill primary">Comenzar</button>
+    <button id="goMuted" class="link">Continuar sin sonido</button>
+  </div>
+</div>
+
+<script src="voice/manifest.js"></script>
+<script src="sfx/manifest.js"></script>
+<script src="data/cases.js"></script>
+<script src="scenes.js"></script>
+<script>
+const BASE = 88;
+// Scripted lines and their pre-rendered voice, from scripts/voice-orb.ts.
+// The orb's name lives in voice/lines.json.
+const V = window.ORB_VOICE || {};
+const line = (id) => V[id]?.text ?? id;
+
+const $ = (s) => document.querySelector(s);
+const orbEl = $('#orb'), squashEl = orbEl.querySelector('.squash'), haloEl = orbEl.querySelector('.halo');
+const faceG = $('#faceG');
+const eyes = [
+  { cx: -11, el: $('#eyeL'), arc: $('#arcL'), shine: $('#shineL'), key: 'hL' },
+  { cx: 11, el: $('#eyeR'), arc: $('#arcR'), shine: $('#shineR'), key: 'hR' },
+];
+// 'pill' (default) or 'none': emotion then lives only in the light and motion
+let eyeStyle = new URLSearchParams(location.search).get('eyes') === 'none' ? 'none' : 'pill';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const easeInOut = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+let W = innerWidth, H = innerHeight;
+
+// ---------------------------------------------------------------- emotions
+// Eyes are small rounded pills, set low and close together (the friendly proportion).
+//   hL/hR     pill heights (short = relaxed, tall = alert, ~1.5 = closed line)
+//   happy     morphs both pills into ∩ arcs
+//   mw/mc/mo  mouth half-width, curve (+ smile, - frown) and openness
+//   tilt/drop body language: head tilt in degrees, sink in px
+const EMO = {
+  neutral:   { w: 6.5, hL: 11,   hR: 11,   happy: 0, mw: 4,   mc: 2.5, mo: 1,   blush: 0,  tilt: 0,   drop: 0,  hue: 232, sat: 75, bob: 1,   halo: 1 },
+  calm:      { w: 6.5, hL: 7.5,  hR: 7.5,  happy: 0, mw: 4,   mc: 3,   mo: .9,  blush: 0,  tilt: 0,   drop: 2,  hue: 232, sat: 75, bob: .8,  halo: .9 },
+  happy:     { w: 6.5, hL: 9,    hR: 9,    happy: 1, mw: 5.5, mc: 5.5, mo: 2.6, blush: .6, tilt: 0,   drop: -4, hue: 40,  sat: 85, bob: 1.6, halo: 1.15 },
+  curious:   { w: 6.5, hL: 12.5, hR: 9.5,  happy: 0, mw: 2.6, mc: .5,  mo: 1.8, blush: 0,  tilt: 13,  drop: 0,  hue: 205, sat: 70, bob: .8,  halo: 1 },
+  thinking:  { w: 6.5, hL: 9,    hR: 9,    happy: 0, mw: 3,   mc: -.6, mo: .9,  blush: 0,  tilt: -9,  drop: 0,  hue: 218, sat: 70, bob: .5,  halo: .95, gaze: [-.8, -.9] },
+  listening: { w: 6.5, hL: 12,   hR: 12,   happy: 0, mw: 3.5, mc: 2,   mo: 1.2, blush: 0,  tilt: 6,   drop: -2, hue: 160, sat: 60, bob: .6,  halo: 1.1 },
+  speaking:  { w: 6.5, hL: 10.5, hR: 10.5, happy: 0, mw: 4.2, mc: 2.5, mo: 1.2, blush: .15, tilt: 0,  drop: 0,  hue: 232, sat: 75, bob: 1.2, halo: 1 },
+  concerned: { w: 6.5, hL: 8,    hR: 8,    happy: 0, mw: 4,   mc: -3,  mo: 1,   blush: 0,  tilt: -4,  drop: 8,  hue: 262, sat: 55, bob: .4,  halo: .85, gaze: [0, .7] },
+  surprised: { w: 7.5, hL: 13.5, hR: 13.5, happy: 0, mw: 2.6, mc: 0,   mo: 3.8, blush: 0,  tilt: 0,   drop: -6, hue: 232, sat: 75, bob: 1.8, halo: 1.2 },
+  resting:   { w: 6.5, hL: 1.6,  hR: 1.6,  happy: 0, mw: 3,   mc: 1.5, mo: .6,  blush: 0,  tilt: 5,   drop: 6,  hue: 235, sat: 40, bob: .4,  halo: .7 },
+};
+const KEYS = ['w', 'hL', 'hR', 'happy', 'mw', 'mc', 'mo', 'blush', 'tilt', 'drop', 'hue', 'sat', 'bob', 'halo'];
+// A kick on entering an emotion: [vertical velocity, squash velocity (- = stretch tall)]
+const KICK = { happy: [-260, 2.6], surprised: [-380, -3.4], curious: [-90, 1.2], listening: [-60, 1], concerned: [70, 1.4] };
+
+const O = {
+  x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, scale: 1, targetScale: 1,
+  spin: 0, spinTarget: 0, sqx: 1, sqy: 1, sq: 0, sqv: 0, lastEmo: null,
+  mode: 'off', emo: 'neutral', flash: null, flashUntil: 0,
+  level: 0, gx: 0, gy: 0, blinkAt: 0, nextBlink: 0, nextAct: 0, act: null, noticeUntil: 0, glance: [0, 0], nextGlance: 0,
+};
+const P = { ...EMO.calm };
+let debugEmo = null, lastInput = performance.now(), wasResting = false;
+const mouse = { x: -1e4, y: -1e4, at: 0, speed: 0 };
+
+function flashEmo(name, ms) { O.flash = name; O.flashUntil = performance.now() + ms; }
+
+function currentEmo(now) {
+  if (debugEmo) return debugEmo;
+  if (O.flash && now < O.flashUntil) return O.flash;
+  if (O.mode === 'idle') {
+    if (now - lastInput > 20000) return 'resting';
+    if (Math.hypot(mouse.x - O.x, mouse.y - O.y) < 150) return 'curious';
+  }
+  return O.emo;
+}
+
+// ---------------------------------------------------------------- sound (soft, optional)
+let AC = null, muted = false;
+const audio = () => (AC ||= new (window.AudioContext || window.webkitAudioContext)());
+function bell(f = 880, vol = .05, when = 0) {
+  if (muted || !AC) return;
+  const t = AC.currentTime + when;
+  for (const [m, v] of [[1, 1], [2.01, .35], [3, .12]]) {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine'; o.frequency.value = f * m;
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol * v, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + 1.6);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + 1.7);
+  }
+}
+const sfx = { form: () => { bell(659); bell(988, .035, .12); }, tap: () => bell(1318, .025) };
+
+// Intro sound design, rendered by scripts/sfx-orb.ts. Kept quiet: it sits under the voice.
+const SFX = window.ORB_SFX || {};
+const sfxTimers = [], sfxPlaying = new Set();
+function fadeOut(a, ms) {
+  const v0 = a.volume, t0 = performance.now();
+  const step = () => {
+    const k = ms ? Math.min(1, (performance.now() - t0) / ms) : 1;
+    a.volume = v0 * (1 - k);
+    if (k < 1) requestAnimationFrame(step); else { a.pause(); sfxPlaying.delete(a); }
+  };
+  step();
+}
+function playSfx(id, { vol = .3, rate = 1, delay = 0, fadeAt = 0 } = {}) {
+  if (muted || !SFX[id]) return;
+  sfxTimers.push(setTimeout(() => {
+    if (muted) return;
+    const a = new Audio(`sfx/${SFX[id]}`);
+    a.volume = vol; a.preservesPitch = false; a.playbackRate = rate;
+    sfxPlaying.add(a); a.onended = () => sfxPlaying.delete(a);
+    a.play().catch(() => {});
+    if (fadeAt) sfxTimers.push(setTimeout(() => fadeOut(a, 1200), fadeAt));
+  }, delay));
+}
+function stopSfx(ms = 300) {
+  sfxTimers.forEach(clearTimeout); sfxTimers.length = 0;
+  for (const a of [...sfxPlaying]) fadeOut(a, ms);
+}
+
+// ---------------------------------------------------------------- effects canvas
+const cv = $('#fx'), ctx = cv.getContext('2d');
+const parts = [], rings = [];
+const stars = Array.from({ length: 45 }, () => ({ x: Math.random(), y: Math.random(), s: rand(.4, 1.2), p: rand(0, 6.28) }));
+function resize() {
+  W = innerWidth; H = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  layoutScene();
+}
+function emit(x, y, n, o = {}) {
+  for (let i = 0; i < n; i++) {
+    const a = rand(0, Math.PI * 2), sp = rand(o.min ?? 4, o.max ?? 24), life = rand(.5, o.life ?? 1.2);
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp + (o.vy || 0), life, max: life, size: rand(.6, o.size ?? 1.8) });
+  }
+}
+function drawFx(dt, t) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#cdd4ff';
+  for (const s of stars) {
+    ctx.globalAlpha = .12 + .22 * Math.sin(t * .9 + s.p) ** 2;
+    ctx.fillRect(s.x * W, s.y * H, s.s, s.s);
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    ctx.fillStyle = `rgba(190,200,255,${p.life / p.max * .8})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 6.283); ctx.fill();
+  }
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const r = rings[i];
+    r.life -= dt; if (r.life <= 0) { rings.splice(i, 1); continue; }
+    const k = 1 - r.life / r.max;
+    ctx.strokeStyle = `rgba(169,180,245,${(1 - k) * .7})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r0 + easeOut(k) * r.r1, 0, 6.283); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ---------------------------------------------------------------- intro scene
+// Three ranges rise into place, the yak stands on a front hill watching, and the orb
+// rises like a sunrise from behind the snowy summit. The yak is a cameo; the orb is the guide.
+const scene = $('#scene'), yak = $('#yak');
+const layers = ['#layerBack', '#layerMid', '#layerFront'].map($);
+const route = $('#route'), routeReveal = $('#routeReveal'), waypointsG = $('#waypoints'), flag = $('#flag');
+const dawn = $('#dawn'), mist = $('#mist');
+// leg span in the yak's own coordinates; the peak gets a flat top this wide
+const YAK = { w: 364, footX: 231, footY: 264, legL: 114, legR: 348 };
+let peak = { x: 0, y: 0 }, sun = { x: 0, y: 0 }, yakS = .3;
+// Ridge as [x, y] fractions of the screen; caps go on the listed peak indices.
+const BACK = [[0, .62], [.08, .5], [.18, .57], [.3, .45], [.42, .56], [.52, .52], [.62, .61], [.74, .48], [.86, .56], [.95, .47], [1, .52]];
+const MID = [[0, .72], [.12, .62], [.24, .68], [.4, .58], [.5, .64], [.62, .5], [.76, .66], [.88, .6], [1, .66]];
+const SUMMIT = 5; // MID index the sun rises behind
+function ridgePath(pts) { return `M${pts.map(([x, y]) => `${x * W},${y * H}`).join(' L')} L${W},${H} L0,${H} Z`; }
+// zigzag snow cap hanging from each peak, down to a fraction of the way along both slopes
+function capsPath(pts, peaks, depth = .045) {
+  return peaks.map((i) => {
+    const [ax, ay] = pts[i], [lx0, ly0] = pts[i - 1], [rx0, ry0] = pts[i + 1];
+    const tl = depth / (ly0 - ay), tr = depth / (ry0 - ay);
+    const L = [lerp(ax, lx0, tl) * W, (ay + depth) * H], R = [lerp(ax, rx0, tr) * W, (ay + depth) * H];
+    const x = (k) => lerp(L[0], R[0], k), notch = depth * H * .45;
+    return `M${ax * W},${ay * H} L${R[0]},${R[1]} L${x(.75)},${R[1] - notch} L${x(.55)},${R[1]} L${x(.35)},${R[1] - notch} L${L[0]},${L[1]} Z`;
+  }).join(' ');
+}
+function layoutScene() {
+  scene.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  yakS = Math.min(140, W * .28) / YAK.w;
+  peak = { x: W * .3, y: H * .74 };
+  sun = { x: MID[SUMMIT][0] * W, y: MID[SUMMIT][1] * H };
+  $('#backFill').setAttribute('d', ridgePath(BACK));
+  $('#backCaps').setAttribute('d', capsPath(BACK, [3, 7, 9], .035));
+  $('#midFill').setAttribute('d', ridgePath(MID));
+  $('#midCaps').setAttribute('d', capsPath(MID, [3, SUMMIT, 7]));
+  // the yak's hill has a flat top exactly as wide as its legs
+  const half = (YAK.footX - YAK.legL) * yakS + 6;
+  $('#frontFill').setAttribute('d', `M0,${H * .84} L${W * .1},${H * .78} L${W * .2},${H * .8} L${peak.x - half},${peak.y} L${peak.x + half},${peak.y} L${W * .42},${H * .81} L${W * .55},${H * .87} L${W * .7},${H * .83} L${W * .85},${H * .88} L${W},${H * .82} L${W},${H} L0,${H} Z`);
+  // mirrored so it faces the sunrise
+  yak.setAttribute('transform', `translate(${peak.x + YAK.footX * yakS} ${peak.y - YAK.footY * yakS}) scale(${-yakS} ${yakS})`);
+
+  const pts = [[.57, .84], [.6, .77], [.55, .71], [.63, .66], [.58, .6]].map(([x, y]) => [W * x, H * y]).concat([[sun.x, sun.y]]);
+  const d = 'M' + pts.map((p) => p.join(',')).join(' L');
+  route.setAttribute('d', d); routeReveal.setAttribute('d', d);
+  waypointsG.innerHTML = '';
+  for (const [x, y] of pts.slice(1, -1)) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 2.8);
+    c.setAttribute('fill', '#fff'); c.setAttribute('class', 'bx'); c.style.opacity = 0;
+    waypointsG.append(c);
+  }
+  const pole = $('#pole');
+  pole.setAttribute('x1', sun.x); pole.setAttribute('y1', sun.y); pole.setAttribute('x2', sun.x); pole.setAttribute('y2', sun.y - 24);
+  $('#cloth').setAttribute('d', `M${sun.x},${sun.y - 24} L${sun.x + 15},${sun.y - 20} L${sun.x},${sun.y - 16}Z`);
+
+  dawn.setAttribute('cx', sun.x); dawn.setAttribute('cy', sun.y); dawn.setAttribute('r', Math.max(W, H) * .45);
+  const m1 = $('#mist1'), m2 = $('#mist2');
+  m1.setAttribute('cx', W * .35); m1.setAttribute('cy', H * .76); m1.setAttribute('rx', W * .35); m1.setAttribute('ry', 40);
+  m2.setAttribute('cx', W * .75); m2.setAttribute('cy', H * .8); m2.setAttribute('rx', W * .3); m2.setAttribute('ry', 30);
+}
+addEventListener('resize', resize); resize();
+
+const rest = () => ({ x: W / 2, y: H * .36 });
+let introDone = null;
+const TL = { ridge: 200, yak: 900, route: 1500, flag: 2600, rise: 2900, fly: 4300, fade: 4500, land: 5600, end: 6200 };
+
+function playScene() {
+  scene.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+  // 'both' so delayed reveals hold their start state (e.g. the route stays hidden until it draws)
+  const keep = { fill: 'both' }, loop = { iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' };
+  const show = (el, duration, delay = 0, easing = 'ease-out') => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration, delay, easing, ...keep });
+
+  // ranges rise into place back to front
+  layers.forEach((el, i) => el.animate(
+    [{ opacity: 0, transform: 'translateY(40px)' }, { opacity: 1, transform: 'none' }],
+    { duration: 1100, delay: TL.ridge + i * 250, easing: 'cubic-bezier(.2,.7,.2,1)', ...keep }));
+  show(mist, 1600, 600);
+  $('#mist1').animate([{ transform: 'translateX(-30px)' }, { transform: 'translateX(30px)' }], { duration: 7000, ...loop });
+  $('#mist2').animate([{ transform: 'translateX(25px)' }, { transform: 'translateX(-25px)' }], { duration: 9000, ...loop });
+
+  show(yak, 900, TL.yak);
+  $('#yakBody').animate([{ transform: 'scale(1,1)' }, { transform: 'scale(1.008,1.022)' }], { duration: 1900, ...loop });
+
+  const rl = routeReveal.getTotalLength(), routeMs = 1100;
+  routeReveal.style.strokeDasharray = rl;
+  routeReveal.animate([{ strokeDashoffset: rl }, { strokeDashoffset: 0 }], { duration: routeMs, delay: TL.route, easing: 'ease-in-out', ...keep });
+  const dots = [...waypointsG.children];
+  dots.forEach((c, i) => c.animate(
+    [{ opacity: 0, transform: 'scale(0)' }, { opacity: 1, transform: 'scale(1.6)' }, { opacity: 1, transform: 'scale(1)' }],
+    { duration: 380, delay: TL.route + (i + 1) / (dots.length + 1) * routeMs, ...keep }));
+
+  flag.animate([{ opacity: 0, transform: 'scaleY(0)' }, { opacity: 1, transform: 'scaleY(1)' }], { duration: 450, delay: TL.flag, easing: 'cubic-bezier(.34,1.56,.64,1)', ...keep });
+  $('#cloth').animate([{ transform: 'skewY(0deg)' }, { transform: 'skewY(-9deg)' }], { duration: 700, ...loop });
+  show(dawn, 1600, TL.rise - 300);
+
+  // sound: wind and pad under everything, a rising chime per milestone, the flag, the dawn swell
+  stopSfx(0);
+  playSfx('ambient', { vol: .35, fadeAt: 5000 });
+  dots.forEach((_, i) => playSfx('chime', { vol: .22, rate: [1, 1.12, 1.26, 1.5][i] ?? 1, delay: TL.route + (i + 1) / (dots.length + 1) * routeMs }));
+  playSfx('flag', { vol: .3, delay: TL.flag });
+  playSfx('swell', { vol: .4, delay: TL.rise });
+
+  const fade ={ duration: 1000, delay: TL.fade, easing: 'ease-in', fill: 'forwards' };
+  for (const el of [yak, ...layers, mist, route, waypointsG, flag, dawn]) el.animate([{ opacity: 0 }], fade);
+}
+
+const skipBtn = $('#skip');
+skipBtn.onclick = () => {
+  if (O.mode !== 'intro') return;
+  const now = performance.now();
+  if (now - O.t0 < TL.land) O.t0 = now - TL.land;
+  scene.animate([{ opacity: 0 }], { duration: 300, fill: 'forwards' });
+  stopSfx(300);
+};
+
+function introStep(now, dt) {
+  const t = now - O.t0, r = rest(), px = O.x, py = O.y;
+  if (reduced) {
+    orbEl.style.opacity = clamp(t / 600, 0, 1);
+    O.x = r.x; O.y = r.y; O.scale = 1;
+    if (t > 600) finishIntro();
+    return;
+  }
+  const top = { x: sun.x, y: sun.y - 70 };
+  if (t < TL.rise) {
+    orbEl.style.opacity = 0;
+    O.x = sun.x; O.y = sun.y + 50; O.scale = .4; O.spin = 0;
+  } else if (t < TL.fly) {
+    // sunrise: climbs slowly out from behind the peak, eyes calm
+    const e = easeOut((t - TL.rise) / (TL.fly - TL.rise));
+    orbEl.style.opacity = 1;
+    O.x = sun.x; O.y = lerp(sun.y + 50, top.y, e); O.scale = lerp(.4, .55, e); O.spin = 0;
+    if (Math.random() < .25) emit(O.x + rand(-20, 20), O.y, 1, { vy: -10, life: 1.4, size: 1.2 });
+  } else if (t < TL.land) {
+    // glides to centre stage, turning once on its axis
+    const u = (t - TL.fly) / (TL.land - TL.fly), e = easeInOut(u);
+    const cx = lerp(top.x, r.x, .5), cy = Math.min(top.y, r.y) - H * .1;
+    O.x = (1 - e) ** 2 * top.x + 2 * (1 - e) * e * cx + e * e * r.x;
+    O.y = (1 - e) ** 2 * top.y + 2 * (1 - e) * e * cy + e * e * r.y;
+    O.scale = lerp(.55, 1, e);
+    O.spin = e * 2 * Math.PI;
+    if (Math.random() < .5) emit(O.x, O.y, 1, { life: 1, size: 1.4 });
+  } else if (t < TL.end) {
+    if (!O.landed) {
+      O.landed = true; sfx.form();
+      rings.push({ x: r.x, y: r.y, r0: 40, r1: 160, life: 1.1, max: 1.1 });
+    }
+    const u = (t - TL.land) / (TL.end - TL.land), w = Math.exp(-u * 5) * Math.cos(u * 18);
+    orbEl.style.opacity = 1;
+    O.x = r.x; O.y = r.y; O.scale = 1; O.spin = 2 * Math.PI;
+    O.sqx = 1 + .07 * w; O.sqy = 1 - .07 * w; O.vx = O.vy = 0;
+  } else finishIntro();
+}
+function finishIntro() {
+  O.sqx = O.sqy = 1; O.scale = O.targetScale = 1;
+  O.spin = O.spinTarget = 0; O.vx = O.vy = 0;
+  O.tx = O.x; O.ty = O.y; O.mode = 'talk';
+  orbEl.style.opacity = 1;
+  skipBtn.classList.remove('show');
+  introDone?.(); introDone = null;
+}
+
+// ---------------------------------------------------------------- idle life
+// It keeps itself busy instead of shadowing the cursor: picks a small activity,
+// does it, rests a moment, picks another. Weights are rough percentages.
+const ACTS = [['wander', 45], ['look', 20], ['hop', 13], ['loop', 12], ['spin', 10]];
+function live(now) {
+  if (now - lastInput > 20000) { O.tx = O.x; O.ty = O.y; return; } // dozing
+  if (now < (O.wayUntil || 0)) return; // stepping aside from a button
+  // a cursor coming close probably wants to tap it: hold still and wait
+  if (now - mouse.at < 1500 && Math.hypot(mouse.x - O.x, mouse.y - O.y) < 180) {
+    O.tx = O.x; O.ty = O.y; O.act = null; O.nextAct = now + 1500; return;
+  }
+  const a = O.act;
+  if (a?.type === 'loop') {
+    const ang = Math.min(1, (now - a.t0) / 1600) * Math.PI * 2;
+    O.tx = a.x + Math.sin(ang) * 55; O.ty = a.y - (1 - Math.cos(ang)) * 55;
+  }
+  if (a?.type === 'look' && now - a.t0 < 2600) {
+    const u = (now - a.t0) / 2600;
+    O.glance = u < .35 ? [-.9, -.1] : u < .7 ? [.9, -.1] : [0, 0]; O.nextGlance = now + 400;
+  }
+  if (now < O.nextAct) return;
+  let r = Math.random() * 100, type = 'wander';
+  for (const [t, w] of ACTS) if ((r -= w) < 0) { type = t; break; }
+  O.act = { type, t0: now, x: O.x, y: O.y };
+  let dur = 1200;
+  if (type === 'wander') { O.tx = rand(W * .1, W * .9); O.ty = rand(H * .12, H * .55); dur = rand(3000, 5000); }
+  if (type === 'look') { O.tx = O.x; O.ty = O.y; flashEmo('curious', 2400); dur = 2600; }
+  if (type === 'hop') {
+    O.vy -= 320; O.sqv += 2.4; flashEmo('happy', 900);
+    setTimeout(() => { if (O.mode === 'idle') { O.vy -= 260; O.sqv += 2; } }, 380);
+  }
+  if (type === 'loop') { flashEmo('happy', 1600); dur = 1700; }
+  if (type === 'spin') { O.spinTarget += Math.PI * 2; flashEmo('happy', 1000); }
+  O.nextAct = now + dur + rand(1500, 4000);
+}
+
+// ---------------------------------------------------------------- free flight (calm)
+function physics(now, dt) {
+  const mdx = mouse.x - O.x, mdy = mouse.y - O.y, md = Math.hypot(mdx, mdy) || 1;
+  if (O.mode === 'idle') live(now);
+  if (O.mode === 'talk') { const r = rest(); O.tx = r.x; O.ty = r.y; }
+  const looping = O.act?.type === 'loop' && now - O.act.t0 < 1700;
+  const k = O.mode === 'idle' ? (looping ? 16 : 3.2) : 14, damp = O.mode === 'idle' ? (looping ? 6 : 3) : 7;
+  O.vx += ((O.tx - O.x) * k - O.vx * damp) * dt;
+  O.vy += ((O.ty - O.y) * k - O.vy * damp) * dt;
+  O.x += O.vx * dt; O.y += O.vy * dt;
+  // stay fully on screen (body plus its bob and kicks); bump softly off the edges
+  const m = BASE * O.scale * .6 + 14;
+  O.tx = clamp(O.tx, m, W - m); O.ty = clamp(O.ty, m, H - m);
+  if (O.x < m || O.x > W - m) { O.x = clamp(O.x, m, W - m); O.vx *= -.3; }
+  if (O.y < m || O.y > H - m) { O.y = clamp(O.y, m, H - m); O.vy *= -.3; }
+  O.scale += (O.targetScale - O.scale) * Math.min(1, dt * 4);
+  O.spin += (O.spinTarget - O.spin) * Math.min(1, dt * 5);
+  if (Math.random() < dt * 2) emit(O.x + rand(-14, 14), O.y + rand(6, 18), 1, { vy: 14, life: 1.4, size: 1.1 });
+}
+
+// ---------------------------------------------------------------- render
+function render(now, dt) {
+  const T = now / 1000, emo = currentEmo(now), tgt = EMO[emo];
+  if (emo === 'resting') wasResting = true;
+  const ease = Math.min(1, dt * 7);
+  for (const k of KEYS) P[k] = lerp(P[k], tgt[k], ease);
+  if (emo !== O.lastEmo) {
+    O.lastEmo = emo;
+    const kick = KICK[emo];
+    if (kick && O.mode !== 'intro') { O.vy += kick[0]; O.sqv += kick[1]; }
+  }
+  // squash spring: kicks and spoken words make the body give a little
+  O.sqv += (-O.sq * 180 - O.sqv * 9) * dt;
+  O.sq = clamp(O.sq + O.sqv * dt, -.25, .25);
+
+  // Gaze: its own glances most of the time. It looks at the cursor only when the cursor
+  // comes close, or briefly when you start moving again after a pause ("notices you").
+  let gx, gy;
+  const mdx = mouse.x - O.x, mdy = mouse.y - O.y, md = Math.hypot(mdx, mdy) || 1;
+  const near = now - mouse.at < 2500 ? Math.max(0, 1 - md / 170) : 0;
+  if (tgt.gaze) [gx, gy] = tgt.gaze;
+  else if (now < O.noticeUntil || near > 0) { const m = Math.min(1, md / 160); gx = mdx / md * m; gy = mdy / md * m; }
+  else {
+    if (now > O.nextGlance) {
+      O.glance = Math.random() < .5 ? [0, 0] : [rand(-.7, .7), rand(-.4, .4)];
+      O.nextGlance = now + rand(1800, 4200);
+    }
+    [gx, gy] = O.glance;
+  }
+  O.gx = lerp(O.gx, gx, Math.min(1, dt * 9)); O.gy = lerp(O.gy, gy, Math.min(1, dt * 9));
+
+  if (now > O.nextBlink) { O.blinkAt = now; O.nextBlink = now + rand(3000, 7000); }
+  const bt = (now - O.blinkAt) / 180;
+  const blink = bt >= 0 && bt <= 1 ? 1 - .85 * Math.sin(Math.PI * bt) : 1;
+
+  const cos = Math.cos(O.spin), sin = Math.sin(O.spin);
+  faceG.setAttribute('transform', `translate(${sin * 28 + O.gx * 7} ${O.gy * 5}) scale(${Math.max(.02, Math.abs(cos))} 1)`);
+  faceG.style.opacity = eyeStyle === 'none' ? 0 : clamp(cos * 3, 0, 1) * clamp((O.scale - .2) / .2, 0, 1);
+
+  for (const e of eyes) {
+    const h = Math.max(1.4, P[e.key] * blink), w = P.w, cy = 3;
+    e.el.setAttribute('x', e.cx - w / 2); e.el.setAttribute('y', cy - h / 2);
+    e.el.setAttribute('width', w); e.el.setAttribute('height', h); e.el.setAttribute('rx', Math.min(w, h) / 2);
+    e.el.style.opacity = 1 - P.happy;
+    e.arc.setAttribute('d', `M${e.cx - 4.5},${cy + 1.5} Q${e.cx},${cy - 5.5} ${e.cx + 4.5},${cy + 1.5}`);
+    e.arc.style.opacity = P.happy;
+    e.shine.setAttribute('cx', e.cx - w * .15); e.shine.setAttribute('cy', cy - h * .26);
+    e.shine.setAttribute('r', h > 6 && P.happy < .5 ? 1.3 : 0);
+  }
+  // mouth: a lens shape. While the voice plays it flaps open and shut on a
+  // syllable-like rhythm, with a little extra on each word onset.
+  const talking = voiceNow && !voiceNow.paused && !voiceNow.ended;
+  const flap = talking ? .35 + .65 * Math.abs(Math.sin(T * 13) * Math.sin(T * 7.3 + 1)) : 0;
+  O.mouthOpen = lerp(O.mouthOpen || 0, flap, Math.min(1, dt * 25));
+  const mo = P.mo + O.mouthOpen * 5.5 + O.level * 2.5, mc = P.mc * (1 - O.mouthOpen * .5), mw = P.mw + O.mouthOpen * 1.2, my = 14;
+  $('#mouth').setAttribute('d', `M${-mw},${my} Q0,${my + mc - mo} ${mw},${my} Q0,${my + mc + mo} ${-mw},${my}Z`);
+  $('#blushL').style.opacity = $('#blushR').style.opacity = P.blush;
+
+  orbEl.style.setProperty('--h', P.hue.toFixed(1));
+  orbEl.style.setProperty('--s', P.sat.toFixed(1));
+  if (!O.listening) O.level *= Math.exp(-dt * 5); // word pulses from the voice fade out
+  const bob = O.mode === 'intro' ? 0 : Math.sin(T * 1.6) * 5 * P.bob + P.drop;
+  const sway = emo === 'thinking' ? Math.sin(T * 1.8) * 5 : 0;
+  // leans toward a nearby cursor
+  const lean = clamp(O.vx * .012, -10, 10) + P.tilt + sway + clamp(mdx / md * near * 14, -14, 14);
+  orbEl.style.transform = `translate(${O.x - BASE / 2}px,${O.y - BASE / 2 + bob}px) scale(${O.scale}) rotate(${lean}deg)`;
+  squashEl.style.transform = `scale(${O.sqx * (1 + O.sq)},${O.sqy * (1 - O.sq)})`;
+  haloEl.style.transform = `scale(${P.halo + O.level * .8 + (emo === 'listening' ? Math.sin(T * 5) * .06 : 0)})`;
+
+  if (bubbleEl.classList.contains('show')) {
+    bubbleEl.style.transform = `translate(${clamp(O.x, 150, W - 150)}px,${O.y + bob - BASE * .9 * O.scale}px) translate(-50%,-100%)`;
+  }
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000) || .016; last = now;
+  if (O.mode === 'intro') introStep(now, dt);
+  else if (O.mode !== 'off') physics(now, dt);
+  if (O.mode !== 'off') render(now, dt);
+  drawFx(dt, now / 1000);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------------------------------------------------------------- voice
+let voiceNow = null;
+function stopVoice() { if (voiceNow) { voiceNow.pause(); voiceNow = null; } }
+// Plays a line's pre-rendered audio; resolves to its timing, or null when silent.
+function speak(id) {
+  stopVoice();
+  const v = V[id];
+  if (muted || !v?.file) return Promise.resolve(null);
+  const audioEl = new Audio(`voice/${v.file}`);
+  voiceNow = audioEl;
+  return audioEl.play().then(() => ({ audio: audioEl, words: v.words })).catch(() => null);
+}
+
+// ---------------------------------------------------------------- caption
+// Words fade up one by one: on the voice's own timing when it speaks, evenly otherwise.
+const cap = $('#caption'), ctext = $('#ctext'), chint = $('#chint'), cchoices = $('#cchoices');
+const C = { done: true, finish: null, advance: null, timers: [] };
+
+function reveal(text, onDone, voice) {
+  C.timers.forEach(clearTimeout); C.timers = [];
+  ctext.innerHTML = '';
+  const words = text.split(' ').map((w) => { const s = document.createElement('span'); s.className = 'w'; s.textContent = w; return s; });
+  words.forEach((s) => ctext.append(s, ' '));
+  if (voice) {
+    let i = 0, stopped = false;
+    const tick = () => {
+      if (stopped) return;
+      const t = voice.audio.currentTime;
+      while (i < words.length && t >= voice.words[i] - .04) { words[i++].classList.add('in'); O.level = Math.max(O.level, .4); O.sqv += 1.1; }
+      if (voice.audio.ended || voice.audio.error) { stopped = true; words.forEach((s) => s.classList.add('in')); onDone(); return; }
+      requestAnimationFrame(tick);
+    };
+    tick();
+    return () => { stopped = true; words.forEach((s) => s.classList.add('in')); };
+  }
+  words.forEach((s, i) => C.timers.push(setTimeout(() => { s.classList.add('in'); O.level = Math.max(O.level, .5); O.sqv += .8; }, 60 + i * 55)));
+  C.timers.push(setTimeout(onDone, 60 + words.length * 55 + 350));
+  return () => { C.timers.forEach(clearTimeout); words.forEach((s) => s.classList.add('in')); };
+}
+
+async function say(id, { emo = 'speaking', after = 'neutral' } = {}) {
+  const voice = await speak(id);
+  return new Promise((res) => {
+    cap.hidden = false; cchoices.innerHTML = ''; chint.classList.remove('show');
+    O.emo = emo; C.done = false; C.advance = null;
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true; C.done = true; O.emo = after; chint.classList.add('show');
+      C.advance = () => { C.advance = null; stopVoice(); chint.classList.remove('show'); res(); };
+    };
+    const skip = reveal(line(id), done, voice);
+    C.finish = () => { skip(); C.timers = []; done(); };
+  });
+}
+
+async function choose(id, options) {
+  const voice = await speak(id);
+  return new Promise((res) => {
+    cap.hidden = false; cchoices.innerHTML = ''; chint.classList.remove('show');
+    O.emo = 'speaking'; C.done = false; C.advance = null;
+    let shown = false;
+    const show = () => {
+      if (shown) return;
+      shown = true;
+      C.done = true; O.emo = 'curious';
+      for (const o of options) {
+        const b = document.createElement('button');
+        b.className = 'pill' + (o.primary ? ' primary' : '');
+        b.innerHTML = o.label + (o.sub ? `<span class="sub">${o.sub}</span>` : '');
+        b.onclick = (ev) => { ev.stopPropagation(); stopVoice(); sfx.tap(); cchoices.innerHTML = ''; res(o.id); };
+        cchoices.append(b);
+      }
+    };
+    const skip = reveal(line(id), show, voice);
+    C.finish = () => { skip(); C.timers = []; show(); };
+  });
+}
+
+// A tap anywhere moves the caption on, except on controls that do their own thing.
+addEventListener('click', (e) => {
+  if (cap.hidden || e.target.closest('button, input, #ask, #debug, #orb, #start')) return;
+  if (!C.done) C.finish?.(); else C.advance?.();
+});
+addEventListener('keydown', (e) => {
+  if (cap.hidden || !(e.key === ' ' || e.key === 'Enter')) return;
+  e.preventDefault();
+  if (!C.done) C.finish?.(); else C.advance?.();
+});
+
+// ---------------------------------------------------------------- bubble
+const bubbleEl = $('#bubble');
+let bubbleTimer = 0;
+function bubble(id, ms = 2800) {
+  clearTimeout(bubbleTimer);
+  if (V[id]) speak(id);
+  bubbleEl.textContent = line(id); bubbleEl.classList.add('show');
+  if (ms) bubbleTimer = setTimeout(() => bubbleEl.classList.remove('show'), ms);
+}
+
+// ---------------------------------------------------------------- text first, voice opt-in
+const store = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+};
+let inputMode = store.get('cordada.inputMode') || 'text';
+
+async function listen(ms) {
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return false; }
+  const src = audio().createMediaStreamSource(stream), an = AC.createAnalyser();
+  an.fftSize = 512; src.connect(an);
+  const buf = new Uint8Array(an.fftSize), end = performance.now() + ms;
+  O.emo = 'listening'; O.listening = true;
+  while (performance.now() < end) {
+    an.getByteTimeDomainData(buf);
+    let sum = 0; for (const v of buf) { const d = (v - 128) / 128; sum += d * d; }
+    O.level = lerp(O.level, Math.min(1, Math.sqrt(sum / buf.length) * 5), .35);
+    await wait(30);
+  }
+  stream.getTracks().forEach((t) => t.stop());
+  src.disconnect(); O.level = 0; O.listening = false;
+  return true;
+}
+
+const ask = $('#ask'), askInput = $('#askInput'), askMic = $('#askMic'), askSend = $('#askSend'), askModeBtn = $('#askMode');
+function renderAsk() {
+  const voice = inputMode === 'voice';
+  askInput.hidden = voice; askSend.hidden = voice; askMic.hidden = !voice;
+  askModeBtn.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-${voice ? 'keys' : 'mic'}"/></svg>`;
+  askModeBtn.title = voice ? 'Cambiar a texto' : 'Cambiar a voz';
+}
+function openAsk() { renderAsk(); ask.hidden = false; if (inputMode === 'text') askInput.focus(); }
+askModeBtn.onclick = () => { inputMode = inputMode === 'voice' ? 'text' : 'voice'; store.set('cordada.inputMode', inputMode); sfx.tap(); renderAsk(); };
+$('#askClose').onclick = () => { ask.hidden = true; O.emo = 'neutral'; };
+
+let answering = false;
+async function answer() {
+  if (answering) return;
+  answering = true;
+  O.emo = 'thinking'; bubble('…', 0);
+  await wait(1200);
+  O.emo = 'speaking';
+  bubble('placeholderAnswer', 5200);
+  await wait(4200);
+  O.emo = 'neutral'; flashEmo('happy', 1400);
+  answering = false;
+}
+askSend.onclick = () => { if (!askInput.value.trim()) return; askInput.value = ''; answer(); };
+askInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') askSend.onclick(); });
+askMic.onclick = async () => {
+  if (answering) return;
+  bubble('listening', 0);
+  await wait(700);
+  if (!(await listen(3000))) {
+    inputMode = 'text'; store.set('cordada.inputMode', inputMode); renderAsk();
+    O.emo = 'concerned'; bubble('micFailedShort', 4000);
+    await wait(3200); O.emo = 'neutral'; return;
+  }
+  answer();
+};
+
+// ---------------------------------------------------------------- interaction
+orbEl.addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  if (O.mode !== 'idle') return;
+  sfx.tap(); flashEmo('happy', 1200);
+  O.spinTarget += Math.PI * 2;
+  rings.push({ x: O.x, y: O.y, r0: 30 * O.scale, r1: 60, life: .8, max: .8 });
+  if (ask.hidden) { bubble('howCanIHelp', 2200); openAsk(); }
+});
+// hovering over it is a little treat
+orbEl.addEventListener('pointerenter', () => {
+  if (O.mode !== 'idle' && O.mode !== 'hold') return;
+  flashEmo('happy', 1100); O.sqv += 1.5;
+});
+// If the orb sits on top of something clickable that the cursor is reaching for, it slides away.
+function makeWay(x, y) {
+  if (O.mode === 'intro' || O.mode === 'off' || Math.hypot(x - O.x, y - O.y) > BASE * O.scale * .7) return false;
+  const under = document.elementsFromPoint(x, y).find((el) => !orbEl.contains(el) && el !== orbEl);
+  if (!under?.closest('button, input, a')) return false;
+  const dx = O.x - x || 1, dy = O.y - y, d = Math.hypot(dx, dy) || 1;
+  O.wayUntil = performance.now() + 1200;
+  if (O.mode === 'idle') O.nextAct = performance.now() + 2500;
+  O.tx = O.x + dx / d * 150; O.ty = O.y + dy / d * 150 - 40;
+  return true;
+}
+function onInput(e) {
+  audio();
+  if (e.type === 'pointermove' && e.clientX != null) makeWay(e.clientX, e.clientY);
+  if (e.type === 'pointermove' && performance.now() - mouse.at > 4000 && O.mode !== 'intro' && O.mode !== 'off') {
+    O.noticeUntil = performance.now() + 1400;
+    if (O.mode === 'idle') flashEmo('curious', 800);
+  }
+  if (e.clientX != null && mouse.at) {
+    const dtm = Math.max(1, performance.now() - mouse.at);
+    mouse.speed = Math.hypot(e.clientX - mouse.x, e.clientY - mouse.y) / dtm * 1000;
+  }
+  if (wasResting && O.mode === 'idle' && performance.now() - lastInput > 20000) flashEmo('surprised', 600);
+  wasResting = false;
+  lastInput = performance.now();
+  if (e.clientX != null) { mouse.x = e.clientX; mouse.y = e.clientY; mouse.at = lastInput; }
+}
+addEventListener('pointermove', onInput);
+addEventListener('pointerdown', onInput);
+addEventListener('keydown', onInput);
+
+// ---------------------------------------------------------------- script
+async function intro() {
+  O.mode = 'intro'; O.t0 = performance.now(); O.landed = false; O.emo = 'calm';
+  if (!reduced) { playScene(); skipBtn.classList.add('show'); }
+  await new Promise((r) => { introDone = r; });
+  O.emo = 'calm'; await wait(500);
+  flashEmo('happy', 900); await wait(700);
+
+  await say('hello', { after: 'happy' });
+  await say('intro');
+  await say('howItWorks', { after: 'calm' });
+  let mode = await choose('askMode', [
+    { id: 'text', label: 'Escribiendo', primary: true },
+    { id: 'voice', label: 'Hablando', sub: 'usa tu micrófono' },
+  ]);
+  if (mode === 'voice') {
+    ctext.textContent = line('sayAnything');
+    const prompt = await speak('sayAnything');
+    if (prompt) await new Promise((r) => { prompt.audio.onended = r; prompt.audio.onerror = r; });
+    if (await listen(3000)) await say('heardYou', { emo: 'happy', after: 'happy' });
+    else { mode = 'text'; await say('micFailed', { emo: 'concerned' }); }
+  } else {
+    await say('textMode', { after: 'happy' });
+  }
+  inputMode = mode; store.set('cordada.inputMode', mode);
+
+  cap.hidden = true; O.emo = 'neutral';
+  $('#continue').classList.add('show');
+}
+
+// ---------------------------------------------------------------- summary screen
+// Data comes from scripts/cases-orb.ts (Sherpas MCP run through src/scenes/detect.ts).
+// No AI here: every word and number on this screen is precomputed.
+const CASES = window.ORB_CASES || {};
+const caseId = new URLSearchParams(location.search).get('case') || Object.keys(CASES)[0];
+const STATUS = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' };
+const BAND = { critical: ['Crítica', 'var(--bad)'], vulnerable: ['Vulnerable', 'var(--bad)'], stable: ['Estable', 'var(--warn)'], strong: ['Fuerte', 'var(--good)'] };
+const MOVES = {
+  'Raise mortality coverage': 'Subir el seguro de vida', 'Add life cover': 'Contratar seguro de vida', 'Close a coverage gap': 'Cerrar un hueco de cobertura',
+  'Add umbrella cover': 'Contratar seguro ante demandas', 'Raise annual savings': 'Ahorrar más cada año', 'Lower the withdrawal rate': 'Sacar menos cada año de tus ahorros',
+  'Raise growth allocation toward glide': 'Invertir un poco más en acciones', 'Reduce growth allocation toward glide': 'Invertir un poco menos en acciones',
+  'Reduce single-name concentration': 'Repartir mejor tus inversiones', 'Pay down revolving card': 'Pagar la tarjeta de crédito',
+};
+const CAPS = { 'High revolving balance with high APR': 'Tu nota está frenada por la deuda de tarjeta', 'Mortality coverage ratio below threshold with dependents': 'Tu nota está frenada por falta de seguro de vida con hijos' };
+// which solutions belong to which topic, to show "if you fix this" inside each card
+const TOPIC_MOVES = {
+  life: ['Raise mortality coverage', 'Add life cover', 'Close a coverage gap'], umbrella: ['Add umbrella cover'], debt: ['Pay down revolving card'],
+  retirement: ['Raise annual savings', 'Lower the withdrawal rate'], cashflow: ['Raise annual savings'],
+  investments: ['Raise growth allocation toward glide', 'Reduce growth allocation toward glide', 'Reduce single-name concentration'],
+};
+const money = (n) => `$${Math.round(Math.abs(n)).toLocaleString('es-ES')}`;
+
+// Small chart per topic. Bars for measured things against their target, a big figure otherwise.
+function viz(t) {
+  const c = STATUS[t.status], n = t.numbers;
+  const bar = (val, lo, hi, max, unit) => {
+    const x = (v) => Math.max(0, Math.min(200, v / max * 200));
+    return `<svg viewBox="0 0 200 54">
+      <rect x="0" y="20" width="200" height="12" rx="6" fill="rgba(255,255,255,.08)"/>
+      ${hi != null ? `<rect x="${x(lo)}" y="16" width="${Math.max(3, x(hi) - x(lo))}" height="20" rx="4" fill="rgba(169,180,245,.25)" stroke="rgba(169,180,245,.6)"/>` : ''}
+      <rect x="0" y="20" width="${x(val)}" height="12" rx="6" fill="${c}"/>
+      <text x="0" y="52" font-size="12" font-weight="600" fill="rgba(255,255,255,.8)" font-family="Poppins">${val}${unit}</text>
+      ${hi != null ? `<text x="${Math.min(x(lo), 120)}" y="11" font-size="10" fill="#a9b4f5" font-family="Poppins">ideal ${lo}${hi !== lo ? '–' + hi : ''}${unit}</text>` : ''}
+    </svg>`;
+  };
+  if (t.id === 'emergency' || t.id === 'near-goal') return bar(t.id === 'near-goal' ? n.after : n.months, n.min ?? 0, n.max ?? null, Math.max(n.months, n.max ?? 6) * 1.25, ' meses');
+  if (t.id === 'investments') return bar(n.equity, n.target, n.target, 100, '% acciones');
+  const big = (s, cap) => `<svg viewBox="0 0 200 54"><text x="0" y="32" font-size="${s.length > 10 ? 24 : 30}" font-weight="700" fill="${c}" font-family="Poppins">${s}</text><text x="0" y="51" font-size="12" font-weight="500" fill="rgba(255,255,255,.65)" font-family="Poppins">${cap}</text></svg>`;
+  if (t.id === 'retirement' && n.runOut !== 'Not applicable') return big(`a los ${n.runOut} años`, 'se agotan tus ahorros');
+  if (t.id === 'retirement') return bar(n.incomeShare, 100, 100, 100, '% cubierto');
+  if (t.id === 'cashflow') return big(money(n.flow), n.flow < 0 ? 'salen de más este año' : 'te sobran al año');
+  if (t.id === 'debt') return n.balance ? big(money(n.balance), 'en tarjetas de crédito') : big(`${Math.round(n.dti * 100)}%`, 'del sueldo se va en deudas');
+  if (t.id === 'education') return big(money(n.gap), n.gap ? 'faltan para la universidad' : 'cubierto');
+  if (t.id === 'life') { const s = (n.shortfall || 0) + (n.coShortfall || 0); return s ? big(money(s), 'de cobertura que falta') : big('✓', 'tu familia está protegida'); }
+  if (t.id === 'umbrella') return n.recommended ? big(money(n.recommended), 'de cobertura recomendada') : big('✓', 'cubierto ante demandas');
+  return big((t.headline.match(/\$[\d,.]+|\d+%/) || [t.label])[0], '');
+}
+
+function renderSummary(c) {
+  const h = c.household;
+  $('#sumWho').textContent = (h.couple ? `${h.names.join(' y ')}, su` : `${h.names[0]}, tu`) + ' salud financiera';
+  const [bandEs, bandColor] = BAND[c.score.band] ?? [c.score.band, 'var(--lav)'];
+  const band = $('#sumBand'); band.textContent = bandEs; band.style.background = bandColor;
+  $('#sumPillars').innerHTML = c.score.pillars.map((p) => `<div class="pillar"><span>${p.name}</span><div class="track"><div class="fill" data-w="${p.score}" style="background:${p.score >= 70 ? 'var(--good)' : p.score >= 40 ? 'var(--warn)' : 'var(--bad)'}"></div></div><b>${p.points}</b></div>`).join('');
+  $('#sumCaps').innerHTML = c.score.caps.map((r) => `<div class="cap">⛔ ${CAPS[r] ?? r}</div>`).join('');
+  $('#sumCards').innerHTML = c.topics.map((t) => {
+    const fix = c.moves.find((m) => (TOPIC_MOVES[t.id] ?? []).includes(m.title));
+    return `<article class="card" data-id="${t.id}">
+      <button class="icon close" title="Cerrar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <h3>${t.title}</h3>
+      <div class="label"><span class="dot" style="background:${STATUS[t.status]}"></span>${t.label}</div>
+      <div class="viz">${viz(t)}</div>
+      <div class="scene"></div>
+      <div class="more">${t.headline}${fix ? `<br><br><b>Si lo resuelves</b> (${MOVES[fix.title] ?? fix.title}), tu nota pasa de ${fix.before} a ${fix.after}.` : ''}
+        <div><button class="pill ask">Preguntarle al orbe</button></div></div>
+    </article>`;
+  }).join('');
+  const bad = c.topics.filter((t) => t.status === 'bad'), good = c.topics.filter((t) => t.status === 'good');
+  $('#sumKey').innerHTML = [...bad.slice(0, 3).map((t) => `<li><b>${t.title}:</b> ${t.headline}</li>`), ...good.slice(0, 1).map((t) => `<li><b>${t.title}:</b> ${t.label.toLowerCase()} 👍</li>`)].join('');
+  $('#sumMoves').innerHTML = [...c.moves].sort((a, b) => (b.after - b.before) - (a.after - a.before)).map((m) => `<div class="move">${MOVES[m.title] ?? m.title} · esfuerzo ${({ low: 'bajo', medium: 'medio', high: 'alto' })[m.effort] ?? m.effort}<br><b>+${m.after - m.before} puntos</b></div>`).join('');
+}
+
+// entrance: score counts up, pillars fill, cards arrive one by one
+async function playSummary(c) {
+  const el = $('#sumScore'), t0 = performance.now();
+  const count = () => { const k = Math.min(1, (performance.now() - t0) / 1400); el.textContent = Math.round(c.score.value * easeOut(k)); if (k < 1) requestAnimationFrame(count); };
+  count();
+  await wait(300);
+  document.querySelectorAll('.pillar .fill').forEach((f) => { f.style.width = f.dataset.w + '%'; });
+  for (const card of document.querySelectorAll('.card')) { card.classList.add('in'); await wait(110); }
+}
+
+const cards = $('#sumCards');
+function orbTo(card) {
+  // beside the card, never on it (the close button lives in its top-right corner)
+  const r = card.getBoundingClientRect();
+  O.mode = 'hold'; O.ty = Math.max(60, r.top + 40);
+  O.tx = r.left > 110 ? r.left - 55 : Math.min(W - 60, r.right + 55);
+}
+// FLIP: measure every card, change the layout, then animate each card from where it was
+function flip(change) {
+  const els = [...cards.children], first = new Map(els.map((e) => [e, e.getBoundingClientRect()]));
+  change();
+  for (const e of els) {
+    const a = first.get(e), b = e.getBoundingClientRect();
+    const dx = a.left - b.left, dy = a.top - b.top, sx = a.width / b.width;
+    if (Math.abs(dx) + Math.abs(dy) + Math.abs(1 - sx) * 100 < 1) continue;
+    e.animate([{ transformOrigin: 'top left', transform: `translate(${dx}px,${dy}px) scaleX(${sx})` }, { transformOrigin: 'top left', transform: 'none' }],
+      { duration: 480, easing: 'cubic-bezier(.2,.7,.2,1)' });
+  }
+}
+function stopScene(card) { card._stop?.(); card._stop = null; const box = card.querySelector('.scene'); if (box) box.innerHTML = ''; }
+function expand(card) {
+  flip(() => {
+    document.querySelectorAll('.card.expanded').forEach((c) => { c.classList.remove('expanded', 'focus'); stopScene(c); });
+    card.classList.add('expanded', 'focus'); cards.classList.add('dim');
+    const topic = CASES[caseId].topics.find((x) => x.id === card.dataset.id);
+    if (window.mountScene && topic) card._stop = window.mountScene(card.querySelector('.scene'), topic, CASES[caseId]);
+  });
+  O.targetScale = .8; setTimeout(() => { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); orbTo(card); }, 500);
+}
+function collapse() {
+  const open = document.querySelectorAll('.card.expanded');
+  if (open.length) flip(() => open.forEach((c) => { c.classList.remove('expanded', 'focus'); stopScene(c); }));
+  if (!tour.on) cards.classList.remove('dim');
+  if (!tour.on && O.mode === 'hold') { O.mode = 'idle'; O.nextAct = 0; }
+}
+cards.addEventListener('click', (e) => {
+  const card = e.target.closest('.card');
+  if (!card || tour.on) return;
+  if (e.target.closest('.close')) { e.stopPropagation(); collapse(); return; }
+  if (e.target.closest('.ask')) { e.stopPropagation(); openAsk(); bubble('howCanIHelp', 2200); return; }
+  if (!card.classList.contains('expanded')) { sfx.tap(); expand(card); }
+});
+addEventListener('keydown', (e) => { if (e.key === 'Escape') collapse(); });
+
+// "Explícame el resumen": the orb visits each card and checks in before moving on
+const tour = { on: false, i: 0, list: [] };
+// The last two stops wrap up from the sidebar: the takeaways, then the best next move.
+function sideStops(c) {
+  const bad = c.topics.filter((t) => t.status === 'bad').slice(0, 3).map((t) => t.title.toLowerCase());
+  const best = [...c.moves].sort((a, b) => (b.after - b.before) - (a.after - a.before))[0];
+  const list = bad.length > 1 ? `${bad.slice(0, -1).join(', ')} y ${bad.at(-1)}` : bad[0];
+  return [
+    { el: $('#sumKey'), emo: 'calm', text: bad.length ? `Si te quedas con algo, que sea esto: lo más urgente es ${list}.` : 'Lo esencial: vas por buen camino.', again: 'Esta columna resume lo más importante de todo lo que vimos, para que lo tengas a mano.' },
+    ...(best ? [{ el: $('#sumMoves'), emo: 'happy', text: `Y la buena noticia: con "${MOVES[best.title] ?? best.title}" tu nota subiría de ${best.before} a ${best.after}. Ahora te enseño cómo.`, again: 'Estas son las acciones que Sherpas te propone, ordenadas por cuánto mejoran tu nota.' }] : []),
+  ];
+}
+function tourShow(again) {
+  const stop = tour.list[tour.i];
+  document.querySelectorAll('.focus').forEach((c) => c.classList.remove('focus'));
+  if (stop.el) {
+    collapse();
+    const side = stop.el.closest('.side');
+    side.classList.add('focus'); side.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => { const r = stop.el.getBoundingClientRect(); O.mode = 'hold'; O.tx = Math.max(60, r.left - 55); O.ty = Math.max(60, r.top + 30); }, 350);
+    O.emo = stop.emo; bubble(again ? stop.again : stop.text, 0);
+    return;
+  }
+  // each stop opens its card, so the topic's animation plays while the orb explains it
+  const card = stop, t = CASES[caseId].topics.find((x) => x.id === card.dataset.id);
+  if (!card.classList.contains('expanded')) expand(card);
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 520);
+  O.emo = t.status === 'bad' ? 'concerned' : t.status === 'good' ? 'happy' : 'speaking';
+  bubble(again ? `${t.title}: ${t.label}. ${t.headline}` : t.headline, 0);
+}
+function tourEnd() {
+  tour.on = false; $('#tourbar').hidden = true; $('#explain').hidden = false;
+  collapse();
+  document.querySelectorAll('.focus').forEach((c) => c.classList.remove('focus'));
+  cards.classList.remove('dim'); O.emo = 'neutral'; flashEmo('happy', 1500);
+  bubble('¡Eso es todo! Toca cualquier tarjeta para verla en detalle.', 3500);
+  setTimeout(() => { O.mode = 'idle'; O.nextAct = 0; }, 1500);
+}
+$('#explain').onclick = () => {
+  collapse(); sfx.tap();
+  tour.on = true; tour.i = 0; tour.list = [...document.querySelectorAll('.card'), ...sideStops(CASES[caseId])];
+  $('#explain').hidden = true; $('#tourbar').hidden = false; cards.classList.add('dim'); O.targetScale = .8;
+  tourShow(false);
+};
+$('#tourNext').onclick = () => { sfx.tap(); tour.i++; if (tour.i >= tour.list.length) tourEnd(); else tourShow(false); };
+$('#tourAgain').onclick = () => { sfx.tap(); flashEmo('thinking', 900); setTimeout(() => tourShow(true), 700); };
+
+$('#continue').onclick = async () => {
+  sfx.tap();
+  $('#continue').classList.remove('show');
+  const c = CASES[caseId];
+  if (!c) { bubble('No encontré los datos de este caso. Corre npm run cases:orb.', 5000); return; }
+  renderSummary(c);
+  $('#summary').classList.add('show');
+  O.mode = 'hold'; O.targetScale = .72; O.tx = W - 70; O.ty = 70;
+  await playSummary(c);
+  flashEmo('happy', 1500);
+  bubble('summaryHere', 2600);
+  $('#explain').hidden = false;
+  await wait(2800);
+  O.mode = 'idle'; O.nextAct = 0;
+};
+
+// ---------------------------------------------------------------- debug panel
+function buildDebug() {
+  const box = $('#debug'); box.hidden = false;
+  const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = (e) => { e.stopPropagation(); fn(b); }; box.append(b); return b; };
+  const emoBtns = [];
+  for (const name of Object.keys(EMO)) {
+    emoBtns.push(mk(name, () => {
+      debugEmo = debugEmo === name ? null : name;
+      emoBtns.forEach((x) => x.classList.toggle('on', x.textContent === debugEmo));
+    }));
+  }
+  mk('↺ intro', () => {
+    ask.hidden = true; cap.hidden = true; $('#continue').classList.remove('show'); $('#summary').classList.remove('show');
+    C.timers.forEach(clearTimeout); C.finish = C.advance = null;
+    O.targetScale = 1; intro();
+  });
+  mk(`ojos: ${eyeStyle}`, (b) => { eyeStyle = eyeStyle === 'pill' ? 'none' : 'pill'; b.textContent = `ojos: ${eyeStyle}`; });
+  mk(muted ? '🔇' : '🔊', (b) => { muted = !muted; if (muted) { stopVoice(); stopSfx(200); } b.textContent = muted ? '🔇' : '🔊'; });
+}
+
+// The start tap is what lets the browser play the voice.
+function begin(withSound) {
+  muted = !withSound;
+  audio();
+  const start = $('#start');
+  start.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, easing: 'ease-out' }).onfinish = () => start.remove();
+  if (new URLSearchParams(location.search).get('debug') === '1') buildDebug();
+  intro();
+}
+$('#go').onclick = () => begin(true);
+$('#goMuted').onclick = () => begin(false);
+</script>
+</body>
+</html>

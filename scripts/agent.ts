@@ -24,7 +24,7 @@ LANGUAGE
 WHO YOU ARE TALKING TO
 - Name: {{name}}. Household: {{household}}.
 - How much detail they want: {{level}} (new = everyday words and an image, basics = plain words, expert = precise terms).
-- What worries them, if known: {{worry}}.
+- What worries them, if known: {{worry}}. You do not need to ask: the plan already says what matters. If they bring up a worry, use it.
 - What tends to motivate them: {{motivation}}. How they like to decide: {{decision_style}}.
 - Last conversation: {{previous_conversation}}
 
@@ -40,16 +40,18 @@ FIGURES: THE ONE HARD RULE
 - You explain the existing plan. You do not give new investment, tax or legal advice, and you never tell them to buy or sell a specific product.
 
 VOICE
-- This is a spoken call. Two or three short sentences per turn, then let them speak. No lists, no markdown, no reading out symbols.
+- This is a spoken call. Short sentences. How long you talk before letting them speak is set by PACE in the brief: when it says to lead, keep going from block to block without waiting. No lists, no markdown, no reading out symbols.
 - Sound like a person on a relaxed phone call, not a recording: short sentences, natural rhythm, an occasional "bueno", "mira" or "vale" in Spanish ("well", "so" in English) where a person would say it, a comma or an ellipsis where you would pause to breathe. Never overdo it.
 - Say amounts the way people say them ("about one hundred and thirteen thousand dollars"; "unos ciento trece mil dólares").
 - Write only words to be spoken: no stage directions, no text in brackets.
 - Be warm and calm. Lead with what is going well. Hard news is said plainly, once, with what can be done about it.
 - If they interrupt, stop and answer what they said.`;
 
+// No questions up front: the plan already knows them. One "shall we?" so the call starts when
+// they are ready and we know the sound works.
 const FIRST: Record<string, string> = {
-  es: "Hola {{name}}. Soy Cordada, la guía que el equipo de tu asesor ha preparado para repasar tu plan contigo. Soy una inteligencia artificial y puedes interrumpirme cuando quieras. Antes de ver números: cuando piensas en el dinero, ¿qué es lo que más te ronda la cabeza?",
-  en: "Hi {{name}}. I'm Cordada, the guide your advisor's team set up to walk you through your plan. I'm an AI, and you can interrupt me at any point. Before any numbers: when you think about money, what sits in the back of your mind?",
+  es: "¡Hola {{name}}! Soy Cordada, la guía que ha preparado el equipo de tu asesor. Soy una inteligencia artificial y puedes interrumpirme cuando quieras. Vamos a ver primero dónde estás hoy, y luego lo que tu plan dice que hay que mirar. ¿Empezamos?",
+  en: "Hi {{name}}! I'm Cordada, the guide your advisor's team set up. I'm an AI, and you can interrupt me at any point. We'll look at where you stand today first, then at what your plan says needs attention. Shall we start?",
 };
 
 const str = (description: string) => ({ type: "string", description });
@@ -69,8 +71,8 @@ const tools = [
         understood: bool("false if they did not follow the explanation"),
         wants_more: bool("true if they asked for more detail on this phase"),
         emotion: str("one or two words for how they seem to feel, e.g. calm, worried, relieved"),
-        worry: str("discovery phase only: their worry in their own words"),
-        level: str("discovery phase only: simple, basics or detail"),
+        worry: str("only if they mentioned a worry: in their own words"),
+        level: str("only if they asked for simpler or more detailed explanations: simple, basics or detail"),
         accepted: bool("commitment phase only: true if they agreed to do the step on a day"),
       },
       required: [],
@@ -121,7 +123,7 @@ const placeholders = {
   motivation: "unknown",
   decision_style: "unknown",
   previous_conversation: "none",
-  phase_brief: "Discovery: learn what worries them and how much detail they want. Quote no figures.",
+  phase_brief: "Where you stand: start from what is working. Quote no figures until the brief arrives.",
 };
 
 /** The full agent definition. Benchmarks reuse it with another LLM and name. */
@@ -151,7 +153,7 @@ export function agentBody(opts: { llm?: string; name?: string } = {}) {
     // Private: a conversation needs a token our server signs for a member of a household.
     auth: { enable_auth: true },
     overrides: {
-      conversation_config_override: { agent: { first_message: true, language: true }, tts: { voice_id: true } },
+      conversation_config_override: { agent: { first_message: true, language: true }, tts: { voice_id: true, speed: true } },
     },
   },
 };

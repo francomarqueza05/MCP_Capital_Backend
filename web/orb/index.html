@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cordada · Orbe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #1d2340; --navy: #2b3a7a; --cream: #fffdf6; --yellow: #ffe873; --h: 192; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; color: #fff;
+    font-family: "Nunito", system-ui, sans-serif;
+    background: radial-gradient(120% 90% at 50% 30%, #1b2a5c 0%, #0b1026 55%, #060814 100%);
+  }
+  #world { position: fixed; inset: 0; }
+  #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 30; }
+
+  /* ---------- orb ---------- */
+  #orb {
+    position: absolute; left: 0; top: 0; width: 96px; height: 96px;
+    transform-origin: 50% 50%; will-change: transform; cursor: pointer; opacity: 0; z-index: 10;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #orb .squash { position: absolute; inset: 0; }
+  #orb .glow {
+    position: absolute; inset: -70%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, hsla(var(--h), 100%, 78%, .55) 0%, hsla(var(--h), 100%, 65%, .16) 36%, transparent 64%);
+  }
+  #orb .wing {
+    position: absolute; top: 2%; width: 58%; height: 60%; pointer-events: none;
+    border-radius: 60% 40% 50% 50% / 70% 60% 40% 30%;
+    background: radial-gradient(ellipse at 40% 40%, rgba(255,255,255,.8), hsla(var(--h), 100%, 85%, .3) 60%, transparent 78%);
+    border: 1px solid rgba(255,255,255,.45);
+  }
+  #orb .wing.l { right: 66%; transform-origin: 100% 85%; }
+  #orb .wing.r { left: 66%; transform-origin: 0% 85%; border-radius: 40% 60% 50% 50% / 60% 70% 30% 40%; }
+  #orb .body {
+    position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 36% 30%, #fff 0%, hsl(var(--h), 100%, 93%) 20%, hsl(var(--h), 95%, 74%) 56%, hsl(var(--h), 85%, 54%) 100%);
+    box-shadow: 0 0 26px hsla(var(--h), 100%, 72%, .95), inset -8px -10px 18px hsla(var(--h), 80%, 32%, .45);
+  }
+  #face { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #face .eye { fill: var(--ink); }
+  #face .shine { fill: #fff; }
+  #face .cheek { fill: #ff8fb1; }
+  #face #mouth { fill: var(--ink); }
+
+  /* ---------- dialog (Nintendo-style box) ---------- */
+  #dialog {
+    position: fixed; left: 50%; bottom: 6vh; transform: translateX(-50%);
+    width: min(640px, calc(100vw - 32px)); padding: 26px 26px 24px; z-index: 20;
+    background: var(--cream); color: var(--ink); border: 4px solid var(--navy); border-radius: 18px;
+    box-shadow: 0 8px 0 #1a2350, 0 24px 48px rgba(0,0,0,.45);
+    font-size: clamp(17px, 2.4vw, 21px); font-weight: 800; line-height: 1.35; cursor: pointer; user-select: none;
+  }
+  #dialog[hidden] { display: none; }
+  #dialog .name {
+    position: absolute; top: -18px; left: 22px; padding: 4px 16px; border-radius: 999px;
+    background: var(--navy); color: #fff; font-size: 15px; letter-spacing: .04em;
+  }
+  #dtext { margin: 0; min-height: 2.7em; }
+  #dnext { position: absolute; right: 18px; bottom: 10px; color: var(--navy); font-size: 14px; animation: nudge .7s ease-in-out infinite alternate; }
+  #dchoices { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  #dchoices:empty { display: none; }
+  @keyframes nudge { to { transform: translateY(4px); } }
+
+  .btn {
+    font: 800 18px "Nunito", system-ui, sans-serif; padding: 12px 22px; border-radius: 14px; cursor: pointer;
+    border: 3px solid var(--navy); background: var(--yellow); color: var(--ink); box-shadow: 0 5px 0 var(--navy);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--navy); }
+  .btn.ghost { background: #fff; }
+
+  #continue { position: fixed; left: 50%; bottom: 8vh; transform: translateX(-50%) scale(.6); opacity: 0; z-index: 20; transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s; pointer-events: none; }
+  #continue.show { transform: translateX(-50%) scale(1); opacity: 1; pointer-events: auto; }
+
+  /* ---------- bubble that follows the orb ---------- */
+  #bubble {
+    position: absolute; left: 0; top: 0; z-index: 15; max-width: min(280px, 70vw); padding: 10px 14px;
+    background: #fff; color: var(--ink); border-radius: 14px; font-weight: 800; font-size: 15px; line-height: 1.3;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35); pointer-events: none; opacity: 0; transition: opacity .2s;
+  }
+  #bubble.show { opacity: 1; }
+  #bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; margin-left: -8px; border: 8px solid transparent; border-bottom: 0; border-top-color: #fff; }
+
+  /* ---------- ask panel ---------- */
+  #ask {
+    position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); z-index: 20;
+    display: flex; align-items: center; gap: 8px; padding: 8px; width: min(560px, calc(100vw - 32px));
+    background: var(--cream); border: 3px solid var(--navy); border-radius: 999px; box-shadow: 0 6px 0 #1a2350;
+  }
+  #ask[hidden] { display: none; }
+  #ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 800 16px "Nunito", sans-serif; color: var(--ink); padding: 8px 10px; }
+  #ask .icon { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--navy); background: #fff; font-size: 18px; cursor: pointer; }
+  #ask .icon.primary { background: var(--yellow); }
+  #askMic { flex: 1 !important; width: auto !important; border-radius: 999px !important; font: 800 16px "Nunito", sans-serif !important; color: var(--ink); }
+
+  /* ---------- placeholder for the next screen ---------- */
+  #summary {
+    position: fixed; left: 50%; top: 50%; width: min(520px, calc(100vw - 32px)); padding: 24px; z-index: 5;
+    transform: translate(-50%, -46%); opacity: 0; transition: opacity .5s, transform .5s cubic-bezier(.34,1.56,.64,1);
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 22px; backdrop-filter: blur(6px);
+  }
+  #summary.show { opacity: 1; transform: translate(-50%, -50%); }
+  #summary h2 { margin: 0 0 14px; font-size: 22px; }
+  #summary .bar { height: 14px; border-radius: 8px; margin: 10px 0; background: linear-gradient(90deg, rgba(255,255,255,.08), rgba(255,255,255,.22), rgba(255,255,255,.08)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+  #summary p { margin: 16px 0 0; opacity: .7; font-weight: 600; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ---------- start screen ---------- */
+  #start { position: fixed; inset: 0; display: grid; place-items: center; z-index: 40; cursor: pointer; text-align: center; }
+  #start h1 { margin: 0; font-size: clamp(36px, 7vw, 64px); font-weight: 900; letter-spacing: .02em; }
+  #start p { margin: 10px 0 0; font-weight: 800; opacity: .85; animation: blink 1.1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  /* ---------- debug ---------- */
+  #debug { position: fixed; left: 12px; top: 12px; z-index: 50; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100vw - 24px); }
+  #debug button { font: 700 12px "Nunito", sans-serif; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+  #debug button.on { background: var(--yellow); color: var(--ink); }
+  #debug[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div id="world">
+  <canvas id="fx"></canvas>
+  <div id="orb" role="button" aria-label="Asistente">
+    <div class="squash">
+      <div class="glow"></div>
+      <div class="wing l"></div>
+      <div class="wing r"></div>
+      <div class="body">
+        <svg id="face" viewBox="-50 -50 100 100" aria-hidden="true">
+          <defs>
+            <clipPath id="clipL"><polygon id="polyL" points="0,0"/></clipPath>
+            <clipPath id="clipR"><polygon id="polyR" points="0,0"/></clipPath>
+          </defs>
+          <g id="faceG">
+            <ellipse class="cheek" id="cheekL" cx="-25" cy="13" rx="7" ry="4"/>
+            <ellipse class="cheek" id="cheekR" cx="25" cy="13" rx="7" ry="4"/>
+            <g clip-path="url(#clipL)"><ellipse class="eye" id="eyeL"/><circle class="shine" id="shineL"/></g>
+            <g clip-path="url(#clipR)"><ellipse class="eye" id="eyeR"/><circle class="shine" id="shineR"/></g>
+            <ellipse id="mouth" cx="0" cy="15" rx="3.5" ry="0"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div id="bubble"></div>
+</div>
+
+<div id="summary" aria-hidden="true">
+  <h2>Tu situación</h2>
+  <div class="bar" style="width:92%"></div>
+  <div class="bar" style="width:74%"></div>
+  <div class="bar" style="width:83%"></div>
+  <p>Próximo prototipo: resumen general animado.</p>
+</div>
+
+<div id="dialog" hidden aria-live="polite">
+  <div class="name" id="dname"></div>
+  <p id="dtext"></p>
+  <div id="dchoices"></div>
+  <div id="dnext" hidden>▼</div>
+</div>
+
+<button id="continue" class="btn">Continuar ▶</button>
+
+<div id="ask" hidden>
+  <button id="askMode" class="icon" title="Cambiar modo"></button>
+  <input id="askInput" placeholder="Pregúntame lo que quieras…" autocomplete="off">
+  <button id="askMic" class="icon primary">🎤 Toca para hablar</button>
+  <button id="askSend" class="icon primary" title="Enviar">➤</button>
+  <button id="askClose" class="icon" title="Cerrar">✕</button>
+</div>
+
+<div id="flash"></div>
+<div id="start"><div><h1>Cordada</h1><p>Toca para comenzar</p></div></div>
+<div id="debug" hidden></div>
+
+<script>
+// Placeholder name until the brand settles on one.
+const NAME = 'Cordi';
+const BASE = 96;
+
+const $ = (s) => document.querySelector(s);
+const orbEl = $('#orb'), squashEl = orbEl.querySelector('.squash'), glowEl = orbEl.querySelector('.glow');
+const wingL = orbEl.querySelector('.wing.l'), wingR = orbEl.querySelector('.wing.r');
+const faceG = $('#faceG'), mouthEl = $('#mouth');
+const eyes = [
+  { cx: -15, side: -1, el: $('#eyeL'), shine: $('#shineL'), poly: $('#polyL'), cheek: $('#cheekL') },
+  { cx: 15, side: 1, el: $('#eyeR'), shine: $('#shineR'), poly: $('#polyR'), cheek: $('#cheekR') },
+];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const easeInOut = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const easeOutBack = (t) => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+let W = innerWidth, H = innerHeight;
+
+// ---------------------------------------------------------------- emotions
+// Every expression is a set of numbers the face eases toward, so any switch animates.
+const EMO = {
+  neutral:   { open: 1,    lidTop: 0,   lidBottom: 0,   tilt: 0,    l: 1,    r: 1,    hue: 192, cheeks: 0,  bob: 1 },
+  happy:     { open: 1.15, lidTop: 0,   lidBottom: .5,  tilt: 0,    l: 1.05, r: 1.05, hue: 46,  cheeks: 1,  bob: 1.6 },
+  curious:   { open: 1.05, lidTop: 0,   lidBottom: 0,   tilt: 0,    l: 1.2,  r: .85,  hue: 172, cheeks: 0,  bob: .8 },
+  thinking:  { open: .95,  lidTop: .3,  lidBottom: 0,   tilt: -.15, l: 1,    r: 1,    hue: 205, cheeks: 0,  bob: .5, gaze: [-.7, -.9] },
+  listening: { open: 1.12, lidTop: 0,   lidBottom: 0,   tilt: 0,    l: 1.08, r: 1.08, hue: 150, cheeks: .3, bob: .6 },
+  speaking:  { open: 1,    lidTop: 0,   lidBottom: .05, tilt: 0,    l: 1,    r: 1,    hue: 192, cheeks: .2, bob: 1.3 },
+  concerned: { open: 1,    lidTop: .2,  lidBottom: 0,   tilt: .9,   l: .95,  r: .95,  hue: 258, cheeks: 0,  bob: .5 },
+  surprised: { open: 1.3,  lidTop: 0,   lidBottom: 0,   tilt: 0,    l: 1.22, r: 1.22, hue: 196, cheeks: 0,  bob: 2 },
+  sleepy:    { open: 1,    lidTop: .62, lidBottom: .08, tilt: .2,   l: 1,    r: 1,    hue: 228, cheeks: 0,  bob: .4 },
+  dizzy:     { open: .8,   lidTop: .15, lidBottom: .1,  tilt: 0,    l: .9,   r: 1.1,  hue: 280, cheeks: 0,  bob: .3, spinGaze: true },
+};
+const KEYS = ['open', 'lidTop', 'lidBottom', 'tilt', 'l', 'r', 'hue', 'cheeks', 'bob'];
+
+const O = {
+  x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, scale: 1, targetScale: 1,
+  spin: 0, spinTarget: 0, sqx: 1, sqy: 1, wing: 0,
+  mode: 'off', emo: 'neutral', flash: null, flashUntil: 0,
+  level: 0, mouth: 0, gx: 0, gy: 0, blinkAt: 0, nextBlink: 0, nextWander: 0,
+};
+const P = { ...EMO.neutral };
+let debugEmo = null, lastInput = performance.now(), wasSleepy = false;
+const mouse = { x: -1e4, y: -1e4, at: 0 };
+
+function flashEmo(name, ms) { O.flash = name; O.flashUntil = performance.now() + ms; }
+
+function currentEmo(now) {
+  if (debugEmo) return debugEmo;
+  if (O.flash && now < O.flashUntil) return O.flash;
+  if (O.mode === 'idle') {
+    if (now - lastInput > 14000) return 'sleepy';
+    if (Math.hypot(mouse.x - O.x, mouse.y - O.y) < 170) return 'curious';
+  }
+  return O.emo;
+}
+
+// ---------------------------------------------------------------- sound
+let AC = null, muted = false;
+const audio = () => (AC ||= new (window.AudioContext || window.webkitAudioContext)());
+function tone({ f = 600, f2, type = 'square', dur = .04, vol = .05, when = 0 }) {
+  if (muted || !AC) return;
+  const t = AC.currentTime + when, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur + .02);
+}
+function noise(dur, vol, from, to) {
+  if (muted || !AC) return;
+  const t = AC.currentTime, buf = AC.createBuffer(1, AC.sampleRate * dur, AC.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  src.buffer = buf; f.type = 'bandpass'; f.Q.value = 1.2;
+  f.frequency.setValueAtTime(from, t); f.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + dur * .7); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  src.connect(f).connect(g).connect(AC.destination); src.start(t);
+}
+const sfx = {
+  blip: () => tone({ f: rand(520, 640), dur: .035, vol: .03 }),
+  chime: () => { tone({ f: 1320, f2: 1980, type: 'triangle', dur: .25, vol: .06 }); tone({ f: 1760, f2: 2640, type: 'triangle', dur: .3, vol: .04, when: .09 }); },
+  whoosh: () => noise(.45, .25, 300, 3200),
+  impact: () => { tone({ f: 170, f2: 36, type: 'sine', dur: .5, vol: .55 }); noise(.22, .4, 2400, 180); },
+  pop: () => tone({ f: 320, f2: 960, type: 'sine', dur: .12, vol: .12 }),
+  hey: () => { tone({ f: 880, type: 'triangle', dur: .09, vol: .07 }); tone({ f: 1175, type: 'triangle', dur: .16, vol: .07, when: .1 }); },
+};
+
+// ---------------------------------------------------------------- effects canvas
+const cv = $('#fx'), ctx = cv.getContext('2d');
+const parts = [], rings = [];
+const stars = Array.from({ length: 80 }, () => ({ x: Math.random(), y: Math.random(), s: rand(.4, 1.6), p: rand(0, 6.28) }));
+function resize() {
+  W = innerWidth; H = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+function emit(x, y, n, o = {}) {
+  for (let i = 0; i < n; i++) {
+    const a = rand(0, Math.PI * 2), sp = rand(o.min ?? 10, o.max ?? 60), life = rand(.4, o.life ?? .9);
+    parts.push({ x, y, vx: Math.cos(a) * sp + (o.vx || 0), vy: Math.sin(a) * sp + (o.vy || 0), g: o.g ?? 0,
+      life, max: life, size: rand(1, o.size ?? 3), h: o.h ?? P.hue, text: o.text });
+  }
+}
+function drawFx(dt, t) {
+  ctx.clearRect(0, 0, W, H);
+  for (const s of stars) {
+    ctx.globalAlpha = .25 + .35 * Math.sin(t * 1.3 + s.p) ** 2;
+    ctx.fillStyle = '#cfe8ff'; ctx.fillRect(s.x * W, ((s.y + t * .004) % 1) * H, s.s, s.s);
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
+    p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .985; p.vy *= .985;
+    const a = p.life / p.max;
+    if (p.text) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = `rgba(220,235,255,${a})`; ctx.font = `900 ${10 + (1 - a) * 10}px Nunito, sans-serif`; ctx.fillText(p.text, p.x, p.y);
+      ctx.globalCompositeOperation = 'lighter';
+    } else {
+      ctx.fillStyle = `hsla(${p.h},100%,80%,${a})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * a + .3, 0, 6.283); ctx.fill();
+    }
+  }
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const r = rings[i];
+    r.life -= dt; if (r.life <= 0) { rings.splice(i, 1); continue; }
+    const k = 1 - r.life / r.max;
+    ctx.strokeStyle = `hsla(${r.h},100%,85%,${(1 - k) * .9})`; ctx.lineWidth = r.w * (1 - k) + .5;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r0 + easeOut(k) * r.r1, 0, 6.283); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ---------------------------------------------------------------- intro flight
+// Tiny spark spirals in while spinning on its axis, dashes at the camera, hits the
+// glass, then backs off to its resting spot. Spin ends on a multiple of 2π so the
+// face is front-on at impact.
+const A = 2400, B = 450, C = 900;
+const rest = () => ({ x: W / 2, y: H * .4 });
+let introDone = null;
+
+function impact() {
+  sfx.impact();
+  $('#flash').animate([{ opacity: .95 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' });
+  const k = [];
+  for (let i = 0; i < 8; i++) k.push({ transform: `translate(${rand(-18, 18) * (1 - i / 8)}px,${rand(-14, 14) * (1 - i / 8)}px)` });
+  k.push({ transform: 'none' });
+  $('#world').animate(k, { duration: 480, easing: 'ease-out' });
+  rings.push({ x: W / 2, y: H / 2, r0: 60, r1: Math.max(W, H) * .7, w: 14, life: .7, max: .7, h: 50 });
+  rings.push({ x: W / 2, y: H / 2, r0: 40, r1: Math.max(W, H) * .45, w: 8, life: .9, max: .9, h: P.hue });
+  emit(W / 2, H / 2, 90, { min: 250, max: 950, life: 1.1, size: 4 });
+}
+
+function introStep(now, dt) {
+  const t = now - O.t0, r = rest(), px = O.x, py = O.y;
+  if (reduced) {
+    O.x = r.x; O.y = r.y; O.scale = 1; O.spin = O.spinTarget = 0;
+    orbEl.style.opacity = clamp(t / 600, 0, 1);
+    if (t > 600) finishIntro();
+    return;
+  }
+  orbEl.style.opacity = 1;
+  if (t < A) {
+    const u = t / A, e = easeInOut(u), R = lerp(Math.min(W, H) * .3, 10, e), ang = u * Math.PI * 5;
+    O.x = lerp(W * .12, r.x, e) + Math.cos(ang) * R;
+    O.y = lerp(H * .18, r.y, e) + Math.sin(ang) * R * .5;
+    O.scale = lerp(.07, .38, Math.pow(u, 1.6));
+    O.spin = u * 12 * Math.PI;
+  } else if (t < A + B) {
+    if (!O.from) { O.from = { x: O.x, y: O.y }; sfx.whoosh(); }
+    const u = (t - A) / B, e = u * u * u;
+    O.x = lerp(O.from.x, W / 2, e); O.y = lerp(O.from.y, H / 2, e);
+    O.scale = lerp(.38, 4.6, e);
+    O.spin = 12 * Math.PI + easeOut(u) * 4 * Math.PI;
+  } else if (t < A + B + C) {
+    if (!O.hit) { O.hit = true; impact(); }
+    const u = (t - A - B) / C, w = Math.exp(-u * 5) * Math.cos(u * 28);
+    O.spin = 16 * Math.PI;
+    O.scale = lerp(4.6, 1, easeOutBack(u));
+    O.x = lerp(W / 2, r.x, easeInOut(u)); O.y = lerp(H / 2, r.y, easeInOut(u));
+    O.sqx = 1 + .35 * w; O.sqy = 1 - .35 * w;
+  } else {
+    finishIntro();
+    return;
+  }
+  O.vx = (O.x - px) / dt; O.vy = (O.y - py) / dt;
+  if (t < A + B) emit(O.x, O.y, 2, { min: 5, max: 30, life: .7, size: 2 + O.scale * 3 });
+}
+function finishIntro() {
+  O.sqx = O.sqy = 1; O.scale = O.targetScale = 1;
+  O.spin = O.spinTarget = 0; O.vx = O.vy = 0;
+  O.tx = O.x; O.ty = O.y; O.mode = 'talk';
+  orbEl.style.opacity = 1;
+  introDone?.(); introDone = null;
+}
+
+// ---------------------------------------------------------------- free flight
+function physics(now, dt) {
+  if (O.mode === 'idle' && now > O.nextWander) {
+    O.tx = rand(W * .12, W * .88); O.ty = rand(H * .14, H * .6);
+    O.nextWander = now + rand(2600, 6000);
+  }
+  if (O.mode === 'talk') {
+    const d = $('#dialog'), top = d.hidden ? H * .5 : d.getBoundingClientRect().top;
+    O.tx = W / 2 + Math.sin(now / 1400) * Math.min(80, W * .12);
+    O.ty = Math.min(H * .4, top - 110);
+  }
+  const k = O.mode === 'idle' ? 9 : 22, damp = O.mode === 'idle' ? 5 : 8;
+  O.vx += ((O.tx - O.x) * k - O.vx * damp) * dt;
+  O.vy += ((O.ty - O.y) * k - O.vy * damp) * dt;
+  O.x += O.vx * dt; O.y += O.vy * dt;
+  O.scale += (O.targetScale - O.scale) * Math.min(1, dt * 6);
+  O.spin += (O.spinTarget - O.spin) * Math.min(1, dt * 7);
+  const speed = Math.hypot(O.vx, O.vy);
+  if (speed > 260) emit(O.x, O.y, 1, { min: 4, max: 20, life: .5, size: 2 });
+  if (Math.random() < dt * 5) emit(O.x + rand(-20, 20), O.y + rand(0, 20), 1, { min: 2, max: 10, g: 40, life: 1.1, size: 1.6 });
+}
+
+// ---------------------------------------------------------------- render
+function render(now, dt) {
+  const T = now / 1000;
+  const emo = currentEmo(now);
+  if (emo === 'sleepy') wasSleepy = true;
+  const tgt = EMO[emo];
+  const ease = Math.min(1, dt * 10);
+  for (const k of KEYS) P[k] = lerp(P[k], tgt[k], ease);
+
+  // gaze: emotion override > dizzy circles > cursor > direction of travel
+  let gx, gy;
+  if (tgt.gaze) [gx, gy] = tgt.gaze;
+  else if (tgt.spinGaze) { gx = Math.cos(T * 9); gy = Math.sin(T * 9); }
+  else if (now - mouse.at < 4000) {
+    const dx = mouse.x - O.x, dy = mouse.y - O.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 200);
+    gx = dx / d * m; gy = dy / d * m;
+  } else { gx = clamp(O.vx / 500, -1, 1); gy = clamp(O.vy / 500, -1, 1); }
+  O.gx = lerp(O.gx, gx, Math.min(1, dt * 8)); O.gy = lerp(O.gy, gy, Math.min(1, dt * 8));
+
+  // blink
+  if (now > O.nextBlink) { O.blinkAt = now; O.nextBlink = now + rand(2200, 5800) * (emo === 'sleepy' ? 1.8 : 1); }
+  const bt = (now - O.blinkAt) / (emo === 'sleepy' ? 320 : 140);
+  const blink = bt >= 0 && bt <= 1 ? 1 - Math.sin(Math.PI * bt) : 1;
+
+  // pseudo-3D spin: the face slides across the sphere and narrows, hidden on the back side
+  const cos = Math.cos(O.spin), sin = Math.sin(O.spin);
+  const faceVis = clamp(cos * 3, 0, 1) * clamp((O.scale - .15) / .2, 0, 1);
+  faceG.setAttribute('transform', `translate(${sin * 30 + O.gx * 7} ${O.gy * 5}) scale(${Math.max(.02, Math.abs(cos))} 1)`);
+  faceG.style.opacity = faceVis;
+
+  for (const e of eyes) {
+    const sc = e.side < 0 ? P.l : P.r;
+    const rx = 7.5 * sc, ry = Math.max(.5, 10.5 * sc * P.open * blink), cx = e.cx, cy = -2;
+    e.el.setAttribute('cx', cx); e.el.setAttribute('cy', cy); e.el.setAttribute('rx', rx); e.el.setAttribute('ry', ry);
+    e.shine.setAttribute('cx', cx - rx * .35); e.shine.setAttribute('cy', cy - ry * .45);
+    e.shine.setAttribute('r', ry > 3 ? 2.2 * sc : 0);
+    // lids are a clip polygon: top edge drops and tilts, bottom edge rises
+    const top = cy - ry + P.lidTop * 2 * ry, bot = cy + ry - P.lidBottom * 2 * ry + .01;
+    const outer = cx + e.side * 16, inner = cx - e.side * 16;
+    e.poly.setAttribute('points', `${outer},${top + P.tilt * 7 * sc} ${inner},${top - P.tilt * 7 * sc} ${inner},${bot} ${outer},${bot}`);
+    e.cheek.style.opacity = P.cheeks * .75;
+  }
+  O.mouth = Math.max(0, O.mouth - dt * 7);
+  mouthEl.setAttribute('ry', emo === 'speaking' ? 3.2 * O.mouth : 0);
+
+  // body
+  orbEl.style.setProperty('--h', P.hue.toFixed(1));
+  const speed = Math.hypot(O.vx, O.vy), s = Math.min(speed / 1800, .22), a = Math.atan2(O.vy, O.vx);
+  const bob = Math.sin(T * 2.2) * 6 * P.bob * (O.mode === 'intro' ? 0 : 1);
+  const lean = clamp(O.vx * .02, -18, 18);
+  orbEl.style.transform = `translate(${O.x - BASE / 2}px,${O.y - BASE / 2 + bob}px) scale(${O.scale}) rotate(${lean}deg)`;
+  squashEl.style.transform = `scale(${O.sqx},${O.sqy}) rotate(${a}rad) scale(${1 + s},${1 - s}) rotate(${-a}rad)`;
+  const pulse = 1 + O.level * .9 + (emo === 'listening' ? Math.sin(T * 6) * .08 : 0) + (emo === 'happy' ? .06 : 0);
+  glowEl.style.transform = `scale(${pulse})`;
+
+  O.wing += dt * (14 + speed * .02 + (O.mode === 'intro' ? 22 : 0));
+  const flap = Math.sin(O.wing) * 32;
+  wingL.style.transform = `rotate(${-12 - flap}deg)`;
+  wingR.style.transform = `rotate(${12 + flap}deg)`;
+
+  if (emo === 'sleepy' && Math.random() < dt * .8) parts.push({ x: O.x + 30, y: O.y - 30, vx: 14, vy: -22, g: 0, life: 2, max: 2, size: 0, h: 0, text: 'z' });
+
+  // bubble follows the orb
+  if (bubbleEl.classList.contains('show')) {
+    bubbleEl.style.transform = `translate(${clamp(O.x, 150, W - 150)}px,${O.y + bob - BASE * .5 * O.scale - 22}px) translate(-50%,-100%)`;
+  }
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000) || .016; last = now;
+  if (O.mode === 'intro') introStep(now, dt);
+  else if (O.mode !== 'off') physics(now, dt);
+  if (O.mode !== 'off') render(now, dt);
+  drawFx(dt, now / 1000);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------------------------------------------------------------- dialog
+const dlg = $('#dialog'), dtext = $('#dtext'), dnext = $('#dnext'), dchoices = $('#dchoices');
+$('#dname').textContent = NAME;
+const D = { done: true, finish: null, advance: null, timer: 0 };
+
+function typeInto(el, text, onDone) {
+  let i = 0;
+  const step = () => {
+    if (i >= text.length) return onDone();
+    const ch = text[i++];
+    el.textContent = text.slice(0, i);
+    if (/\S/.test(ch) && i % 2) { sfx.blip(); O.mouth = 1; }
+    D.timer = setTimeout(step, /[.,!?…:]/.test(ch) ? 170 : 26);
+  };
+  step();
+}
+
+function say(text, { emo = 'speaking', after = 'neutral' } = {}) {
+  return new Promise((res) => {
+    dlg.hidden = false; dchoices.innerHTML = ''; dnext.hidden = true; dtext.textContent = '';
+    O.emo = emo; D.done = false;
+    D.finish = () => {
+      clearTimeout(D.timer); D.done = true; dtext.textContent = text; dnext.hidden = false; O.emo = after;
+      D.advance = () => { D.advance = null; res(); };
+    };
+    typeInto(dtext, text, D.finish);
+  });
+}
+
+function choose(text, options) {
+  return new Promise((res) => {
+    dlg.hidden = false; dchoices.innerHTML = ''; dnext.hidden = true; dtext.textContent = '';
+    O.emo = 'speaking'; D.done = false; D.advance = null;
+    const show = () => {
+      clearTimeout(D.timer); D.done = true; dtext.textContent = text; O.emo = 'curious';
+      for (const o of options) {
+        const b = document.createElement('button');
+        b.className = 'btn' + (o.ghost ? ' ghost' : ''); b.textContent = o.label;
+        b.onclick = (ev) => { ev.stopPropagation(); sfx.pop(); dchoices.innerHTML = ''; res(o.id); };
+        dchoices.append(b);
+      }
+    };
+    D.finish = show;
+    typeInto(dtext, text, show);
+  });
+}
+
+dlg.addEventListener('click', () => { if (!D.done) D.finish?.(); else D.advance?.(); });
+addEventListener('keydown', (e) => {
+  if (dlg.hidden || !(e.key === ' ' || e.key === 'Enter')) return;
+  e.preventDefault();
+  if (!D.done) D.finish?.(); else D.advance?.();
+});
+
+// ---------------------------------------------------------------- bubble
+const bubbleEl = $('#bubble');
+let bubbleTimer = 0;
+function bubble(text, ms = 2600, typed = false) {
+  clearTimeout(bubbleTimer);
+  bubbleEl.classList.add('show');
+  const hide = () => { if (ms) bubbleTimer = setTimeout(() => bubbleEl.classList.remove('show'), ms); };
+  if (!typed) { bubbleEl.textContent = text; hide(); return Promise.resolve(); }
+  return new Promise((res) => typeInto(bubbleEl, text, () => { hide(); res(); }));
+}
+
+// ---------------------------------------------------------------- voice / text
+const store = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+};
+let inputMode = store.get('cordada.inputMode') || 'text';
+
+// Listens to the mic for `ms`, driving the glow with the voice level.
+async function listen(ms) {
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return false; }
+  const src = audio().createMediaStreamSource(stream), an = AC.createAnalyser();
+  an.fftSize = 512; src.connect(an);
+  const buf = new Uint8Array(an.fftSize), end = performance.now() + ms;
+  O.emo = 'listening';
+  while (performance.now() < end) {
+    an.getByteTimeDomainData(buf);
+    let sum = 0; for (const v of buf) { const d = (v - 128) / 128; sum += d * d; }
+    O.level = lerp(O.level, Math.min(1, Math.sqrt(sum / buf.length) * 5), .4);
+    await wait(30);
+  }
+  stream.getTracks().forEach((t) => t.stop());
+  src.disconnect(); O.level = 0;
+  return true;
+}
+
+const ask = $('#ask'), askInput = $('#askInput'), askMic = $('#askMic'), askSend = $('#askSend'), askModeBtn = $('#askMode');
+function renderAsk() {
+  const voice = inputMode === 'voice';
+  askInput.hidden = voice; askSend.hidden = voice; askMic.hidden = !voice;
+  askModeBtn.textContent = voice ? '⌨️' : '🎤';
+  askModeBtn.title = voice ? 'Cambiar a texto' : 'Cambiar a voz';
+}
+function openAsk() { renderAsk(); ask.hidden = false; if (inputMode === 'text') askInput.focus(); }
+askModeBtn.onclick = () => { inputMode = inputMode === 'voice' ? 'text' : 'voice'; store.set('cordada.inputMode', inputMode); sfx.pop(); renderAsk(); };
+$('#askClose').onclick = () => { ask.hidden = true; O.emo = 'neutral'; };
+
+let answering = false;
+async function answer() {
+  if (answering) return;
+  answering = true;
+  O.emo = 'thinking'; bubble('Mmm…', 0);
+  await wait(1100);
+  O.emo = 'speaking';
+  await bubble('¡Buena pregunta! Cuando me conecte a tus datos te lo explico con tus números. 😉', 3500, true);
+  O.emo = 'neutral'; flashEmo('happy', 1500);
+  answering = false;
+}
+askSend.onclick = () => { if (!askInput.value.trim()) return; askInput.value = ''; answer(); };
+askInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') askSend.onclick(); });
+askMic.onclick = async () => {
+  if (answering) return;
+  bubble('Te escucho…', 0);
+  const ok = await listen(3000);
+  if (!ok) {
+    inputMode = 'text'; store.set('cordada.inputMode', inputMode); renderAsk();
+    O.emo = 'concerned'; await bubble('No pude usar tu micrófono. Escríbeme aquí abajo.', 3000, true);
+    O.emo = 'neutral'; return;
+  }
+  answer();
+};
+
+// ---------------------------------------------------------------- orb interaction
+orbEl.addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  if (O.mode !== 'idle') return;
+  sfx.hey(); flashEmo('happy', 1200);
+  O.vy -= 420; O.spinTarget += Math.PI * 2;
+  emit(O.x, O.y, 18, { min: 60, max: 220, life: .8, size: 3 });
+  if (ask.hidden) { bubble('¡Hola! ¿Qué quieres saber?', 2200); openAsk(); }
+});
+function onInput(e) {
+  if (wasSleepy && O.mode === 'idle' && performance.now() - lastInput > 14000) { flashEmo('surprised', 700); sfx.pop(); }
+  wasSleepy = false;
+  lastInput = performance.now();
+  if (e.clientX != null) { mouse.x = e.clientX; mouse.y = e.clientY; mouse.at = lastInput; }
+}
+addEventListener('pointermove', onInput);
+addEventListener('pointerdown', onInput);
+addEventListener('keydown', onInput);
+
+// ---------------------------------------------------------------- script
+async function intro() {
+  O.mode = 'intro'; O.t0 = performance.now(); O.from = null; O.hit = false;
+  sfx.chime();
+  await new Promise((r) => { introDone = r; });
+  flashEmo('dizzy', 1000); await wait(1000);
+  flashEmo('surprised', 450); sfx.pop(); await wait(450);
+  O.emo = 'happy'; await wait(300);
+
+  await say('¡Hey! ¡Hola! 👋', { emo: 'happy', after: 'happy' });
+  await say(`Soy ${NAME}, tu guía financiera.`, { after: 'happy' });
+  await say('Voy a mostrarte tu situación de un vistazo. Sin letra chica y sin rodeos.');
+  let mode = await choose('Antes de empezar: ¿prefieres hablarme o escribirme?', [
+    { id: 'voice', label: '🎤 Hablar' },
+    { id: 'text', label: '⌨️ Escribir', ghost: true },
+  ]);
+  if (mode === 'voice') {
+    dtext.textContent = 'Di algo, lo que sea… 🎙️'; dnext.hidden = true;
+    if (await listen(3200)) await say('¡Te escucho fuerte y claro!', { emo: 'happy', after: 'happy' });
+    else { mode = 'text'; await say('No pude usar tu micrófono. Te escribo yo, y puedes cambiarlo cuando quieras.', { emo: 'concerned' }); }
+  } else {
+    await say('¡Perfecto! Te escribo por aquí.', { emo: 'happy', after: 'happy' });
+  }
+  inputMode = mode; store.set('cordada.inputMode', mode);
+  await say('Si algo no se entiende, tócame y te lo explico. ¿Vamos?', { after: 'happy' });
+
+  dlg.hidden = true; O.mode = 'idle'; O.emo = 'neutral'; O.nextWander = performance.now() + 1500;
+  $('#continue').classList.add('show');
+}
+
+$('#continue').onclick = async () => {
+  sfx.pop();
+  $('#continue').classList.remove('show');
+  const card = $('#summary'); card.classList.add('show');
+  await wait(350);
+  const r = card.getBoundingClientRect();
+  O.mode = 'hold'; O.tx = Math.min(W - 60, r.right); O.ty = Math.max(60, r.top - 20);
+  flashEmo('happy', 2500);
+  await wait(700);
+  await bubble('¡Aquí va a vivir tu resumen!', 2500, true);
+  await wait(1200);
+  O.mode = 'idle'; O.nextWander = 0;
+};
+
+$('#start').addEventListener('click', () => {
+  audio(); $('#start').remove();
+  if (new URLSearchParams(location.search).get('debug') !== '0') buildDebug();
+  intro();
+}, { once: true });
+
+// ---------------------------------------------------------------- debug panel
+function buildDebug() {
+  const box = $('#debug'); box.hidden = false;
+  const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = (e) => { e.stopPropagation(); fn(b); }; box.append(b); return b; };
+  const emoBtns = [];
+  for (const name of Object.keys(EMO)) {
+    emoBtns.push(mk(name, (b) => {
+      debugEmo = debugEmo === name ? null : name;
+      emoBtns.forEach((x) => x.classList.toggle('on', x.textContent === debugEmo));
+    }));
+  }
+  mk('↺ intro', () => {
+    ask.hidden = true; dlg.hidden = true; $('#continue').classList.remove('show'); $('#summary').classList.remove('show');
+    clearTimeout(D.timer); D.finish = D.advance = null; intro();
+  });
+  mk('🔊', (b) => { muted = !muted; b.textContent = muted ? '🔇' : '🔊'; });
+}
+</script>
+</body>
+</html>

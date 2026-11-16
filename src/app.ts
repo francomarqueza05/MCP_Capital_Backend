@@ -1,5 +1,6 @@
 // The HTTP API. Every route is declared with its schema, so requests are validated and the
 // OpenAPI document (GET /openapi.json, browsable at /docs) is always the real contract.
+import { paceFor } from "./engine/engine";
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import { cors } from "hono/cors";
@@ -80,13 +81,13 @@ export function createApp() {
       summary: "Open a conversation",
       description: "Starts the phase plan for the member behind the token, carrying over what was learnt last time.",
       ...member,
-      request: { body: { content: { "application/json": { schema: z.object({ lang: S.Lang.optional() }) } } } },
+      request: { body: { content: { "application/json": { schema: z.object({ lang: S.Lang.optional(), pace: S.Pace.optional() }) } } } },
       responses: { 201: json(S.SessionView, "The conversation and its first phase"), ...errors },
     }),
     async (c) => {
       const { caseData, member: m, owner } = c.get("caller");
-      const { lang } = c.req.valid("json");
-      return c.json(await openSession(caseData, m, owner, lang), 201);
+      const { lang, pace } = c.req.valid("json");
+      return c.json(await openSession(caseData, m, owner, lang, pace), 201);
     },
   );
 
@@ -362,13 +363,13 @@ export function createApp() {
       summary: "Who this link belongs to",
       ...member,
       responses: {
-        200: json(z.object({ name: z.string(), household: z.string(), place: z.string(), members: z.array(z.string()) }), "The member"),
+        200: json(z.object({ name: z.string(), household: z.string(), place: z.string(), members: z.array(z.string()), age: z.number(), pace: S.Pace }), "The member, with the pace their call starts at"),
         ...errors,
       },
     }),
     (c) => {
       const { caseData, member: m } = c.get("caller");
-      return c.json({ name: m.name, household: caseData.family, place: caseData.place, members: caseData.members.map((x) => x.name) }, 200);
+      return c.json({ name: m.name, household: caseData.family, place: caseData.place, members: caseData.members.map((x) => x.name), age: m.age, pace: paceFor(m.age) }, 200);
     },
   );
 

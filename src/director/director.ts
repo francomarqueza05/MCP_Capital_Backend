@@ -99,7 +99,9 @@ export function stepsFor(
   const expert = profile.level === "expert";
   const lad = ladder(phase, c, plan, profile, topic);
   // Experts start one level deeper; every "tell me more" adds a level.
-  const reach = Math.min(3, 1 + (expert ? 1 : 0) + (mode === "more" ? depth : 0));
+  // Level 2 is always on the board too: the phase shows everything at once and the guide walks
+  // through it, so there is something to look forward to. Experts get level 3 as well.
+  const reach = Math.min(3, 2 + (expert ? 1 : 0) + (mode === "more" ? depth : 0));
   let ids: { id: string; level: 1 | 2 | 3 }[] = [];
   for (let l = 0; l < reach; l++) for (const id of lad[l]) ids.push({ id, level: (l + 1) as 1 | 2 | 3 });
 

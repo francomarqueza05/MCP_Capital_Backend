@@ -12,6 +12,24 @@ export type PhaseId = "discovery" | "today" | "focus" | "tension" | "route" | "s
 
 export type Level = "new" | "basics" | "expert";
 
+/**
+ * How the guide paces the call, chosen by age and changeable by the person before starting.
+ *   brisk   younger: the guide leads the whole way, a little faster, and asks nothing unless
+ *           they interrupt with a doubt
+ *   steady  the guide leads and checks once at the end of each phase
+ *   calm    older: slower voice, shorter sentences, and a check that they follow after
+ *           every block on screen
+ */
+export type Pace = "brisk" | "steady" | "calm";
+
+export const PACE: Record<Pace, { speed: number; checkIn: "never" | "phase" | "block" }> = {
+  brisk: { speed: 1.1, checkIn: "never" },
+  steady: { speed: 1.0, checkIn: "phase" },
+  calm: { speed: 0.88, checkIn: "block" },
+};
+
+export const paceFor = (age: number | undefined): Pace => (age === undefined ? "steady" : age < 40 ? "brisk" : age < 58 ? "steady" : "calm");
+
 export type Profile = {
   memberId: string;
   name: string;
@@ -19,6 +37,8 @@ export type Profile = {
   level: Level;
   worry: string | null;
   worryTopic: TopicId | null;
+  age?: number;
+  pace: Pace;
 };
 
 export type Visual =
@@ -44,6 +64,7 @@ export type Packet = {
   avoid: string[];
   fallback: string[];
   maxTurns: number;
+  pace: Pace;
   /** The blocks to show in this phase, in order, chosen by the director. */
   steps: Step[];
 };
@@ -107,8 +128,10 @@ export function firstStep(c: CaseData, topic: TopicId | null) {
   return { title: title.length > 70 ? title.slice(0, 67).trimEnd() + "..." : title, detail: rec, move };
 }
 
+// The plan already says who they are and what is wrong, so the call asks nothing up front:
+// it opens on where they stand and then goes into the analysis.
 export function buildPlan(c: CaseData, p: Profile): PhaseId[] {
-  const plan: PhaseId[] = ["discovery", "today"];
+  const plan: PhaseId[] = ["today"];
   const focus = focusConcern(c, p);
   if (focus) plan.push("focus");
   if (focusTension(c, focus)) plan.push("tension");
@@ -165,6 +188,7 @@ export function packet(c: CaseData, s: SessionState): Packet {
     depth: s.depth,
     avoid: later.length ? [`Do not get ahead of the plan: ${later.join(", ")} come later.`] : [],
     maxTurns: MAX_TURNS,
+    pace: p.pace,
     steps: stepsFor(c, p, id, topic, s.depth, s.mode ?? null, usedBefore(c, p, s.plan, s.phase, topic)),
   };
 
@@ -245,7 +269,7 @@ export function packet(c: CaseData, s: SessionState): Packet {
         planSays: [t.text],
         analogy: simple ? "It's one paycheck asked to do two jobs at the same time." : null,
         visual: { kind: "quote", text: "Two goals, one pool of money" },
-        ask: [{ question: "Does that match what you expected?", chips: ["Yes, roughly", "No, that's news to me"], field: "worry" }],
+        ask: p.pace === "brisk" ? [] : [{ question: "Does that match what you expected?", chips: ["Yes, roughly", "No, that's news to me"], field: "worry" }],
         exit: "They see the trade-off and have reacted to it.",
         fallback: ["Here is the part that needs a decision.", t.text],
       };
@@ -312,8 +336,17 @@ const LEVELS: Record<string, Level> = {
   "dame el detalle": "expert",
 };
 
-export function startState(c: CaseData, member: Member, prior?: Partial<Profile>): SessionState {
-  const profile: Profile = { memberId: member.id, name: member.name, lang: prior?.lang ?? "es", level: prior?.level ?? "basics", worry: prior?.worry ?? null, worryTopic: prior?.worryTopic ?? null };
+export function startState(c: CaseData, member: Member, prior?: Partial<Profile>, pace?: Pace): SessionState {
+  const profile: Profile = {
+    memberId: member.id,
+    name: member.name,
+    lang: prior?.lang ?? "es",
+    level: prior?.level ?? "basics",
+    worry: prior?.worry ?? null,
+    worryTopic: prior?.worryTopic ?? null,
+    age: member.age,
+    pace: pace ?? paceFor(member.age),
+  };
   return { phase: 0, depth: 0, turns: 0, plan: buildPlan(c, profile), profile, log: [], done: false };
 }
 
@@ -325,7 +358,8 @@ export function advance(c: CaseData, prev: SessionState, input: DoneInput): Adva
   const id = s.plan[s.phase];
   const a = input.answers ?? {};
 
-  if (a.worry && id === "discovery") {
+  // Nothing is asked up front, but if they mention a worry it steers the focus.
+  if (a.worry) {
     s.profile.worry = a.worry.slice(0, 300);
     s.profile.worryTopic = classify(a.worry);
   }
@@ -349,7 +383,7 @@ export function advance(c: CaseData, prev: SessionState, input: DoneInput): Adva
     return { state: s, accepted: null };
   }
 
-  if (id === "discovery") s.plan = buildPlan(c, s.profile);
+  if (a.worry && s.phase < s.plan.indexOf("focus")) s.plan = [...s.plan.slice(0, s.phase + 1), ...buildPlan(c, s.profile).slice(1)];
   s.phase++;
   s.depth = 0;
   s.mode = null;

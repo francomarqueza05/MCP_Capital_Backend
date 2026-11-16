@@ -14,7 +14,10 @@
     "typecheck": "tsc --noEmit",
     "agent": "tsx --env-file=.env scripts/agent.ts",
     "openapi": "tsx scripts/openapi.ts",
-    "bench": "tsx --env-file-if-exists=.env bench/run.ts"
+    "bench": "tsx --env-file-if-exists=.env bench/run.ts",
+    "voice:orb": "tsx --env-file-if-exists=.env scripts/voice-orb.ts",
+    "sfx:orb": "tsx --env-file-if-exists=.env scripts/sfx-orb.ts",
+    "cases:orb": "tsx --env-file=.env scripts/cases-orb.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

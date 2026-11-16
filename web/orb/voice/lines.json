@@ -1,0 +1,15 @@
+{
+  "hello": { "text": "¡Hola! Soy Cordi.", "tag": "[excited]" },
+  "intro": "Te acompaño a entender tu plan financiero, paso a paso.",
+  "howItWorks": { "text": "Primero verás un resumen de tu situación. Si algo no queda claro, tócame y lo vemos juntos.", "tag": "[warmly]" },
+  "askMode": "¿Cómo prefieres hacerme preguntas?",
+  "sayAnything": "Di algo, te escucho.",
+  "heardYou": { "text": "¡Perfecto, te escucho bien!", "tag": "[happy]" },
+  "micFailed": { "text": "No pude acceder al micrófono. Seguimos por escrito; puedes cambiarlo cuando quieras.", "tag": "[apologetic]" },
+  "textMode": "¡Perfecto, seguimos por escrito!",
+  "summaryHere": "Aquí verás tu resumen.",
+  "howCanIHelp": "¿En qué te ayudo?",
+  "listening": { "text": "Te escucho.", "tag": "[softly]" },
+  "micFailedShort": { "text": "No pude acceder al micrófono. Puedes escribirme aquí abajo.", "tag": "[apologetic]" },
+  "placeholderAnswer": { "text": "¡Buena pregunta! Cuando esté conectado a tu plan, te lo explico con tus propias cifras.", "tag": "[warmly]" }
+}

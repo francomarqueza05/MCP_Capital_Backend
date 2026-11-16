@@ -34,13 +34,12 @@ test("a full conversation ends in a goal, a next step and a memory of it", async
   const open = await call("/v1/sessions", timothy, post({ lang: "en" }));
   assert.equal(open.status, 201);
   const o = await open.json();
-  assert.equal(o.packet.phase, "discovery");
+  assert.equal(o.packet.phase, "today");
+  assert.equal(o.persona.pace, "steady", "Timothy is 40");
   assert.equal(o.persona.name, "Timothy");
   assert.match(o.agentBrief, /PHASE 1 of/);
 
-  let r = await (await call(`/v1/sessions/${o.session.id}/phase-done`, timothy, post({ answers: { worry: "Paying for college", level: "Keep it simple" } }))).json();
-  assert.equal(r.packet.phase, "today");
-  assert.equal(r.persona.level, "new");
+  let r = await (await call(`/v1/sessions/${o.session.id}/phase-done`, timothy, post({ understood: true, answers: { worry: "Paying for college" } }))).json();
   let guard = 0;
   while (r.packet && guard++ < 12) {
     r = await (await call(`/v1/sessions/${o.session.id}/phase-done`, timothy, post({ understood: true, emotion: "calm", answers: { accepted: true } }))).json();

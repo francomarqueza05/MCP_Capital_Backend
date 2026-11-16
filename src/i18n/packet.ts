@@ -42,6 +42,17 @@ export async function localize(p: Packet, lang: Lang): Promise<Packet> {
   return out;
 }
 
+/** How to run the phase for this person's pace (see Pace in the engine). */
+const PACE_RULES: Record<string, (p: Packet) => string[]> = {
+  brisk: (p) => [
+    `PACE: lead the whole phase yourself, without stopping to ask${p.phase === "commit" ? " (except the commitment question)" : ""}. Go from one block to the next in one flow. Stop only if they interrupt; then answer, and carry on.`,
+  ],
+  steady: () => ["PACE: lead the phase yourself. At the end, ask in a few words whether it is clear."],
+  calm: () => [
+    "PACE: speak slowly, in short and simple sentences. After each block, check they followed in a few words (for example '¿Hasta aquí bien?') and wait for the answer. If they did not follow, explain it again with an everyday image before moving on.",
+  ],
+};
+
 const LANG_NAME: Record<Lang, string> = { es: "Spanish (Spain)", en: "English" };
 
 /**
@@ -67,13 +78,20 @@ export function agentBrief(p: Packet, lang: Lang): string {
       "ON SCREEN, in this order. Call show_block with the id just before you talk about each one, then say it in your own words:",
       ...p.steps.map((st) => `- ${st.block} (${st.name})${st.say ? `: ${st.say}` : ""}`),
     );
-  lines.push(`DONE WHEN: ${p.exit}`);
+  lines.push(...PACE_RULES[p.pace ?? "steady"](p));
+  if (p.phase !== "commit")
+    lines.push(
+      "SUMMARY ON SCREEN: once you have explained the last block, the screen shows a summary of this phase with every block, a short text, a button to discuss each one and a Continue button. " +
+        "Say in one short sentence that they can look at the summary, ask about any part, or press Continue when ready. Then stop and wait. " +
+        "If they ask about a part, answer briefly from this brief (or lookup) and wait again. Do NOT call phase_done until they ask to continue (they say so, or press Continue).",
+    );
+  lines.push(`DONE WHEN: ${p.phase === "commit" ? p.exit : "they ask to continue to the next part."}`);
   if (p.avoid.length) lines.push(...p.avoid);
   lines.push(
     `Then call phase_done. Pass understood=false if they did not follow, wants_more=true if they asked for more detail` +
       (p.ask.some((a) => a.field === "worry") && p.phase === "discovery" ? ", worry=<their worry in their words>, level=<simple|basics|detail>" : "") +
       (p.ask.some((a) => a.field === "accepted") ? ", accepted=true/false" : "") +
-      ". Keep each turn to two or three short sentences.",
+      ".",
   );
   return lines.join("\n");
 }

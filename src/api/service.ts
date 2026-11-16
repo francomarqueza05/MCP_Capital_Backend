@@ -1,6 +1,6 @@
 // What the /api/v1 routes do, kept apart from HTTP so it can be tested and reused.
 import type { CaseData, Member } from "../cases/load";
-import { advance, firstStep, focusConcern, packet, startState, type DoneInput, type SessionState } from "../engine/engine";
+import { advance, firstStep, focusConcern, packet, PACE, startState, type DoneInput, type Pace, type SessionState } from "../engine/engine";
 import { concernTopic } from "../engine/topics";
 import { getStore, type Owner, type Session } from "../store/store";
 import { ApiError } from "./errors";
@@ -19,6 +19,9 @@ export function personaFor(c: CaseData, m: Member, s: SessionState, previous: st
     },
     language: s.profile.lang,
     level: s.profile.level,
+    pace: s.profile.pace,
+    /** Voice speed for the live agent (ElevenLabs tts.speed). */
+    speed: PACE[s.profile.pace].speed,
     worry: s.profile.worry,
     worryTopic: s.profile.worryTopic,
     riskProfile: m.riskProfile ?? null,
@@ -60,9 +63,9 @@ async function previousSummary(o: Owner) {
   return done[0] ?? null;
 }
 
-export async function openSession(c: CaseData, m: Member, o: Owner, lang?: Lang) {
+export async function openSession(c: CaseData, m: Member, o: Owner, lang?: Lang, pace?: Pace) {
   const prev = await previousSummary(o);
-  const state = startState(c, m, prev?.state.profile);
+  const state = startState(c, m, prev?.state.profile, pace);
   if (lang) state.profile.lang = lang;
   const s = await getStore().createSession(o, state);
   warm(c, state);
@@ -98,7 +101,7 @@ export async function phaseDone(c: CaseData, m: Member, o: Owner, id: string, in
   if (s.state.done) throw new ApiError(409, "finished", "This conversation has already ended. Open a new one.");
   const { state, accepted } = advance(c, s.state, input);
   // Their worry may have changed the plan: get its phases ready now.
-  if (s.state.plan[s.state.phase] === "discovery") warm(c, state);
+  if (input.answers?.worry) warm(c, state);
 
   let goal = null;
   if (accepted !== null) {

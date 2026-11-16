@@ -6,16 +6,15 @@ import { test } from "node:test";
 import { caseIds, casesDir, getCase } from "../src/cases/load";
 import { advance, packet, startState, type SessionState } from "../src/engine/engine";
 import { lookup } from "../src/engine/lookup";
-import { TOPICS } from "../src/engine/topics";
+import { classify, TOPICS } from "../src/engine/topics";
 
 const ids = caseIds();
 
 /** Walk a whole conversation with fixed answers and collect every packet. */
 function walk(id: string, worry?: string) {
   const c = getCase(id)!;
-  let s: SessionState = startState(c, c.members[0]);
-  const packets = [packet(c, s)];
-  s = advance(c, s, { answers: { worry, level: "Keep it simple" } }).state;
+  let s: SessionState = startState(c, c.members[0], worry ? { worry, worryTopic: classify(worry), level: "new" } : { level: "new" });
+  const packets: ReturnType<typeof packet>[] = [];
   let guard = 0;
   while (!s.done && guard++ < 20) {
     packets.push(packet(c, s));
@@ -37,13 +36,11 @@ test("all four cases load with members, facts and persona", () => {
   }
 });
 
-test("every conversation starts with discovery, never with bad news, and ends with a commitment", () => {
+test("every conversation opens on where they stand, never with bad news, and ends with a commitment", () => {
   for (const id of ids) {
     const { s, packets } = walk(id);
-    assert.equal(packets[0].phase, "discovery");
-    assert.equal(packets[0].facts.length, 0, "no figures before we know them");
-    assert.equal(packets[1].phase, "today");
-    const v = packets[1].visual;
+    assert.equal(packets[0].phase, "today");
+    const v = packets[0].visual;
     assert.ok(v.kind !== "figure" || v.fact.id !== "score", `${id}: the score is never the first thing shown`);
     assert.equal(packets.at(-1)!.phase, "commit");
     assert.ok(s.done);
@@ -90,4 +87,19 @@ test("lookup answers every topic from the plan only", () => {
       assert.ok(r.facts.length + r.planSays.length > 0, `${id} ${t.id} has nothing to say`);
     }
   }
+});
+
+test("pace follows age and shapes the brief", async () => {
+  const { paceFor } = await import("../src/engine/engine");
+  const { agentBrief } = await import("../src/i18n/packet");
+  assert.equal(paceFor(30), "brisk");
+  assert.equal(paceFor(45), "steady");
+  assert.equal(paceFor(70), "calm");
+  const c = getCase("michael-carter")!;
+  const young = packet(c, startState(c, c.members[0]));
+  assert.equal(young.pace, "brisk");
+  assert.match(agentBrief(young, "es"), /without stopping to ask/);
+  assert.match(agentBrief(young, "es"), /Do NOT call phase_done until they ask to continue/);
+  const old = packet(c, startState(c, c.members[0], undefined, "calm"));
+  assert.match(agentBrief(old, "es"), /After each block/);
 });

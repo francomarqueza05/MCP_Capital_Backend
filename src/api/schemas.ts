@@ -7,6 +7,9 @@ export const ErrorSchema = z
   .openapi("Error");
 
 export const Lang = z.enum(["es", "en"]).openapi({ description: "Language of the family. Spanish by default." });
+export const Pace = z
+  .enum(["brisk", "steady", "calm"])
+  .openapi({ description: "How the guide paces the call. Defaults by age: brisk under 40 (leads, asks nothing), steady to 57 (checks each phase), calm from 58 (slower, checks each block)." });
 
 export const Fact = z
   .object({
@@ -78,6 +81,8 @@ export const Persona = z
     household: z.object({ adults: z.array(z.string()), children: z.array(z.string()), place: z.string() }),
     language: Lang,
     level: z.enum(["new", "basics", "expert"]),
+    pace: Pace,
+    speed: z.number().openapi({ description: "Voice speed to pass to the live agent as overrides.tts.speed." }),
     worry: z.string().nullable(),
     worryTopic: z.string().nullable(),
     riskProfile: z.string().nullable(),
