@@ -8,17 +8,24 @@
 // camera, the route, the flags and where Cordi should be; the orb engine gives Cordi its weight.
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Case } from "@/data/cases";
-import { hasVoice, line, playSfx, speak, stopSfx, stopVoice, tones } from "@/lib/audio";
-import { clamp, easeInOut, lerp, wait } from "@/lib/store";
+import { hasVoice, line, playSfx, prefetchSpeech, speak, stopSfx, stopVoice, tones } from "@/lib/audio";
+import { clamp, easeInOut, lerp, useStore, wait } from "@/lib/store";
 import { orb, type Emotion } from "@/orb/engine";
 import { emit, ring, setStars } from "@/orb/fx";
 import { openAsk } from "@/stage/Ask";
-import { showBubble } from "@/stage/stage";
+import { orbSpot, showBubble } from "@/stage/stage";
 import { buildSteps, type Step } from "./steps";
 import { campU, ROUTE, SUMMIT, WH, WW } from "./world";
 import { COLOR, drawOccluder, drawWorld, type Frame } from "./render";
 import { Detail } from "./Detail";
 import { Narration, type Line } from "./Narration";
+import { understanding } from "./understanding";
+import { chat, closePanel, setTab } from "@/stage/chat";
+import { inCall } from "@/stage/call";
+import { nav, remember, session } from "@/ai/client";
+import { offerExplain, startExplain } from "@/explain/player";
+import { ExplainButton } from "@/explain/ExplainUI";
+import { explain, inTheater } from "@/explain/player";
 
 const HOVER = 78; // Cordi floats this far above the trail, in world units
 const MOOD: Record<Step["status"], Emotion> = { good: "happy", warn: "thinking", bad: "concerned", goal: "happy" };
@@ -35,7 +42,37 @@ export type Phase = "wait" | "intro" | "overview" | "tour";
 
 export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: Phase) => void }>(function Expedition({ c, onPhase }, ref) {
   const steps = useMemo(() => buildSteps(c), [c]);
+  const mountainLine = c.household.couple ? "Vuestro plan es esta montaña. Cada bandera es una parte de vuestro análisis." : "Tu plan es esta montaña. Cada bandera es una parte de tu análisis.";
   const n = steps.length;
+  const marks = useStore(understanding, (s) => s.marks);
+  // "Llévame y explícamelo" from the chat: fly to that camp, open it, offer the explanation
+  const navKey = useStore(nav, (n) => n.key);
+  const goRef = useRef<(i: number, open?: boolean) => void>(() => {});
+  const pending = useRef<{ i: number; how: "chat" | "call" } | null>(null);
+  // on the way to an explanation that starts on arrival: no camp narration in between
+  const [transit, setTransit] = useState(false);
+  useEffect(() => {
+    const { to, how } = nav.get();
+    if (!to) return;
+    const i = steps.findIndex((s) => s.id === to);
+    if (i < 0) return;
+    closePanel();
+    if (how) {
+      // straight on: fly there, and the explanation starts once Cordi has arrived
+      pending.current = { i, how };
+      setTransit(true);
+      setNarr(null);
+      goRef.current(i, false);
+      return;
+    }
+    goRef.current(i, true);
+    offerExplain(steps[i], c);
+  }, [navKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // marks belong to one family's climb: a new case starts with no flags planted
+  useEffect(() => {
+    understanding.set({ marks: {} });
+  }, [c.id]);
   const campPos = useMemo(() => steps.map((_, i) => ROUTE.at(campU(i, n))), [steps, n]);
   // each summary sits on the outer side of its switchback, pointing away from the route;
   // base camp's goes under the tent, the summit's to the left of its flag
@@ -62,6 +99,14 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   const [visited, setVisited] = useState(0);
   const [walking, setWalking] = useState(false);
   const [detail, setDetail] = useState(false);
+  // the side panel is up for a camp's detail, or for the conversation with Cordi
+  const chatPanel = useStore(chat, (s) => s.panel);
+  const sheet = detail || chatPanel;
+  // a call's explanation takes the screen: the side panel steps aside, and comes back after
+  const theater = useStore(explain, (s) => s.how !== null && (s.phase === "playing" || s.phase === "done"));
+  useEffect(() => {
+    if (detail) setTab("detail");
+  }, [detail]);
   const [narr, setNarr] = useState<Line | null>(null);
   const [hover, setHover] = useState<number | null>(null);
 
@@ -72,8 +117,9 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   const walked = useRef(0);
   const touring = useRef(false);
   const cw = useRef({ x: 0, y: 0, vx: 0, vy: 0, ready: false });
+  const cs = useRef({ x: 0, y: 0, vx: 0, vy: 0, ready: false }); // Cordi held at a screen spot
   const live = useRef({ idx: -1, detail: false, phase: "wait" as Phase, hover: null as number | null, visited: 0 });
-  live.current = { idx, detail, phase, hover, visited };
+  live.current = { idx, detail: sheet && !theater, phase, hover, visited };
   const introT0 = useRef(-1);
   const routeK = useRef(0);
   const draw = useRef<{ t0: number; dur: number; popped: number } | null>(null);
@@ -289,7 +335,31 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
 
       // Cordi on screen
       const scale = clamp(c.z / campZ(), 0.42, 1) * (isNarrow() ? 0.62 : 0.8);
-      if (cd.mode === "rise") {
+      const spot = orbSpot.get().at;
+      if (spot && cd.mode !== "hidden" && cd.mode !== "rise") {
+        // called away from the mountain (beside a call's explanation): fly there on a spring,
+        // in screen space; when released, the world spring picks up from wherever it is
+        const s = cs.current;
+        if (!s.ready) {
+          s.x = orb.x;
+          s.y = orb.y;
+          s.vx = s.vy = 0;
+          s.ready = true;
+        }
+        const K = 70;
+        const D = 2 * Math.sqrt(K) * 0.7;
+        const st = Math.min(dt, 0.033);
+        s.vx += (K * (spot.x - s.x) - D * s.vx) * st;
+        s.vy += (K * (spot.y - s.y) - D * s.vy) * st;
+        s.x += s.vx * st;
+        s.y += s.vy * st;
+        orb.mode = "puppet";
+        orb.x = s.x;
+        orb.y = s.y;
+        orb.scale += (spot.scale - orb.scale) * Math.min(1, dt * 4);
+        cw.current.ready = false;
+        if (Math.hypot(s.vx, s.vy) > 220 && Math.random() < 0.3) emit(s.x, s.y + 20, 1, { vy: 8, life: 0.9, size: 0.9 });
+      } else if (cd.mode === "rise") {
         const k = clamp((now - cd.t0) / cd.dur, 0, 1);
         const e = 1 - Math.pow(1 - k, 3);
         const [sx, sy] = toScreen(SUMMIT.x, SUMMIT.y + lerp(70, -130, e));
@@ -318,6 +388,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         orb.y = sy;
         orb.scale += (scale - orb.scale) * Math.min(1, dt * 4);
       }
+      if (!spot) cs.current.ready = false;
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -332,26 +403,91 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     if (idx < 0 || walking || phase !== "tour") return;
     const [x, y] = campPos[idx];
     frame(x, y - HOVER * 0.5, campZ());
-  }, [detail, idx, walking, campPos, frame, phase]);
+  }, [sheet, theater, idx, walking, campPos, frame, phase]);
 
   // ---------------------------------------------------------------- narration
   const narrate = useCallback(async (l: Line) => {
     if (skipped.current && l.title === undefined) return;
     stopVoice();
-    const voice = l.voice ? await speak(l.voice) : null;
+    // on a call, Cordi's voice belongs to the call: narration shows as text only
+    const voice = l.voice && !inCall() ? await speak(l.voice) : null;
     const words = l.text.split(" ");
     const times = voice ? voice.words : words.map((_, i) => 0.06 + i * 0.052);
-    setNarr({ ...l, times, key: Math.random() });
-    times.forEach((t) => setTimeout(() => orb.pulse(0.35, 0.9), t * 1000));
+    const key = Math.random();
+    remember(l.text);
+    setNarr({ ...l, times, key });
     const ms = (times.at(-1) ?? 0) * 1000 + 450;
+    const pulses = times.map((t) => setTimeout(() => orb.pulse(0.35, 0.9), t * 1000));
     if (!voice) orb.speakFor(ms - 300);
-    if (l.title === undefined) await pause(voice ? Math.max(ms, (voice.audio.duration || 0) * 1000) : ms);
+    if (l.title !== undefined) return;
+
+    // The opening's lines play like a game's dialogue box: a tap while the words are still
+    // appearing shows the whole line at once (the voice carries on); a tap once it's whole
+    // stops the voice and moves to the next line. Left alone, it moves on when the voice ends.
+    await new Promise<void>((res) => {
+      let whole = false;
+      let over = false;
+      const showAll = () => {
+        if (whole) return;
+        whole = true;
+        setNarr((n) => (n && n.key === key ? { ...n, whole: true } : n));
+      };
+      const end = () => {
+        if (over) return;
+        over = true;
+        dialog.current = null;
+        pulses.forEach(clearTimeout);
+        res();
+      };
+      dialog.current = () => {
+        if (!whole) showAll();
+        else {
+          stopVoice();
+          orb.speakFor(0);
+          end();
+        }
+      };
+      setTimeout(showAll, ms);
+      const spoken = voice
+        ? new Promise<void>((r) => {
+            if (voice.audio.ended || voice.audio.paused) return r();
+            voice.audio.addEventListener("ended", () => r(), { once: true });
+            voice.audio.addEventListener("pause", () => r(), { once: true });
+            voice.audio.addEventListener("error", () => r(), { once: true });
+          })
+        : wait(ms);
+      spoken.then(() => pause(1100)).then(end);
+      if (skipped.current) end();
+    });
   }, []);
+
+  // the dialogue box's tap: anywhere on the scene (not on a button), or Space / Enter
+  const dialog = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const tap = (e: PointerEvent) => {
+      if ((e.target as Element).closest("button, a, input, select")) return;
+      dialog.current?.();
+    };
+    const key = (e: KeyboardEvent) => {
+      if ((e.key === " " || e.key === "Enter") && !(e.target as Element).closest("button, input, select")) {
+        e.preventDefault();
+        dialog.current?.();
+      }
+    };
+    addEventListener("pointerdown", tap);
+    addEventListener("keydown", key);
+    return () => {
+      removeEventListener("pointerdown", tap);
+      removeEventListener("keydown", key);
+    };
+  }, [phase]);
 
   // ---------------------------------------------------------------- moving between camps
   const arrive = useCallback(
     (i: number, open: boolean) => {
       const st = steps[i];
+      session.set({ camp: st.title, campId: st.id });
       setWalking(false);
       setIdx(i);
       setVisited((v) => Math.max(v, i));
@@ -365,7 +501,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         orb.spinOnce();
       }
       if (open) setDetail(true);
-      narrate({ title: st.title, label: st.label, status: st.status, text: st.say, step: i });
+      if (!pending.current) narrate({ title: st.title, label: st.label, status: st.status, text: st.say, step: i });
     },
     [steps, campPos, narrate],
   );
@@ -405,6 +541,20 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     },
     [n, walking, phase, idx, arrive, setPhase],
   );
+
+  goRef.current = go;
+  // arrived where "Siguiente" was headed: start its explanation in the same mode
+  useEffect(() => {
+    const p = pending.current;
+    if (!p || walking || idx !== p.i) return;
+    pending.current = null;
+    const t = setTimeout(() => {
+      offerExplain(steps[p.i], c, true);
+      void startExplain(p.how);
+      setTransit(false);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [walking, idx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- the whole mountain
   const overview = useCallback(() => {
@@ -455,6 +605,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     cc.k = 0.55;
     introT0.current = reduced ? -1e9 : performance.now();
     playSfx("ambient", { vol: 0.34, fadeAt: 11000 });
+    prefetchSpeech(mountainLine);
 
     await pause(reduced ? 0 : 2300);
     draw.current = { t0: performance.now(), dur: reduced || skipped.current ? 1 : 2600, popped: 0 };
@@ -495,7 +646,8 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     await narrate({ text: line("intro"), voice: hasVoice("intro") ? "intro" : undefined });
     await pause(250);
     orb.setEmo("speaking");
-    await narrate({ text: "Tu plan es esta montaña. Cada bandera es una parte de tu análisis." });
+    // no pre-rendered recording for this line: the live voice says it (fetched at the start)
+    await narrate({ text: mountainLine, voice: mountainLine });
     await pause(400);
 
     setNarr(null);
@@ -510,7 +662,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     cc.k = 3;
     setPhase("overview");
     orb.flashEmo("happy", 1200);
-  }, [frameWide, narrate, setPhase]);
+  }, [frameWide, narrate, setPhase, mountainLine]);
 
   const skip = useCallback(() => {
     if (skipped.current) return;
@@ -550,11 +702,14 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   // keyboard
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if ((e.target as Element).closest("input")) return;
+      if ((e.target as Element).closest("input") || inTheater()) return;
       if (e.key === "ArrowRight" || e.key === "ArrowUp") go(Math.min(n - 1, idx + 1), phase === "overview");
       if (e.key === "ArrowLeft" || e.key === "ArrowDown") go(Math.max(0, idx - 1), phase === "overview");
       if (e.key === "Escape") {
-        if (live.current.detail) setDetail(false);
+        if (live.current.detail) {
+          setDetail(false);
+          closePanel();
+        }
         else if (live.current.phase === "tour") overview();
       }
     };
@@ -607,7 +762,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
           <button
             key={st.id}
             ref={(el) => void (notes.current[i] = el)}
-            className={`note t-${st.status} ${sides[i]}${hover === i ? " on" : ""}${phase === "overview" && i === Math.max(0, idx) ? " here" : ""}`}
+            className={`note t-${st.status} ${sides[i]}${marks[st.id] === "yes" ? " understood" : ""}${hover === i ? " on" : ""}${phase === "overview" && i === Math.max(0, idx) ? " here" : ""}`}
             style={{ ["--i" as string]: i }}
             tabIndex={phase === "overview" ? 0 : -1}
             onClick={() => go(i, true)}
@@ -625,12 +780,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       <Narration
         line={narr}
         total={n}
-        hidden={(detail && !isNarrow()) || walking || phase === "overview"}
+        hidden={(sheet && !isNarrow()) || walking || transit || phase === "overview"}
         actions={
           phase === "tour" &&
           step && (
             <>
-              <button className="act act-main" onClick={() => setDetail(true)}>
+              <ExplainButton step={step} c={c} />
+              <button className="act" onClick={() => setDetail(true)}>
                 Ver el detalle
               </button>
               {idx < n - 1 && (
@@ -674,16 +830,21 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         <circle ref={leaderDot} r={4} className="leader-dot" />
       </svg>
 
-      {step && (
+      {(step || chatPanel) && (
         <Detail
           origin={detail && idx >= 0 ? toScreen(campPos[idx][0], campPos[idx][1] - 40) : null}
-          open={detail}
-          step={step}
+          open={sheet && !theater}
+          step={step ?? steps[0]}
           c={c}
-          index={idx}
+          index={Math.max(0, idx)}
           total={n}
-          onClose={() => setDetail(false)}
+          onClose={() => {
+            setDetail(false);
+            closePanel();
+          }}
           onNext={idx < n - 1 ? () => go(idx + 1, true) : undefined}
+          steps={steps}
+          onGo={(i) => go(i, true)}
         />
       )}
     </div>

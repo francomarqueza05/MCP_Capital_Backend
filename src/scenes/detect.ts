@@ -13,6 +13,8 @@ export interface Topic {
   scene: string;
   headline: string;
   numbers: Record<string, unknown>;
+  // exact Sherpas figures behind the label, for the "Ver detalle" layer
+  detail?: [string, string][];
 }
 
 export interface Summary {
@@ -27,7 +29,8 @@ export interface Summary {
 const SUSTAINABLE_WITHDRAWAL = 6;
 
 const fromColour = (c: string | undefined): Status => (c === "G" ? "good" : c === "Y" ? "warn" : "bad");
-const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const usd = (n: number) => `$${Math.round(n).toLocaleString("es-ES", { useGrouping: "always" } as Intl.NumberFormatOptions)}`;
+const num = (n: number) => n.toLocaleString("es-ES");
 const pct = (s: string) => parseFloat(s);
 
 const PILLARS: Record<string, string> = {
@@ -64,7 +67,17 @@ export function detect(fh: any, ia: any): Summary {
   topics.push({
     id: "emergency", title: "Fondo de emergencia", status: fromColour(ef.color), label: efLabel, scene: efScene,
     headline: `Cubres ${months} meses de gastos; lo recomendado es ${ef.minRecommendedEFMonths}–${ef.maxRecommendedEFMonths}.`,
-    numbers: { months, after, min: ef.minRecommendedEFMonths, max: ef.maxRecommendedEFMonths },
+    numbers: { months, after, min: ef.minRecommendedEFMonths, max: ef.maxRecommendedEFMonths, expenses: ef.monthlyExpenses },
+    detail: [
+      ["Efectivo accesible hoy", usd(f.cash.accessibleCash.value)],
+      ["De ello, en fondos monetarios", usd(ef.totalMoneyMarketAmount)],
+      ["Gastos mensuales", usd(ef.monthlyExpenses)],
+      ["Meses cubiertos", num(months)],
+      ["Rango recomendado", `${ef.minRecommendedEFMonths}–${ef.maxRecommendedEFMonths} meses (${usd(ef.minRecommendedEmergencyFund)} – ${usd(ef.maxRecommendedEmergencyFund)})`],
+      ["Por qué ese rango", `${ef.nrOfEarners} ${ef.nrOfEarners === 1 ? "ingreso" : "ingresos"} en el hogar${ef.incomeDisparity ? `, diferencia de ingresos ${ef.incomeDisparity === "Low" ? "baja" : ef.incomeDisparity}` : ""}`],
+      ["Meses tras las metas cercanas", num(after)],
+      ["Veredicto Sherpas", `${ef.claim} (${ef.color})`],
+    ],
   });
   // only when the goal wipes out at least half of the cushion (Carter: 3.2 → 0 months)
   if (after <= months / 2 && after < ef.minRecommendedEFMonths) {
@@ -99,14 +112,27 @@ export function detect(fh: any, ia: any): Summary {
     shortYears: typeof shortYears === "number" ? shortYears : 0, retireAge: adults[0]?.retirement_age ?? 65,
     projected: r.retirementSavings.balanceInRetirementAccountsAtRetirementAgeInTodaysDollars,
   };
+  const rs = r.retirementSavings, fr = f.retirement;
+  const retDetail: [string, string][] = [
+    ["Edad de jubilación", `${retNumbers.retireAge} (en ${rs.yearsToRetirement} años)`],
+    ["Gasto anual en la jubilación", `${usd(fr.spendingNeed.value)} (${String(fr.spendingNeed.period).replace(/average over the (\d+) years of retirement/, "media de $1 años de jubilación")})`],
+    ["Ingresos garantizados", `${usd(fr.guaranteedIncome.value)}/año · ${fr.incomeShareOfNeed.value} del gasto`],
+    ["Lo que deben cubrir tus ahorros", `${usd(fr.spendingGap.value)}/año`],
+    ["Ahorros previstos al jubilarte", usd(rs.balanceInRetirementAccountsAtRetirementAgeInTodaysDollars)],
+    ["Brecha al jubilarte", usd(gap)],
+    ["Ahorro extra necesario", `${usd(rs.requiredExtraSavings)}/año`],
+    ["Retiro anual medio de la cartera", fr.withdrawalRateAverage.value],
+    ["Edad en que se agotan los ahorros", typeof runOut === "number" ? `${runOut}` : "No se agotan"],
+    ["Supuestos", `inflación ${(rs.generalInflation * 100).toFixed(1)}%, rentabilidad media ${(rs.averagePerformance * 100).toFixed(2)}%; cifras en dinero de hoy`],
+  ];
   if (typeof runOut === "number") {
-    topics.push({ id: "retirement", title: "Jubilación", status: "bad", label: "El dinero se acaba antes de tiempo", scene: "hourglass", headline: `Tus ahorros se agotarían a los ${runOut} años.`, numbers: retNumbers });
+    topics.push({ id: "retirement", title: "Jubilación", status: "bad", label: "El dinero se acaba antes de tiempo", scene: "hourglass", headline: `Tus ahorros se agotarían a los ${runOut} años.`, numbers: retNumbers, detail: retDetail });
   } else if (gap > 0) {
-    topics.push({ id: "retirement", title: "Jubilación", status: "bad", label: "Lo ahorrado no alcanza", scene: "two-mountains", headline: `Faltan ${usd(gap)} para jubilarte como planeas.`, numbers: retNumbers });
+    topics.push({ id: "retirement", title: "Jubilación", status: "bad", label: "Lo ahorrado no alcanza", scene: "two-mountains", headline: `Faltan ${usd(gap)} para jubilarte como planeas.`, numbers: retNumbers, detail: retDetail });
   } else if (draw > SUSTAINABLE_WITHDRAWAL) {
-    topics.push({ id: "retirement", title: "Jubilación", status: "warn", label: "Sacas demasiado cada año", scene: "open-tap", headline: `Sacarías un ${draw}% al año; lo sostenible ronda el ${SUSTAINABLE_WITHDRAWAL}%.`, numbers: retNumbers });
+    topics.push({ id: "retirement", title: "Jubilación", status: "warn", label: "Sacas demasiado cada año", scene: "open-tap", headline: `Sacarías un ${draw}% al año; lo sostenible ronda el ${SUSTAINABLE_WITHDRAWAL}%.`, numbers: retNumbers, detail: retDetail });
   } else {
-    topics.push({ id: "retirement", title: "Jubilación", status: "good", label: "Vas bien", scene: "praise", headline: "Tu jubilación va por buen camino.", numbers: retNumbers });
+    topics.push({ id: "retirement", title: "Jubilación", status: "good", label: "Vas bien", scene: "praise", headline: "Tu jubilación va por buen camino.", numbers: retNumbers, detail: retDetail });
   }
 
   // education
@@ -155,6 +181,56 @@ export function detect(fh: any, ia: any): Summary {
     scene: leveraged.length ? "leverage-drop" : Math.abs(diff) >= 5 ? "balance-scale" : "praise",
     headline: `${invNumbers.equity}% en acciones; lo ideal para ti es ${invNumbers.target}%.`, numbers: invNumbers,
   });
+
+  // exact Sherpas figures for the topics that don't build their own detail above
+  const pctOf = (x: number) => `${num(Math.round(x * 1000) / 10)}%`;
+  const extra: Record<string, [string, string][]> = {
+    cashflow: [
+      ["Ingresos brutos al año", usd(income)],
+      ["Flujo neto este año", `${flow < 0 ? "−" : ""}${usd(Math.abs(flow))}`],
+      ["Ahorro anual", `${usd(r.savingsLevel.savingAmount)} (${pctOf(saveRate)} de los ingresos)`],
+      ["Fiabilidad del dato de ahorro", ia.key_metrics.savingsAndContributions?.savingsCapacity?.savingsCapacityReliable === false ? "estimado (Sherpas lo marca como poco fiable)" : "fiable"],
+    ],
+    "near-goal": [
+      ["Meses cubiertos hoy", num(months)],
+      ["Meses tras la meta cercana", num(after)],
+      ...((km.savingsAndExpenses?.shortTermGoalsNeeded ?? []) as any[]).map((g): [string, string] => [`Meta: ${g.description}`, `${usd(g.amount)} · ${g.paymentFrequency === "ONE_TIME" ? "pago único" : "anual"} · ${String(g.date).slice(0, 7)}`]),
+    ],
+    debt: [
+      ["Deuda de tarjetas", usd(cc.balance)],
+      ["Pago mensual de tarjetas", usd(cc.monthlyPayment)],
+      ["Interés mensual (pago que solo cubre intereses)", usd(cc.paymentsEqualToInterest)],
+      ["Tarjetas sobre ingresos", pctOf(cc.percentageOfCCOverGrossIncome)],
+      ["Deuda total sobre ingresos (DTI)", pctOf(r.debtToIncome.ratio)],
+      ["Vivienda sobre ingresos", pctOf(r.housingRatio.ratio)],
+      ["Deudas que siguen en la jubilación", r.currentDPD.beforeRetirement ? "no" : `sí, nivel ${r.currentDPD.avgDTIInRetirementLevel}`],
+      ...(capped ? [["Tope en la nota", "Sí: saldo de tarjeta alto con interés alto"] as [string, string]] : []),
+    ],
+    education: [
+      ["Coste total de la universidad (dinero de hoy)", usd(edu.totalEducationGoalRequiredAmountAtToday)],
+      ["Ahorrado en cuentas 529", usd(edu.current529AccountsBalance)],
+      ["Aportes anuales a 529", usd(edu.annualSavingsGoingTo529Accounts)],
+      ["Brecha", usd(edu.totalGAP)],
+      ["Rentabilidad esperada", pctOf(edu.expectedPerformance)],
+    ],
+    life: lifeKeys.map(([n, k], i): [string, string] => [
+      n, `${k} · cubre ${usd(i ? li.coClientCoverage : li.clientCoverage)}; mínimo recomendado ${usd(i ? li.recommendedCoClientMinCoverage : li.recommendedClientMinCoverage)}`,
+    ]).concat([["Hijos dependientes", li.scenario?.kids ? "sí" : "no"]]),
+    umbrella: [
+      ["Póliza umbrella", um.claim === "No coverage" ? "no tiene" : usd(um.currentCoverage)],
+      ["Cobertura recomendada", usd(um.recommendedCoverage)],
+      ["Veredicto Sherpas", `${um.claim} (${um.color})`],
+    ],
+    investments: [
+      ["Acciones / renta fija hoy", `${invNumbers.equity}% / ${100 - invNumbers.equity}%`],
+      ["Objetivo para tu horizonte", `${invNumbers.target}% / ${100 - invNumbers.target}%`],
+      ["Glide path de jubilación", km.assetsAndInvestments?.retirementGlidePath?.retirementGlidePathForClient ?? "—"],
+      ["Sector más concentrado", invNumbers.sector || "—"],
+      ["Productos apalancados", invNumbers.leveraged || "ninguno"],
+      ["Cartera dentro de su banda de riesgo", outOfBand ? "no" : "sí"],
+    ],
+  };
+  for (const t of topics) if (!t.detail && extra[t.id]) t.detail = extra[t.id];
 
   return {
     id: fh.case.slug,

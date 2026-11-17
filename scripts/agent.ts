@@ -6,15 +6,16 @@ import { pathToFileURL } from "node:url";
 const KEY = process.env.ELEVENLABS_API_KEY;
 const AGENT = process.env.ELEVENLABS_AGENT_ID;
 const VOICE = process.env.VOICE_ID ?? "eZxqQzb5CuYo3Kl6EXfZ"; // Sofia: soft, natural Castilian Spanish
-// eleven_v3_conversational: the most natural agent voice (breaths, pauses, intonation).
-// eleven_flash_v2_5 answers faster but sounds flatter.
-const TTS_MODEL = process.env.TTS_MODEL ?? "eleven_v3_conversational";
+// eleven_flash_v2_5: steady from one line to the next, fast, and the same model as the
+// pre-rendered and live voices in MCPV2. eleven_v3_conversational sounds more natural
+// (breaths, pauses) but varies too much between lines; set TTS_MODEL to try it again.
+const TTS_MODEL = process.env.TTS_MODEL ?? "eleven_flash_v2_5";
 const VOICE_EN = process.env.VOICE_ID_EN ?? "EXAVITQu4vr4xnSDxMaL"; // Sarah, for English
 const LLM = process.env.AGENT_LLM ?? "gemini-3.1-flash-lite"; // chosen by bench/ 2026-11-14: follows the phases, 0.75 s to first token
 if (!KEY) throw new Error("ELEVENLABS_API_KEY missing: run with --env-file=../.env");
 
 // Layer 0: fixed rules. Layers 1 and 2 arrive as dynamic variables and contextual updates.
-const PROMPT = `You are Cordada, a voice guide set up by the family's financial advisor team at Sherpas Wealth to walk one person through their own financial plan. You are an AI and you say so if asked. You never pretend to be human or to be the advisor.
+const PROMPT = `You are Cordi, a voice guide set up by the family's financial advisor team at Sherpas Wealth to walk one person through their own financial plan. You are an AI and you say so if asked. You never pretend to be human or to be the advisor.
 
 LANGUAGE
 - Speak only {{language_name}} for the whole call. Never switch language, even if the person does: answer in {{language_name}} and, if they clearly cannot follow, tell them they can restart the call in the other language from the start screen.
@@ -50,8 +51,8 @@ VOICE
 // No questions up front: the plan already knows them. One "shall we?" so the call starts when
 // they are ready and we know the sound works.
 const FIRST: Record<string, string> = {
-  es: "¡Hola {{name}}! Soy Cordada, la guía que ha preparado el equipo de tu asesor. Soy una inteligencia artificial y puedes interrumpirme cuando quieras. Vamos a ver primero dónde estás hoy, y luego lo que tu plan dice que hay que mirar. ¿Empezamos?",
-  en: "Hi {{name}}! I'm Cordada, the guide your advisor's team set up. I'm an AI, and you can interrupt me at any point. We'll look at where you stand today first, then at what your plan says needs attention. Shall we start?",
+  es: "¡Hola {{name}}! Soy Cordi, la guía que ha preparado el equipo de tu asesor. Soy una inteligencia artificial y puedes interrumpirme cuando quieras. Vamos a ver primero dónde estás hoy, y luego lo que tu plan dice que hay que mirar. ¿Empezamos?",
+  en: "Hi {{name}}! I'm Cordi, the guide your advisor's team set up. I'm an AI, and you can interrupt me at any point. We'll look at where you stand today first, then at what your plan says needs attention. Shall we start?",
 };
 
 const str = (description: string) => ({ type: "string", description });

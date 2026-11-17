@@ -77,6 +77,30 @@ select {
 .stage {
   position: fixed;
   inset: 0;
+  /* it's a scene to tap, not a page to select: no text cursor, caret or selection on a tap */
+  cursor: default;
+  caret-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.stage :where(button, select, label, [role="button"], a) {
+  cursor: pointer;
+}
+.stage :where(button:disabled) {
+  cursor: default;
+}
+/* only where you type */
+.stage :where(input, textarea) {
+  cursor: text;
+  caret-color: var(--ink);
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* what Cordi wrote in the conversation can still be selected to copy, without the I-beam */
+.stage :where(.chat-msg p, .chat-hello) {
+  user-select: text;
+  -webkit-user-select: text;
 }
 .fx-layer {
   position: fixed;
@@ -565,6 +589,29 @@ select {
   opacity: 0;
   animation: word 0.55s var(--ease) both;
 }
+/* the whole line at once (tapped through): no staggered entrance to fight with */
+.narr-text.whole .w {
+  animation: none;
+  opacity: 1;
+}
+.narr-next {
+  display: inline-block;
+  margin-left: 0.35em;
+  font-size: 0.7em;
+  color: var(--lichen);
+  animation: narr-next 0.9s ease-in-out infinite;
+}
+@keyframes narr-next {
+  50% {
+    transform: translateY(0.2em);
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .narr-next {
+    animation: none;
+  }
+}
 @keyframes word {
   from {
     opacity: 0;
@@ -933,6 +980,395 @@ select {
 .detail-fix b {
   color: var(--good);
 }
+/* questions at a camp: chips that start a short conversation with Cordi */
+.qa {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.qa-head {
+  margin: 0 0 0.75rem;
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+.qa-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.qa-chip {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(238, 240, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(11, 16, 51, 0.45);
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+}
+.qa-chip:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.qa-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.qa-chip.is-next {
+  border-color: rgba(154, 166, 240, 0.6);
+  color: var(--ink);
+}
+/* "did that land?": a flag is only planted once it's clear */
+.gauge {
+  margin-top: 1.5rem;
+}
+.gauge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.gauge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(238, 240, 255, 0.22);
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+.gauge-btn:hover:not(:disabled) {
+  color: var(--ink);
+}
+.gauge-btn.g-yes:hover:not(:disabled) {
+  border-color: var(--good);
+}
+.gauge-btn.g-meh:hover:not(:disabled) {
+  border-color: var(--warn);
+}
+.gauge-btn.g-no:hover:not(:disabled) {
+  border-color: var(--bad);
+}
+.gauge-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.gauge-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--good);
+}
+.gauge-undo {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--t-sm);
+  font-weight: 400;
+  color: var(--lichen);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.gauge-undo:hover {
+  color: var(--ink);
+}
+.review {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.review ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+.review-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(11, 16, 51, 0.35);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  text-align: left;
+}
+.review-item:hover {
+  border-color: var(--ink);
+}
+.review-item small {
+  color: var(--lichen);
+  font-size: var(--t-sm);
+}
+.review-ok {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--good);
+}
+.note.understood .note-title::after {
+  content: " ⛳";
+}
+
+/* the side panel's tabs: this camp's detail, or the conversation with Cordi */
+.tabs {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem 0 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0.6rem 0.8rem;
+  border: 0;
+  background: none;
+  color: var(--lichen);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab.on {
+  color: var(--ink);
+}
+.tab.on::after {
+  content: "";
+  position: absolute;
+  left: 0.6rem;
+  right: 0.6rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+.tab-count {
+  min-width: 1.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(238, 240, 255, 0.14);
+  font-size: 0.75rem;
+  text-align: center;
+}
+.tabs .detail-close {
+  position: static;
+  margin-left: auto;
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* the conversation: a chat, like any chat app */
+.chat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.chat-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #c9d0ff 35%, #7d8be8 70%, #4a55b8);
+  box-shadow: 0 0 18px rgba(154, 166, 240, 0.45);
+}
+.chat-name {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+.chat-where {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--lichen);
+}
+.chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.25rem 1.5rem 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(154, 166, 240, 0.25) transparent;
+}
+.chat-empty {
+  padding-top: 1.25rem;
+}
+.chat-hello,
+.chat-msg.from-cordi p {
+  margin: 0;
+  padding: 0.7rem 0.95rem;
+  border-radius: 12px 12px 12px 3px;
+  background: var(--ink);
+  color: var(--sky);
+  font-size: var(--t-sm);
+  line-height: 1.55;
+}
+.chat-hello {
+  max-width: 85%;
+}
+.chat-who {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-weight: 700;
+  opacity: 0.6;
+}
+.chat-topic {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 1rem 0 0.55rem;
+  background: #0e1340;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lichen);
+}
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+  margin-bottom: 0.8rem;
+}
+.chat-msg.from-you {
+  margin-left: auto;
+  align-items: flex-end;
+}
+.chat-msg.from-you p {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px 12px 3px 12px;
+  background: rgba(238, 240, 255, 0.12);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.chat-meta {
+  margin-bottom: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--lichen);
+}
+.chat-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: currentColor;
+  animation: chat-blink 0.9s steps(1) infinite;
+}
+@keyframes chat-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.chat-msg .chat-typing {
+  display: flex;
+  gap: 0.3rem;
+  width: fit-content;
+  padding: 0.85rem 1rem;
+}
+.chat-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sky);
+  animation: chat-dot 1s infinite ease-in-out;
+}
+.chat-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.chat-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes chat-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.chat-next {
+  margin-top: 0.5rem;
+}
+.chat-next .gauge {
+  margin: 0 0 1.25rem;
+}
+.qa-block + .gauge,
+.gauge + .qa-block {
+  margin-top: 1.25rem;
+}
+.chat-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 1rem 1rem;
+  padding: 5px 5px 5px 0.9rem;
+  border: 1px solid rgba(238, 240, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(11, 16, 51, 0.6);
+}
+.chat-input:focus-within {
+  border-color: var(--ink);
+}
+.chat-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  outline: none;
+}
+.chat-input input::placeholder {
+  color: var(--lichen);
+}
+.chat-input button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-caret,
+  .chat-typing span {
+    animation: none;
+  }
+}
+
 .detail-foot {
   display: flex;
   justify-content: space-between;
@@ -1327,4 +1763,1440 @@ select {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ------------------------------------------------------------------ the call
+   Small and steady at the bottom: Cordi's words are in its bubble, this only says what's
+   happening and holds the controls. */
+.call {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 57;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.45rem 0.45rem 1rem;
+  border: 1px solid rgba(238, 240, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(14, 19, 64, 0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 40px rgba(3, 5, 20, 0.5);
+}
+.call-live {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 0 0 rgba(142, 227, 191, 0.6);
+  animation: call-live 1.6s infinite;
+}
+.call.s-connecting .call-live {
+  background: var(--warn);
+}
+.call.s-listening .call-live {
+  animation-duration: 0.9s;
+}
+@keyframes call-live {
+  70% {
+    box-shadow: 0 0 0 9px rgba(142, 227, 191, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(142, 227, 191, 0);
+  }
+}
+.call-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 7.5rem;
+  margin-right: 0.25rem;
+  line-height: 1.2;
+}
+.call-status {
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+.call-clock {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--lichen);
+}
+.call-btn {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(238, 240, 255, 0.28);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.call-btn:hover {
+  border-color: var(--ink);
+}
+.call-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(238, 240, 255, 0.1);
+  color: var(--ink);
+  transition: background 0.2s;
+}
+.call-icon:hover {
+  background: rgba(238, 240, 255, 0.2);
+}
+.call-icon.on {
+  background: var(--ink);
+  color: var(--sky);
+}
+.call-icon.hang {
+  background: #e5484d;
+  color: #fff;
+}
+.call-icon.hang:hover {
+  background: #f2555a;
+}
+.call-error {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 57;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(480px, calc(100vw - 32px));
+  margin: 0;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border: 1px solid rgba(245, 154, 170, 0.5);
+  border-radius: 10px;
+  background: rgba(14, 19, 64, 0.96);
+  color: var(--ink);
+  font-size: var(--t-sm);
+}
+.call-error button {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--lichen);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.chat-call {
+  margin-left: auto;
+  padding: 0.5rem 0.85rem;
+}
+@media (max-width: 760px) {
+  .call {
+    bottom: 1rem;
+  }
+  .call-info {
+    min-width: 6rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-live {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ "Explícame esto" */
+.detail-explain {
+  margin-top: 1rem;
+}
+.explain-choose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.explain-ask {
+  width: 100%;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--lichen);
+}
+
+/* the player's controls, in the chat and on the stage */
+.xp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.xp-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(238, 240, 255, 0.08);
+  color: var(--ink);
+}
+.xp-icon:hover:not(:disabled) {
+  background: rgba(238, 240, 255, 0.18);
+}
+.xp-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.xp-icon.main {
+  width: 44px;
+  height: 44px;
+  background: var(--ink);
+  color: var(--sky);
+}
+.xp-controls.compact .xp-icon {
+  width: 32px;
+  height: 32px;
+}
+.xp-controls.compact .xp-icon.main {
+  width: 36px;
+  height: 36px;
+}
+.xp-text {
+  margin-left: 0.25rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(238, 240, 255, 0.28);
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.xp-text:hover {
+  border-color: var(--ink);
+}
+.xp-text.quiet {
+  margin-left: auto;
+  border-color: transparent;
+  color: var(--lichen);
+}
+.xp-done {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--good);
+}
+.xp-dots {
+  display: flex;
+  gap: 0.3rem;
+}
+.xp-dots span {
+  flex: 1;
+  max-width: 2.25rem;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(238, 240, 255, 0.14);
+  transition: background 0.3s;
+}
+.xp-dots span.on {
+  background: var(--lichen);
+}
+.xp-dots span.now {
+  background: var(--ink);
+}
+.xp-bar {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 1rem 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(11, 16, 51, 0.6);
+}
+.xp-bar-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--t-sm);
+}
+.xp-bar-title {
+  font-weight: 700;
+  color: var(--ink);
+}
+.xp-bar-n {
+  color: var(--lichen);
+  font-variant-numeric: tabular-nums;
+}
+.chat-visual {
+  margin-top: 0.5rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(11, 16, 51, 0.55);
+}
+
+/* a call's explanation: the visual large, over the dimmed mountain */
+.xp-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(3, 5, 20, 0.55);
+  pointer-events: none;
+}
+.xp-stage {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 47;
+  translate: -50% -50%;
+  display: grid;
+  gap: 1.25rem;
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px);
+  padding: 1.5rem 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(14, 19, 64, 0.97);
+  box-shadow: 0 30px 80px rgba(3, 5, 20, 0.6);
+  overflow-y: auto;
+}
+.xp-stage-head h2 {
+  margin: 0.15rem 0 0.75rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.xp-stage-kicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lichen);
+}
+.xp-stage-body {
+  min-height: 220px;
+  display: grid;
+  align-items: center;
+}
+.xp-check p {
+  margin: 0 0 0.9rem;
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* the visuals, first pass */
+.vx {
+  color: var(--ink);
+}
+.vx .t-good {
+  color: var(--good);
+}
+.vx .t-warn {
+  color: var(--warn);
+}
+.vx .t-bad {
+  color: var(--bad);
+}
+.vx-figure {
+  display: grid;
+  gap: 0.25rem;
+}
+.vx-big {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.vx-cap {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+.vx-bars {
+  display: grid;
+  gap: 0.75rem;
+}
+.vx-bar {
+  display: grid;
+  grid-template-columns: minmax(6rem, 34%) 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--t-sm);
+}
+.vx-bar-label {
+  color: var(--ink-2);
+}
+.vx-bar-track {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(238, 240, 255, 0.07);
+  overflow: hidden;
+}
+.vx-bar-of {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: rgba(238, 240, 255, 0.1);
+}
+.vx-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: currentColor;
+}
+.vx-bar-fill.t-neutral {
+  color: var(--lichen);
+}
+.vx-bar-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vx-bar-val small {
+  font-weight: 400;
+  color: var(--lichen);
+}
+.vx-range {
+  display: grid;
+  gap: 0.6rem;
+}
+.vx-range-label {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+.vx-range-track {
+  position: relative;
+  height: 14px;
+  margin-top: 1.6rem;
+  border-radius: 7px;
+  background: rgba(238, 240, 255, 0.08);
+}
+.vx-range-ok {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 7px;
+  background: rgba(142, 227, 191, 0.35);
+  transform-origin: center;
+}
+.vx-range-dot {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px rgba(14, 19, 64, 0.9);
+}
+.vx-range-val {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: var(--t-sm);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.vx-range-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--lichen);
+}
+.vx-score {
+  display: grid;
+  gap: 0.5rem;
+}
+.vx-score-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.vx-score-n {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.vx-score-arrow {
+  flex: 1;
+  max-width: 9rem;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--lichen), var(--good));
+  transform-origin: left;
+}
+.vx-score-up {
+  font-weight: 700;
+}
+.vx-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vx-list li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  font-size: var(--t-md);
+}
+.vx-list small {
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+.vx-list-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  translate: 0 -1px;
+}
+.vx-list-dot.t-neutral {
+  color: var(--lichen);
+}
+
+/* on a call, the stage moves right to leave Cordi room on its left (above it on a phone) */
+@media (min-width: 760px) {
+  .xp-stage {
+    left: calc(50% + 80px);
+    width: min(620px, calc(100vw - 300px));
+  }
+}
+@media (max-width: 759px) {
+  .xp-stage {
+    top: calc(50% + 46px);
+    max-height: calc(100vh - 220px);
+  }
+}
+
+/* ------------------------------------------------------------------ the call's theater
+   Cordi's column on the left, the step large on the right. The call bar sits below both. */
+.theater {
+  position: fixed;
+  inset: 0;
+  z-index: 47;
+  display: grid;
+  grid-template-columns: minmax(220px, 26vw) minmax(0, 1fr);
+  gap: clamp(1rem, 2.5vw, 2.5rem);
+  padding: clamp(4.5rem, 9vh, 6rem) clamp(1rem, 4vw, 3.5rem) 6.5rem;
+  background:
+    radial-gradient(ellipse at 18% 40%, rgba(154, 166, 240, 0.16), transparent 55%),
+    linear-gradient(180deg, rgba(7, 10, 36, 0.78), rgba(7, 10, 36, 0.9));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+/* Cordi itself is the orb flying over this column: the column only frames it */
+.theater-seat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 1rem;
+}
+.theater-halo {
+  position: absolute;
+  left: 50%;
+  top: min(42%, 260px);
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(154, 166, 240, 0.28), transparent 65%);
+  pointer-events: none;
+}
+.theater-state {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lichen);
+}
+.theater-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 880px;
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(14, 19, 64, 0.92);
+  box-shadow: 0 40px 90px rgba(3, 5, 20, 0.55);
+}
+.theater-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.theater-head h2 {
+  margin: 0.15rem 0 0.9rem;
+  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+  font-weight: 800;
+  font-stretch: 115%;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.theater-n {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(238, 240, 255, 0.08);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--lichen);
+}
+.theater-body {
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+  margin: 1.25rem 0 1rem;
+  display: grid;
+  align-items: center;
+  /* visuals are fitted to this room (see Fit), never scrolled */
+  overflow: hidden;
+}
+.theater-visual {
+  width: 100%;
+}
+.theater-foot {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 759px) {
+  .theater {
+    grid-template-columns: 1fr;
+    grid-template-rows: 120px minmax(0, 1fr);
+    padding: 4rem 0.75rem 5.5rem;
+  }
+  .theater-seat {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 0 0 1rem;
+  }
+  .theater-halo {
+    left: 64px;
+    top: 62%;
+    width: 140px;
+    height: 140px;
+    margin: -70px 0 0 -70px;
+  }
+  .theater-state {
+    display: none;
+  }
+  .theater-stage {
+    border-radius: 14px;
+  }
+}
+
+/* chapters: the steps, each a tap away */
+.xp-dots button {
+  flex: 1;
+  max-width: 2.75rem;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(238, 240, 255, 0.14);
+  transition:
+    background 0.3s,
+    transform 0.2s;
+}
+.xp-dots button:hover {
+  transform: scaleY(1.6);
+  background: rgba(238, 240, 255, 0.35);
+}
+.xp-dots button.on {
+  background: var(--lichen);
+}
+.xp-dots button.now {
+  background: var(--ink);
+}
+
+/* visuals: interactive pieces */
+.vx-tip,
+.vx-hint {
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+.vx-hint {
+  margin: 0.25rem 0 0;
+}
+.vx-back {
+  justify-self: start;
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(238, 240, 255, 0.28);
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font-size: var(--t-sm);
+}
+.vx-months {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 1.25rem;
+  max-width: 560px;
+}
+.vx-months .vx-tip {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+}
+.vx-month {
+  position: relative;
+  aspect-ratio: 1 / 1.25;
+  padding: 0;
+  border: 1px solid rgba(238, 240, 255, 0.16);
+  border-radius: 5px;
+  background: rgba(238, 240, 255, 0.04);
+  overflow: hidden;
+}
+.vx-month.on {
+  border-color: var(--ink);
+}
+.vx-month-fill {
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  transform-origin: bottom;
+  opacity: 0.85;
+}
+.vx-bars .vx-bar {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  margin: 0 -0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  font-size: var(--t-sm);
+  transition: background 0.2s;
+}
+.vx-bars .vx-bar.focus {
+  background: rgba(238, 240, 255, 0.06);
+}
+.theater .vx-bar-track {
+  height: 16px;
+  border-radius: 8px;
+}
+.vx-bar-more {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  font-size: 0.8rem;
+  color: var(--lichen);
+}
+.vx-range-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.vx-range-state {
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+.vx-range .vx-range-track {
+  height: 18px;
+  margin-top: 2.25rem;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+.vx-range .vx-range-track:focus-visible {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.vx-range .vx-range-dot {
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  cursor: grab;
+}
+.vx-range-real {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink-2);
+  border-radius: 1px;
+}
+.vx-dial {
+  position: relative;
+  width: min(320px, 100%);
+}
+.vx-dial svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.vx-dial-bg,
+.vx-dial-fill {
+  fill: none;
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+.vx-dial-bg {
+  stroke: rgba(238, 240, 255, 0.1);
+}
+.vx-dial-fill {
+  stroke: currentColor;
+}
+.vx-dial-fill.t-warn {
+  color: var(--warn);
+}
+.vx-dial-fill.t-good {
+  color: var(--good);
+}
+.vx-dial-needle {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.vx-dial-hub {
+  fill: var(--ink);
+}
+.vx-dial-n {
+  position: absolute;
+  left: 50%;
+  bottom: -0.25rem;
+  translate: -50% 0;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.vx-toggle {
+  display: inline-flex;
+  gap: 4px;
+  width: fit-content;
+  margin-top: 1rem;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(238, 240, 255, 0.07);
+}
+.vx-toggle button {
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--lichen);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  transition:
+    background 0.25s,
+    color 0.25s;
+}
+.vx-toggle button.on {
+  background: var(--ink);
+  color: var(--sky);
+}
+.vx-list li {
+  display: grid;
+  gap: 0.15rem;
+}
+.vx-list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-md);
+  text-align: left;
+}
+.vx-list-more {
+  margin-left: 0.25rem;
+  color: var(--lichen);
+}
+.vx-list li small {
+  padding-left: 1.3rem;
+  overflow: hidden;
+}
+.theater .vx-big {
+  font-size: clamp(3rem, 7vw, 5.5rem);
+}
+.theater .vx-list li,
+.theater .vx-list-row {
+  font-size: 1.15rem;
+}
+/* Cordi flies over the theater, never behind it */
+.stage:has(.theater) .orb,
+.stage:has(.theater) .orb-shadow {
+  z-index: 48;
+}
+
+/* "¿Seguimos?": after each step on a call, the visual waits to be explored */
+.goon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border: 1px solid rgba(154, 166, 240, 0.35);
+  border-radius: 12px;
+  background: rgba(154, 166, 240, 0.08);
+}
+.goon-text {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+.goon-btn {
+  gap: 0.55rem;
+}
+.goon-ring {
+  width: 18px;
+  height: 18px;
+  rotate: -90deg;
+}
+.goon-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.goon-ring-bg {
+  stroke: rgba(11, 16, 51, 0.2);
+}
+.goon-ring-fg {
+  stroke: var(--sky);
+  stroke-linecap: round;
+}
+
+/* Cordi speaking up on its own: a small card under the orb, with answers to tap */
+.remark-anchor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 56;
+  pointer-events: none;
+}
+.remark {
+  width: max-content;
+  max-width: min(300px, 80vw);
+  padding: 0.75rem 0.9rem;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--ink);
+  color: var(--sky);
+  box-shadow: 0 16px 36px rgba(3, 5, 20, 0.5);
+  pointer-events: auto;
+}
+.remark p {
+  margin: 0;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  line-height: 1.45;
+}
+.remark-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+.remark-choices button {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(11, 16, 51, 0.25);
+  border-radius: 999px;
+  background: none;
+  color: var(--sky);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.remark-choices button:first-child {
+  background: var(--sky);
+  color: var(--ink);
+  border-color: var(--sky);
+}
+.remark-choices button:hover {
+  border-color: var(--sky);
+}
+
+/* the theater by chat: Cordi | the step, large | the conversation */
+.theater.how-chat {
+  grid-template-columns: minmax(170px, 17vw) minmax(0, 1fr) minmax(300px, 27vw);
+}
+.theater-chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(14, 19, 64, 0.94);
+  box-shadow: 0 40px 90px rgba(3, 5, 20, 0.5);
+  overflow: hidden;
+}
+.theater-chat .chat-topic {
+  background: rgba(14, 19, 64, 0.98);
+}
+@media (max-width: 1100px) and (min-width: 760px) {
+  .theater.how-chat {
+    grid-template-columns: minmax(150px, 20vw) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 34vh;
+  }
+  .theater.how-chat .theater-chat {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 759px) {
+  .theater.how-chat {
+    grid-template-columns: 1fr;
+    grid-template-rows: 120px minmax(0, 1fr) 32vh;
+  }
+}
+
+/* the chat in step with the explanation: where each step starts, the rest set back */
+.chat-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.9rem 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lichen);
+}
+.chat-step::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.chat-line {
+  transition: opacity 0.4s;
+}
+.chat-line.away {
+  opacity: 0.45;
+}
+
+/* Cordi's own question in the chat: its answers as buttons under the message */
+.chat-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.chat-quick button {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(238, 240, 255, 0.3);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.chat-quick button:first-child {
+  background: var(--ink);
+  color: var(--sky);
+  border-color: var(--ink);
+}
+.chat-quick button:hover {
+  border-color: var(--ink);
+}
+
+/* the score gauge, second pass: number under the gauge, scale and "today" marked */
+.vx-score-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+}
+.vx-score .vx-dial {
+  position: relative;
+  width: min(300px, 100%);
+}
+.vx-score .vx-dial svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.vx-score .vx-dial-bg,
+.vx-score .vx-dial-fill {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+.vx-score .vx-dial-bg {
+  stroke: rgba(238, 240, 255, 0.08);
+}
+.vx-score .vx-dial-fill.t-warn {
+  stroke: var(--warn);
+}
+.vx-score .vx-dial-fill.t-good {
+  stroke: var(--good);
+}
+.vx-dial-tick {
+  stroke: rgba(238, 240, 255, 0.22);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.vx-dial-today {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.vx-dial-label {
+  fill: var(--ink-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.vx-dial-end {
+  fill: var(--lichen);
+  font-size: 11px;
+}
+.vx-score .vx-dial-needle {
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.vx-score .vx-dial-hub {
+  fill: var(--ink);
+  stroke: rgba(14, 19, 64, 1);
+  stroke-width: 3;
+}
+.vx-dial-read {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+.vx-score .vx-dial-n {
+  position: static;
+  translate: none;
+  font-size: clamp(2.25rem, 4.5vw, 3rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.vx-score .vx-dial-n.t-good {
+  color: var(--good);
+}
+.vx-dial-of {
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+.vx-score-side {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+.vx-score-side .vx-toggle {
+  margin-top: 0;
+}
+.vx-score .vx-score-up {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+/* a suggestion written for this moment */
+.qa-chip.is-live {
+  border-color: rgba(154, 166, 240, 0.45);
+}
+
+/* the flag is planted: progress, and the next camp one tap away */
+.nextup {
+  display: grid;
+  justify-items: start;
+  gap: 0.9rem;
+}
+.nextup-flag {
+  font-size: 2.75rem;
+  line-height: 1;
+}
+.nextup-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 800;
+  color: var(--ink);
+}
+.nextup-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.nextup-progress span {
+  width: 1.6rem;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(238, 240, 255, 0.14);
+}
+.nextup-progress span.on {
+  background: var(--good);
+}
+.nextup-progress span.next {
+  background: var(--ink);
+  animation: nextup-pulse 1.4s ease-in-out infinite;
+}
+.nextup-progress small {
+  margin-left: 0.5rem;
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+@keyframes nextup-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+.nextup-go {
+  margin-top: 0.4rem;
+  gap: 0.6rem;
+}
+.nextup-all {
+  margin: 0.25rem 0 0;
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--good);
+}
+.nextup-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nextup-progress span.next {
+    animation: none;
+  }
+}
+
+/* a visual scaled to fit the stage: it keeps its layout, only smaller */
+.fit {
+  width: 100%;
+  overflow: visible;
+}
+.fit-inner {
+  transform-origin: top center;
+}
+
+/* long lists (all the camps) in two columns, so they fit the stage */
+.vx-list.many {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.5rem;
+}
+@media (max-width: 520px) {
+  .vx-list.many {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* "Seguimos" in the controls row: dim while Cordi talks, lit when it waits */
+.xp-go {
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+}
+.xp-go:disabled {
+  opacity: 0.35;
+}
+.xp-go.ready {
+  animation: xp-go-pulse 1.8s ease-in-out infinite;
+}
+@keyframes xp-go-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(238, 240, 255, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(238, 240, 255, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xp-go.ready {
+    animation: none;
+  }
+}
+
+/* switch chat / call inside the explanation */
+.theater-head {
+  flex-wrap: wrap;
+}
+.theater-how {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(238, 240, 255, 0.07);
+}
+.theater-how button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--lichen);
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition:
+    background 0.25s,
+    color 0.25s;
+}
+.theater-how button svg {
+  width: 15px;
+  height: 15px;
+}
+.theater-how button.on {
+  background: var(--ink);
+  color: var(--sky);
+}
+.theater-how button:not(.on):hover {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ "¿Quién sube hoy?" */
+.lg {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  width: min(980px, calc(100vw - 32px));
+}
+.lg-pick,
+.lg-hello {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+}
+.lg-ask {
+  margin: 1.4rem 0 1.4rem;
+  font-size: var(--t-lg);
+  color: var(--ink-2);
+}
+.lg-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lg-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 1.5rem 1rem 1.25rem;
+  border: 1px solid rgba(238, 240, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(14, 19, 64, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--ink);
+  text-align: center;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    background 0.25s;
+}
+.lg-card:hover,
+.lg-card:focus-visible {
+  border-color: rgba(238, 240, 255, 0.55);
+  background: rgba(20, 27, 82, 0.85);
+  box-shadow:
+    0 20px 50px rgba(3, 5, 20, 0.5),
+    0 0 0 4px rgba(154, 166, 240, 0.12);
+  outline: none;
+}
+.lg-card-on {
+  width: min(320px, 100%);
+  margin-top: 1.4rem;
+  border-color: rgba(238, 240, 255, 0.45);
+  box-shadow: 0 30px 70px rgba(3, 5, 20, 0.55);
+}
+.lg-avatars {
+  display: inline-flex;
+  margin-bottom: 0.25rem;
+}
+.lg-avatar {
+  display: grid;
+  place-items: center;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  border: 3px solid rgba(14, 19, 64, 1);
+  background: linear-gradient(140deg, hsl(var(--h) 70% 72%), hsl(calc(var(--h) + 40) 60% 52%));
+  color: #0b1033;
+  font-size: calc(var(--s) * 0.42);
+  font-weight: 800;
+}
+.lg-avatar + .lg-avatar {
+  margin-left: calc(var(--s) * -0.32);
+}
+.lg-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.lg-who {
+  font-size: var(--t-sm);
+  color: var(--lichen);
+}
+.lg-note {
+  margin: 1.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--lichen);
+}
+.lg-hello .start-tag {
+  margin: 1.4rem 0 1.6rem;
+}
+.lg-back {
+  margin-top: 1rem;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--lichen);
+  font-size: var(--t-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lg-back:hover {
+  color: var(--ink);
+}
+/* the current profile in the top bar */
+.lg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.35rem;
+  border: 1px solid rgba(238, 240, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(11, 16, 51, 0.5);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.lg-chip .lg-avatars {
+  margin: 0;
+}
+.lg-chip .lg-avatar {
+  border-width: 2px;
+}
+.lg-chip small {
+  color: var(--lichen);
+  font-weight: 500;
+}
+.lg-chip:hover {
+  border-color: var(--ink);
+}
+@media (max-width: 560px) {
+  .lg-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lg-chip span:not(.lg-avatars):not(.lg-avatar),
+  .lg-chip small {
+    display: none;
+  }
+}
+/* the start screen holds the profile cards: let it be wider than the old tagline */
+.start-inner {
+  max-width: none;
 }

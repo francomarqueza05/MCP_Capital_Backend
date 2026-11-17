@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { createStore, useStore, wait } from "@/lib/store";
 import { tones } from "@/lib/audio";
 import { orb } from "@/orb/engine";
+import { chat, converse } from "./chat";
 import { showBubble } from "./stage";
 
 const read = (k: string) => {
@@ -27,20 +28,8 @@ export const setInputMode = (mode: "text" | "voice") => {
 };
 export const openAsk = () => ask.set({ open: true });
 
-let answering = false;
-async function answer() {
-  if (answering) return;
-  answering = true;
-  orb.setEmo("thinking");
-  showBubble("…", 0);
-  await wait(1200);
-  orb.setEmo("speaking");
-  showBubble("placeholderAnswer", 5200);
-  await wait(4200);
-  orb.setEmo("neutral");
-  orb.flashEmo("happy", 1400);
-  answering = false;
-}
+/** A free question: it joins the same conversation (and log) as the suggested ones. */
+const answer = (question: string) => converse(question, null, "Preguntas libres");
 
 export function Ask() {
   const { open, mode } = useStore(ask, (s) => s);
@@ -57,12 +46,13 @@ export function Ask() {
 
   if (!open) return null;
   const send = () => {
-    if (!text.trim()) return;
+    const q = text.trim();
+    if (!q || chat.get().busy) return;
     setText("");
-    answer();
+    answer(q);
   };
   const mic = async () => {
-    if (answering) return;
+    if (chat.get().busy) return;
     showBubble("listening", 0);
     await wait(700);
     if (!(await orb.listen(3000))) {
@@ -73,7 +63,7 @@ export function Ask() {
       orb.setEmo("neutral");
       return;
     }
-    answer();
+    answer("(pregunta por voz)");
   };
 
   return (

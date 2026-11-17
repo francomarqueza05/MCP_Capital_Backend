@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cordada · Orbe premium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Palette sampled by eye from the Sherpas hackathon banner. */
   :root { --navy: #0b1030; --navy-2: #141a45; --lav: #a9b4f5; --lav-dim: rgba(169,180,245,.35); --white: #fff; --h: 232; --s: 75; }
@@ -106,84 +106,99 @@
   #askMic { display: flex !important; gap: 8px; justify-content: center; align-items: center; }
   #askMic { flex: 1 !important; width: auto !important; border-radius: 999px !important; font: 600 15px "Poppins", sans-serif !important; }
 
-  /* ---------- summary screen ---------- */
-  :root { --good: #6fd8a8; --warn: #f5c76b; --bad: #f2879a; --card: rgba(255,255,255,.045); --line: rgba(169,180,245,.16); }
-  #summary {
-    position: fixed; inset: 0; z-index: 5; overflow-y: auto; padding: 28px 24px 110px;
-    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-content: start;
-    max-width: 1240px; margin: 0 auto; opacity: 0; pointer-events: none; transition: opacity .6s;
-  }
+  /* ---------- summary: the expedition map ----------
+     The intro's landscape becomes the summary. Altitude = score, each topic is a camp
+     whose weather is its state; tapping one zooms the camera in and opens an editorial
+     panel with a precise chart and Sherpas' exact figures. */
+  :root { --good: #6fd8a8; --warn: #f5c76b; --bad: #f2879a; --ink: #e9ecff; --hair: rgba(169,180,245,.22); }
+  .serif { font-family: "Fraunces", Georgia, serif; }
+  #summary { position: fixed; inset: 0; z-index: 5; opacity: 0; pointer-events: none; transition: opacity 1.2s ease; overflow: hidden; }
   #summary.show { opacity: 1; pointer-events: auto; }
-  #summary .hero { grid-column: 1 / -1; display: flex; gap: 28px; align-items: center; flex-wrap: wrap; padding: 22px 26px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
-  .hero .who { color: var(--lav); font-size: 14px; font-weight: 500; }
-  .hero .score { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
-  .hero .score small { font-size: 20px; font-weight: 500; opacity: .5; }
-  .hero .band { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--navy); }
-  .hero .pillars { flex: 1; min-width: 260px; display: grid; gap: 9px; }
-  .pillar { display: grid; grid-template-columns: 96px 1fr 44px; gap: 10px; align-items: center; font-size: 13px; }
-  .pillar .track { height: 8px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; }
-  .pillar .fill { height: 100%; width: 0; border-radius: 6px; transition: width 1.2s cubic-bezier(.2,.7,.2,1); }
-  .pillar b { text-align: right; font-weight: 600; opacity: .8; }
-  .caps { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
-  .cap { padding: 6px 12px; border-radius: 10px; font-size: 12.5px; background: rgba(242,135,154,.12); border: 1px solid rgba(242,135,154,.35); }
+  #world { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 0 0; will-change: transform; }
+  /* film grain as a fixed overlay, so the camera never has to redraw it */
+  #summary::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 7; opacity: .55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E"); }
+  #world .layer { transition: transform .9s cubic-bezier(.2,.7,.2,1); }
+  .camp { cursor: pointer; outline: none; }
+  .camp .card { transition: transform .35s cubic-bezier(.2,.7,.2,1), fill .3s; transform-box: fill-box; transform-origin: center; }
+  .camp:hover .card, .camp:focus .card { fill: rgba(30,38,96,.92); }
+  .camp:hover .lantern-glow { opacity: .9; }
+  .camp text { pointer-events: none; }
+  .camp { transition: opacity .6s; }
+  .camp.dim { opacity: .42; }
+  .camp.active .card { stroke: #a9b4f5; stroke-width: 1.6; fill: rgba(24,31,84,.95); }
+  .camp.active .lantern-glow { opacity: .9 !important; }
 
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; align-content: start; }
-  .card {
-    position: relative; padding: 16px 18px 18px; border-radius: 18px; background: var(--card); border: 1px solid var(--line);
-    cursor: pointer; opacity: 0; transform: translateY(14px); transition: opacity .5s, transform .5s, filter .35s, box-shadow .3s;
+  #xHero { position: absolute; left: 56px; top: 44px; width: min(440px, 40vw); z-index: 6; transition: opacity .6s, transform .6s; }
+  #summary.focused #xHero, #summary.focused #xLegend { opacity: 0; pointer-events: none; }
+  #summary.focused #xHero { transform: translateX(-24px); }
+  .eyebrow { font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--lav); }
+  #xScore { font-size: 128px; line-height: .88; font-weight: 300; letter-spacing: -.045em; margin: 14px 0 6px; }
+  #xScore small { font-size: 22px; letter-spacing: 0; color: var(--lav); }
+  #xBand { font-size: 22px; font-style: italic; font-weight: 300; }
+  #xLede { margin: 16px 0 22px; font-size: 14.5px; line-height: 1.65; color: rgba(233,236,255,.84); }
+  .xPillars { display: grid; gap: 8px; }
+  .xPillar { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 12px; font-size: 12px; color: var(--lav); }
+  .xPillar i { display: block; height: 2px; background: var(--hair); position: relative; }
+  .xPillar i::after { content: ""; position: absolute; left: 0; top: -1px; height: 4px; border-radius: 2px; width: var(--w); background: var(--c); transition: width 1.6s cubic-bezier(.2,.7,.2,1); }
+  .xPillar b { text-align: right; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .xMoves { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--hair); }
+  .xMove { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; font-size: 13px; color: rgba(233,236,255,.86); border-bottom: 1px solid rgba(169,180,245,.1); }
+  .xMove b { font-family: "Fraunces", serif; font-weight: 500; color: var(--good); white-space: nowrap; }
+  .xMove small { display: block; color: var(--lav); font-size: 11px; }
+  .xMoves { transition: background .4s, box-shadow .4s; border-radius: 12px; }
+  #xHero.focus .xMoves { background: rgba(169,180,245,.07); box-shadow: 0 0 0 12px rgba(169,180,245,.07); }
+  #xLegend { position: absolute; right: 56px; top: 50px; z-index: 6; display: flex; gap: 22px; font-size: 12px; color: var(--lav); transition: opacity .6s; }
+  #xLegend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: var(--c); }
+
+  #xPanel {
+    position: absolute; top: 0; right: 0; bottom: 0; width: min(580px, 100vw); padding: 46px 50px 120px; overflow-y: auto; z-index: 8;
+    background: linear-gradient(90deg, rgba(11,16,48,0), #0b1030 8%); transform: translateX(105%);
+    transition: transform 1s cubic-bezier(.65,0,.25,1); scrollbar-width: thin; scrollbar-color: var(--hair) transparent;
   }
-  .card.in { opacity: 1; transform: none; }
-  .card:hover { box-shadow: 0 0 0 1px rgba(169,180,245,.4); }
-  .card h3 { margin: 0; font-size: 14px; font-weight: 600; opacity: .75; }
-  .card .label { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; font-size: 17px; font-weight: 600; }
-  .card .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-  .card .viz { height: 54px; }
-  .card .viz svg { width: 100%; height: 100%; overflow: visible; }
-  .card .viz { transition: height .5s cubic-bezier(.2,.7,.2,1); }
-  .card .more { max-height: 0; opacity: 0; overflow: hidden; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.85); transition: max-height .5s cubic-bezier(.2,.7,.2,1), opacity .4s .1s, margin .5s; }
-  .card .close { position: absolute; top: 12px; right: 12px; background: none; border: 0; color: #fff; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .3s; }
-  .cards.dim .card:not(.focus) { filter: blur(3px); opacity: .35; }
-  .card.focus { box-shadow: 0 0 0 2px var(--lav); }
-  /* grows in place: takes two columns of the grid and opens its explanation */
-  .card.expanded { grid-column: span 2; background: #141a45; cursor: default; z-index: 3; }
-  .card.expanded .viz { height: 0; overflow: hidden; }
-  /* the topic's big animation (web/orb/scenes.js) */
-  .card .scene { display: none; }
-  .card.expanded .scene { display: block; margin-top: 4px; animation: sceneIn .5s ease both; }
-  @keyframes sceneIn { from { opacity: 0; transform: scale(.97); } }
-  .scene-svg { width: 100%; height: 220px; display: block; overflow: visible; }
-  .scene-slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--lav); }
-  .scene-slider b { color: #fff; font-weight: 600; min-width: 92px; text-align: right; }
-  .scene-slider input { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 6px; background: rgba(169,180,245,.25); outline: none; }
-  .scene-slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px rgba(169,180,245,.8); cursor: pointer; }
-  .scene-slider input::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; cursor: pointer; }
-  .scene-note { margin: 6px 0 0; font-size: 11.5px; opacity: .55; }
-  .scene-toggle { margin-top: 10px; padding: 9px 16px; font-size: 14px; }
-  .card.expanded .more { max-height: 320px; opacity: 1; margin-top: 14px; }
-  .card.expanded .close { opacity: .7; pointer-events: auto; }
-  @media (max-width: 640px) { .card.expanded { grid-column: auto; } }
-  /* dark, thin scrollbar so it doesn't break the scene */
-  #summary { scrollbar-width: thin; scrollbar-color: rgba(169,180,245,.25) transparent; }
-  #summary::-webkit-scrollbar { width: 8px; }
-  #summary::-webkit-scrollbar-track { background: transparent; }
-  #summary::-webkit-scrollbar-thumb { background: rgba(169,180,245,.25); border-radius: 8px; }
-  html, body { scrollbar-color: rgba(169,180,245,.25) transparent; }
-  .card .ask { margin-top: 16px; }
+  #summary.focused #xPanel { transform: none; }
+  #xPanel > * { transition: opacity .24s ease, transform .24s ease; }
+  #xPanel.swapping > * { opacity: 0; transform: translateY(6px); }
+  #xClose { position: absolute; top: 30px; right: 34px; background: none; border: 0; color: var(--lav); font: 500 12px "Poppins"; letter-spacing: .12em; cursor: pointer; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; }
+  .tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  #xStatement { font-size: 33px; line-height: 1.16; font-weight: 400; margin: 14px 0 22px; letter-spacing: -.01em; }
+  .xFigure { display: flex; align-items: baseline; gap: 14px; }
+  #xNum { font-size: 70px; font-weight: 300; line-height: 1; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+  #xUnit { font-size: 13.5px; color: var(--lav); max-width: 220px; line-height: 1.45; }
+  #xChart { margin: 20px 0 4px; }
+  #xChart .chart { width: 100%; overflow: visible; }
+  #xChart .scene-svg { width: 100%; height: 200px; display: block; overflow: hidden; }
+  #xChart .scene-slider, .control { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; margin: 12px 0 4px; font-size: 12px; color: var(--lav); }
+  #xChart .scene-slider b, .control b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
+  #xChart input[type=range] { -webkit-appearance: none; appearance: none; height: 2px; background: var(--hair); outline: none; }
+  #xChart input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); cursor: pointer; box-shadow: 0 0 12px rgba(169,180,245,.8); }
+  #xChart input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--ink); cursor: pointer; }
+  #xChart .scene-note, .xFoot { font-size: 12px; color: var(--lav); line-height: 1.6; margin: 8px 0 0; opacity: 1; }
+  #xChart .scene-toggle { background: transparent; border: 1px solid var(--hair); color: var(--ink); }
+  #xFix { margin-top: 22px; padding: 14px 16px; border-left: 2px solid var(--good); background: rgba(111,216,168,.06); font-size: 13px; line-height: 1.55; }
+  #xFix b { font-family: "Fraunces", serif; font-weight: 500; color: var(--good); }
+  #xFix:empty { display: none; }
+  #xDetailBtn { margin-top: 26px; background: none; border: 0; border-top: 1px solid var(--hair); width: 100%; text-align: left; padding: 16px 0 0; color: var(--ink); font: 500 12px "Poppins"; letter-spacing: .12em; cursor: pointer; }
+  #xDetailBtn::after { content: "  ↓"; color: var(--lav); }
+  #xDetailBtn.open::after { content: "  ↑"; }
+  #xDetail { max-height: 0; overflow: hidden; transition: max-height .6s ease; }
+  #xDetail.open { max-height: 1000px; }
+  #xDetail table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  #xDetail td { padding: 10px 0; border-bottom: 1px solid var(--hair); vertical-align: top; line-height: 1.45; }
+  #xDetail td:first-child { color: var(--lav); width: 46%; padding-right: 14px; }
+  #xDetail td:last-child { font-variant-numeric: tabular-nums; }
+  #xDetail .src { margin-top: 12px; font-size: 11px; color: var(--lav); opacity: .7; }
 
-  .side { align-self: start; position: sticky; top: 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
-  .side { transition: box-shadow .3s; }
-  .side.focus { box-shadow: 0 0 0 2px var(--lav); }
-  .side h4 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--lav); letter-spacing: .06em; text-transform: uppercase; }
-  .side ul { margin: 0 0 18px; padding-left: 18px; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; }
-  .move { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); margin-bottom: 8px; font-size: 13.5px; }
-  .move b { color: var(--good); }
-
-  #explain { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 20; }
-  #tourbar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 30; display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: 999px; background: #141a45; border: 1px solid var(--line); }
+  #explain { position: fixed; left: 56px; bottom: 30px; z-index: 20; }
+  #tourbar { position: fixed; left: 56px; bottom: 30px; z-index: 30; display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: 999px; background: rgba(20,26,69,.92); border: 1px solid var(--hair); backdrop-filter: blur(8px); }
   #tourbar[hidden], #explain[hidden] { display: none; }
   #tourbar span { font-size: 14px; font-weight: 500; margin-right: 6px; }
   #tourbar .pill { padding: 9px 16px; font-size: 14px; }
-  @media (max-width: 860px) { #summary { grid-template-columns: 1fr; padding: 20px 16px 110px; } .side { position: static; } }
+  @media (max-width: 860px) {
+    #xHero { left: 20px; right: 20px; width: auto; top: 22px; } #xScore { font-size: 88px; } .xPillars, .xMoves { display: none; }
+    #xLegend { left: 20px; right: auto; top: auto; bottom: 84px; } #xPanel { padding: 32px 22px 120px; background: #0b1030; } #explain { left: 20px; }
+  }
+
 
   /* ---------- start screen: the tap that unlocks sound ---------- */
   #start {
@@ -264,21 +279,68 @@
 <div id="bubble"></div>
 
 <main id="summary" aria-hidden="true">
-  <section class="hero">
-    <div>
-      <div class="who" id="sumWho"></div>
-      <div class="score"><span id="sumScore">0</span><small> / 100</small></div>
-      <span class="band" id="sumBand"></span>
-    </div>
-    <div class="pillars" id="sumPillars"></div>
+  <svg id="world" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Mapa de tu expedición">
+    <defs>
+      <linearGradient id="xSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060920"/><stop offset=".5" stop-color="#101645"/><stop offset="1" stop-color="#1c2462"/></linearGradient>
+      <radialGradient id="xMoon"><stop offset="0" stop-color="#e9ecff" stop-opacity=".55"/><stop offset=".18" stop-color="#a9b4f5" stop-opacity=".22"/><stop offset="1" stop-color="#a9b4f5" stop-opacity="0"/></radialGradient>
+      <radialGradient id="xHalo"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".3" stop-color="#a9b4f5" stop-opacity=".35"/><stop offset="1" stop-color="#a9b4f5" stop-opacity="0"/></radialGradient>
+      <radialGradient id="xStorm"><stop offset="0" stop-color="#03051a" stop-opacity=".8"/><stop offset="1" stop-color="#03051a" stop-opacity="0"/></radialGradient>
+      <linearGradient id="xAurora" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6fd8a8" stop-opacity="0"/><stop offset=".35" stop-color="#6fd8a8" stop-opacity=".16"/><stop offset=".65" stop-color="#a9b4f5" stop-opacity=".2"/><stop offset="1" stop-color="#a9b4f5" stop-opacity="0"/></linearGradient>
+      <filter id="xBlur"><feGaussianBlur stdDeviation="22"/></filter>
+      <filter id="xGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter>
+      <filter id="xGrain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .055 0"/></filter>
+    </defs>
+    <rect width="1600" height="900" fill="url(#xSky)"/>
+    <g id="xStars"></g>
+    <path id="xAuroraBand" d="M-100,170 C300,90 700,230 1000,130 S1500,60 1700,150 L1700,240 C1400,170 1100,300 800,240 S200,200 -100,260 Z" fill="url(#xAurora)" filter="url(#xBlur)"/>
+    <circle cx="1185" cy="210" r="260" fill="url(#xMoon)"/>
+    <g class="layer" data-depth=".15">
+      <path fill="#0e1340" d="M-60,470 L90,400 L210,440 L360,330 L520,420 L640,370 L780,430 L930,340 L1060,380 L1185,230 L1310,350 L1440,290 L1660,380 L1660,900 L-60,900 Z"/>
+      <path fill="#2a3382" d="M1185,230 L1226,262 L1210,259 L1198,270 L1182,258 L1162,264 Z M360,330 L392,356 L378,354 L366,364 L352,354 L336,358 Z M930,340 L958,362 L944,360 L934,368 L922,360 L908,362 Z M1440,290 L1470,312 L1456,310 L1444,318 L1432,310 L1418,313 Z"/>
+    </g>
+    <g class="layer" data-depth=".3">
+      <path fill="#121848" d="M-60,560 L120,480 L280,530 L470,440 L640,520 L820,470 L990,540 L1170,450 L1350,520 L1660,470 L1660,900 L-60,900 Z"/>
+      <path fill="#262f78" d="M470,440 L500,462 L486,460 L476,468 L464,460 L448,463 Z M1170,450 L1198,470 L1184,468 L1174,476 L1162,468 L1146,471 Z"/>
+    </g>
+    <g class="layer" data-depth=".5">
+      <path fill="#161d50" d="M-60,660 L180,590 L380,630 L590,560 L800,630 L1010,580 L1230,650 L1450,590 L1660,640 L1660,900 L-60,900 Z"/>
+      <g id="xMist"></g>
+    </g>
+    <g id="xRouteLayer">
+      <path id="xRoute" d="M650,860 C700,800 640,760 700,700 S800,640 790,580 S860,490 900,450 S980,370 1040,330 S1140,270 1185,236" fill="none" stroke="#a9b4f5" stroke-width="2.6" stroke-linecap="round" stroke-dasharray=".1 11" opacity=".8"/>
+      <g id="xSummit"></g>
+    </g>
+    <g class="layer" data-depth="1">
+      <path fill="#1b2259" d="M-60,780 L160,730 L380,770 L600,720 L840,790 L1080,750 L1320,800 L1660,750 L1660,900 L-60,900 Z"/>
+      <g id="xYak"></g>
+    </g>
+    <g id="xWeather"></g>
+    <g id="xCamps"></g>
+  </svg>
+
+  <section id="xHero">
+    <div class="eyebrow" id="xWho"></div>
+    <div id="xScore" class="serif"><span>0</span><small> / 100</small></div>
+    <div id="xBand" class="serif"></div>
+    <p id="xLede"></p>
+    <div class="xPillars" id="xPillars"></div>
+    <div class="xMoves"><div class="eyebrow">Lo que más te ayuda</div><div id="xMoves"></div></div>
   </section>
-  <div class="caps" id="sumCaps"></div>
-  <section class="cards" id="sumCards"></section>
-  <aside class="side">
-    <h4>Lo importante</h4>
-    <ul id="sumKey"></ul>
-    <h4>Lo que más te ayuda</h4>
-    <div id="sumMoves"></div>
+  <div id="xLegend">
+    <span style="--c:var(--good)">Despejado · bien</span>
+    <span style="--c:var(--warn)">Niebla · atención</span>
+    <span style="--c:var(--bad)">Tormenta · a resolver</span>
+  </div>
+
+  <aside id="xPanel" aria-live="polite">
+    <button id="xClose">CERRAR ✕</button>
+    <div class="eyebrow" id="xEyebrow"></div>
+    <h2 id="xStatement" class="serif"></h2>
+    <div class="xFigure"><span id="xNum" class="serif"></span><span id="xUnit"></span></div>
+    <div id="xChart"></div>
+    <div id="xFix"></div>
+    <button id="xDetailBtn">VER DETALLE</button>
+    <div id="xDetail"><table id="xDetailRows"></table><div class="src">Fuente: informes de Sherpas (salud financiera e inversiones). Sin estimaciones propias salvo donde se indica.</div></div>
   </aside>
 </main>
 <button id="explain" class="pill primary" hidden>Explícame el resumen</button>
@@ -666,7 +728,13 @@ function live(now) {
   for (const [t, w] of ACTS) if ((r -= w) < 0) { type = t; break; }
   O.act = { type, t0: now, x: O.x, y: O.y };
   let dur = 1200;
-  if (type === 'wander') { O.tx = rand(W * .1, W * .9); O.ty = rand(H * .12, H * .55); dur = rand(3000, 5000); }
+  if (type === 'wander') {
+    // on the map it stays around its altitude on the route instead of roaming the screen
+    // on the map it drifts up and down its stretch of the route rather than across the screen
+    if (O.homeMap && window.routeWander) { const h0 = window.mapPointToScreen(window.routeWander()); O.tx = h0.x; O.ty = h0.y; }
+    else { O.tx = rand(W * .1, W * .9); O.ty = rand(H * .12, H * .55); }
+    dur = rand(3000, 5000);
+  }
   if (type === 'look') { O.tx = O.x; O.ty = O.y; flashEmo('curious', 2400); dur = 2600; }
   if (type === 'hop') {
     O.vy -= 320; O.sqv += 2.4; flashEmo('happy', 900);
@@ -682,6 +750,8 @@ function physics(now, dt) {
   const mdx = mouse.x - O.x, mdy = mouse.y - O.y, md = Math.hypot(mdx, mdy) || 1;
   if (O.mode === 'idle') live(now);
   if (O.mode === 'talk') { const r = rest(); O.tx = r.x; O.ty = r.y; }
+  // anchored to a point of the map: follows it through every camera move
+  if (O.mode === 'hold' && O.anchor && window.mapPointToScreen) { const sp = window.mapPointToScreen(O.anchor); O.tx = sp.x; O.ty = sp.y; }
   const looping = O.act?.type === 'loop' && now - O.act.t0 < 1700;
   const k = O.mode === 'idle' ? (looping ? 16 : 3.2) : 14, damp = O.mode === 'idle' ? (looping ? 6 : 3) : 7;
   O.vx += ((O.tx - O.x) * k - O.vx * damp) * dt;
@@ -767,7 +837,13 @@ function render(now, dt) {
   haloEl.style.transform = `scale(${P.halo + O.level * .8 + (emo === 'listening' ? Math.sin(T * 5) * .06 : 0)})`;
 
   if (bubbleEl.classList.contains('show')) {
-    bubbleEl.style.transform = `translate(${clamp(O.x, 150, W - 150)}px,${O.y + bob - BASE * .9 * O.scale}px) translate(-50%,-100%)`;
+    // above the orb by default; to its side when it's anchored next to a camp on the map
+    const r0 = BASE * .55 * O.scale + 14;
+    // a side bubble that would leave the screen opens above instead
+    const side = O.bubbleSide === 'left' && O.x - r0 - bubbleEl.offsetWidth < 12 ? null : O.bubbleSide === 'right' && O.x + r0 + bubbleEl.offsetWidth > W - 12 ? null : O.bubbleSide;
+    bubbleEl.style.transform = side === 'left' ? `translate(${O.x - r0}px,${O.y + bob}px) translate(-100%,-50%)`
+      : side === 'right' ? `translate(${O.x + r0}px,${O.y + bob}px) translate(0,-50%)`
+      : `translate(${clamp(O.x, 150, W - 150)}px,${O.y + bob - BASE * .9 * O.scale}px) translate(-50%,-100%)`;
   }
 }
 
@@ -1019,193 +1095,419 @@ async function intro() {
   $('#continue').classList.add('show');
 }
 
-// ---------------------------------------------------------------- summary screen
+// ---------------------------------------------------------------- summary: the expedition map
 // Data comes from scripts/cases-orb.ts (Sherpas MCP run through src/scenes/detect.ts).
-// No AI here: every word and number on this screen is precomputed.
+// No AI on this screen: every word and number is precomputed from Sherpas.
 const CASES = window.ORB_CASES || {};
 const caseId = new URLSearchParams(location.search).get('case') || Object.keys(CASES)[0];
-const STATUS = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' };
-const BAND = { critical: ['Crítica', 'var(--bad)'], vulnerable: ['Vulnerable', 'var(--bad)'], stable: ['Estable', 'var(--warn)'], strong: ['Fuerte', 'var(--good)'] };
+const XNS = 'http://www.w3.org/2000/svg';
+const ACC = { good: '#6fd8a8', warn: '#f5c76b', bad: '#f2879a' };
+const TONE = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' };
+const WEATHER = { good: 'Despejado', warn: 'Niebla', bad: 'Tormenta' };
+const BAND = { critical: 'crítica', vulnerable: 'vulnerable', stable: 'estable', strong: 'fuerte' };
 const MOVES = {
   'Raise mortality coverage': 'Subir el seguro de vida', 'Add life cover': 'Contratar seguro de vida', 'Close a coverage gap': 'Cerrar un hueco de cobertura',
   'Add umbrella cover': 'Contratar seguro ante demandas', 'Raise annual savings': 'Ahorrar más cada año', 'Lower the withdrawal rate': 'Sacar menos cada año de tus ahorros',
   'Raise growth allocation toward glide': 'Invertir un poco más en acciones', 'Reduce growth allocation toward glide': 'Invertir un poco menos en acciones',
   'Reduce single-name concentration': 'Repartir mejor tus inversiones', 'Pay down revolving card': 'Pagar la tarjeta de crédito',
 };
-const CAPS = { 'High revolving balance with high APR': 'Tu nota está frenada por la deuda de tarjeta', 'Mortality coverage ratio below threshold with dependents': 'Tu nota está frenada por falta de seguro de vida con hijos' };
-// which solutions belong to which topic, to show "if you fix this" inside each card
 const TOPIC_MOVES = {
   life: ['Raise mortality coverage', 'Add life cover', 'Close a coverage gap'], umbrella: ['Add umbrella cover'], debt: ['Pay down revolving card'],
   retirement: ['Raise annual savings', 'Lower the withdrawal rate'], cashflow: ['Raise annual savings'],
   investments: ['Raise growth allocation toward glide', 'Reduce growth allocation toward glide', 'Reduce single-name concentration'],
 };
-const money = (n) => `$${Math.round(Math.abs(n)).toLocaleString('es-ES')}`;
+const EFFORT = { low: 'esfuerzo bajo', medium: 'esfuerzo medio', high: 'esfuerzo alto' };
+const fmt = (n, d = 0) => (+n).toLocaleString('es-ES', { maximumFractionDigits: d, minimumFractionDigits: d, useGrouping: 'always' });
+const money = (n) => `$${fmt(Math.round(Math.abs(n)))}`;
+const short = (n) => Math.abs(n) >= 1e6 ? `$${fmt(Math.abs(n) / 1e6, 2)}M` : Math.abs(n) >= 1e4 ? `$${fmt(Math.round(Math.abs(n) / 1e3))}k` : money(n);
+const listEs = (a) => a.length > 1 ? `${a.slice(0, -1).join(', ')} y ${a.at(-1)}` : a[0] ?? '';
+const svgEl = (p, tag, a = {}, text) => { const e = document.createElementNS(XNS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text != null) e.textContent = text; p.append(e); return e; };
 
-// Small chart per topic. Bars for measured things against their target, a big figure otherwise.
-function viz(t) {
-  const c = STATUS[t.status], n = t.numbers;
-  const bar = (val, lo, hi, max, unit) => {
-    const x = (v) => Math.max(0, Math.min(200, v / max * 200));
-    return `<svg viewBox="0 0 200 54">
-      <rect x="0" y="20" width="200" height="12" rx="6" fill="rgba(255,255,255,.08)"/>
-      ${hi != null ? `<rect x="${x(lo)}" y="16" width="${Math.max(3, x(hi) - x(lo))}" height="20" rx="4" fill="rgba(169,180,245,.25)" stroke="rgba(169,180,245,.6)"/>` : ''}
-      <rect x="0" y="20" width="${x(val)}" height="12" rx="6" fill="${c}"/>
-      <text x="0" y="52" font-size="12" font-weight="600" fill="rgba(255,255,255,.8)" font-family="Poppins">${val}${unit}</text>
-      ${hi != null ? `<text x="${Math.min(x(lo), 120)}" y="11" font-size="10" fill="#a9b4f5" font-family="Poppins">ideal ${lo}${hi !== lo ? '–' + hi : ''}${unit}</text>` : ''}
-    </svg>`;
-  };
-  if (t.id === 'emergency' || t.id === 'near-goal') return bar(t.id === 'near-goal' ? n.after : n.months, n.min ?? 0, n.max ?? null, Math.max(n.months, n.max ?? 6) * 1.25, ' meses');
-  if (t.id === 'investments') return bar(n.equity, n.target, n.target, 100, '% acciones');
-  const big = (s, cap) => `<svg viewBox="0 0 200 54"><text x="0" y="32" font-size="${s.length > 10 ? 24 : 30}" font-weight="700" fill="${c}" font-family="Poppins">${s}</text><text x="0" y="51" font-size="12" font-weight="500" fill="rgba(255,255,255,.65)" font-family="Poppins">${cap}</text></svg>`;
-  if (t.id === 'retirement' && n.runOut !== 'Not applicable') return big(`a los ${n.runOut} años`, 'se agotan tus ahorros');
-  if (t.id === 'retirement') return bar(n.incomeShare, 100, 100, 100, '% cubierto');
-  if (t.id === 'cashflow') return big(money(n.flow), n.flow < 0 ? 'salen de más este año' : 'te sobran al año');
-  if (t.id === 'debt') return n.balance ? big(money(n.balance), 'en tarjetas de crédito') : big(`${Math.round(n.dti * 100)}%`, 'del sueldo se va en deudas');
-  if (t.id === 'education') return big(money(n.gap), n.gap ? 'faltan para la universidad' : 'cubierto');
-  if (t.id === 'life') { const s = (n.shortfall || 0) + (n.coShortfall || 0); return s ? big(money(s), 'de cobertura que falta') : big('✓', 'tu familia está protegida'); }
-  if (t.id === 'umbrella') return n.recommended ? big(money(n.recommended), 'de cobertura recomendada') : big('✓', 'cubierto ante demandas');
-  return big((t.headline.match(/\$[\d,.]+|\d+%/) || [t.label])[0], '');
-}
-
-function renderSummary(c) {
-  const h = c.household;
-  $('#sumWho').textContent = (h.couple ? `${h.names.join(' y ')}, su` : `${h.names[0]}, tu`) + ' salud financiera';
-  const [bandEs, bandColor] = BAND[c.score.band] ?? [c.score.band, 'var(--lav)'];
-  const band = $('#sumBand'); band.textContent = bandEs; band.style.background = bandColor;
-  $('#sumPillars').innerHTML = c.score.pillars.map((p) => `<div class="pillar"><span>${p.name}</span><div class="track"><div class="fill" data-w="${p.score}" style="background:${p.score >= 70 ? 'var(--good)' : p.score >= 40 ? 'var(--warn)' : 'var(--bad)'}"></div></div><b>${p.points}</b></div>`).join('');
-  $('#sumCaps').innerHTML = c.score.caps.map((r) => `<div class="cap">⛔ ${CAPS[r] ?? r}</div>`).join('');
-  $('#sumCards').innerHTML = c.topics.map((t) => {
-    const fix = c.moves.find((m) => (TOPIC_MOVES[t.id] ?? []).includes(m.title));
-    return `<article class="card" data-id="${t.id}">
-      <button class="icon close" title="Cerrar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <h3>${t.title}</h3>
-      <div class="label"><span class="dot" style="background:${STATUS[t.status]}"></span>${t.label}</div>
-      <div class="viz">${viz(t)}</div>
-      <div class="scene"></div>
-      <div class="more">${t.headline}${fix ? `<br><br><b>Si lo resuelves</b> (${MOVES[fix.title] ?? fix.title}), tu nota pasa de ${fix.before} a ${fix.after}.` : ''}
-        <div><button class="pill ask">Preguntarle al orbe</button></div></div>
-    </article>`;
-  }).join('');
-  const bad = c.topics.filter((t) => t.status === 'bad'), good = c.topics.filter((t) => t.status === 'good');
-  $('#sumKey').innerHTML = [...bad.slice(0, 3).map((t) => `<li><b>${t.title}:</b> ${t.headline}</li>`), ...good.slice(0, 1).map((t) => `<li><b>${t.title}:</b> ${t.label.toLowerCase()} 👍</li>`)].join('');
-  $('#sumMoves').innerHTML = [...c.moves].sort((a, b) => (b.after - b.before) - (a.after - a.before)).map((m) => `<div class="move">${MOVES[m.title] ?? m.title} · esfuerzo ${({ low: 'bajo', medium: 'medio', high: 'alto' })[m.effort] ?? m.effort}<br><b>+${m.after - m.before} puntos</b></div>`).join('');
-}
-
-// entrance: score counts up, pillars fill, cards arrive one by one
-async function playSummary(c) {
-  const el = $('#sumScore'), t0 = performance.now();
-  const count = () => { const k = Math.min(1, (performance.now() - t0) / 1400); el.textContent = Math.round(c.score.value * easeOut(k)); if (k < 1) requestAnimationFrame(count); };
-  count();
-  await wait(300);
-  document.querySelectorAll('.pillar .fill').forEach((f) => { f.style.width = f.dataset.w + '%'; });
-  for (const card of document.querySelectorAll('.card')) { card.classList.add('in'); await wait(110); }
-}
-
-const cards = $('#sumCards');
-function orbTo(card) {
-  // beside the card, never on it (the close button lives in its top-right corner)
-  const r = card.getBoundingClientRect();
-  O.mode = 'hold'; O.ty = Math.max(60, r.top + 40);
-  O.tx = r.left > 110 ? r.left - 55 : Math.min(W - 60, r.right + 55);
-}
-// FLIP: measure every card, change the layout, then animate each card from where it was
-function flip(change) {
-  const els = [...cards.children], first = new Map(els.map((e) => [e, e.getBoundingClientRect()]));
-  change();
-  for (const e of els) {
-    const a = first.get(e), b = e.getBoundingClientRect();
-    const dx = a.left - b.left, dy = a.top - b.top, sx = a.width / b.width;
-    if (Math.abs(dx) + Math.abs(dy) + Math.abs(1 - sx) * 100 < 1) continue;
-    e.animate([{ transformOrigin: 'top left', transform: `translate(${dx}px,${dy}px) scaleX(${sx})` }, { transformOrigin: 'top left', transform: 'none' }],
-      { duration: 480, easing: 'cubic-bezier(.2,.7,.2,1)' });
+// The figure each topic leads with, on the map and in its panel.
+function keyFigure(t) {
+  const n = t.numbers;
+  switch (t.id) {
+    case 'emergency': return [fmt(n.months, n.months % 1 ? 1 : 0), 'meses de gastos cubiertos con tu efectivo'];
+    case 'near-goal': return [fmt(n.after), `meses de colchón después de ${(n.goal || 'ese gasto').toLowerCase()}`];
+    case 'cashflow': return [`${n.flow < 0 ? '−' : '+'}${short(n.flow)}`, n.flow < 0 ? 'al año: sale más de lo que entra' : 'al año te sobran'];
+    case 'debt': return n.balance ? [short(n.balance), 'en tarjetas de crédito'] : [`${fmt(Math.round(n.dti * 100))}%`, 'del sueldo se va en deudas'];
+    case 'retirement': return n.runOut !== 'Not applicable' ? [n.runOut, `años: edad en que se agotan tus ahorros (te jubilas a los ${n.retireAge})`] : n.gap > 0 ? [short(n.gap), 'de brecha al jubilarte, en dinero de hoy'] : [`${n.incomeShare}%`, 'del gasto cubierto con ingresos fijos'];
+    case 'education': return [short(n.gap), 'faltan para la universidad'];
+    case 'life': { const s = (n.shortfall || 0) + (n.coShortfall || 0); return s ? [short(s), 'de cobertura que falta'] : ['✓', 'tu familia quedaría protegida']; }
+    case 'umbrella': return n.recommended ? [short(n.recommended), 'de cobertura recomendada que no tienes'] : ['✓', 'cubierto ante demandas'];
+    case 'investments': return [`${n.equity}%`, `en acciones; lo ideal para ti es ${n.target}%`];
+    default: return ['', ''];
   }
 }
-function stopScene(card) { card._stop?.(); card._stop = null; const box = card.querySelector('.scene'); if (box) box.innerHTML = ''; }
-function expand(card) {
-  flip(() => {
-    document.querySelectorAll('.card.expanded').forEach((c) => { c.classList.remove('expanded', 'focus'); stopScene(c); });
-    card.classList.add('expanded', 'focus'); cards.classList.add('dim');
-    const topic = CASES[caseId].topics.find((x) => x.id === card.dataset.id);
-    if (window.mountScene && topic) card._stop = window.mountScene(card.querySelector('.scene'), topic, CASES[caseId]);
-  });
-  O.targetScale = .8; setTimeout(() => { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); orbTo(card); }, 500);
+function statement(t) {
+  const n = t.numbers;
+  switch (t.id) {
+    case 'emergency': return n.months < n.min ? 'Si mañana dejaras de cobrar, el colchón duraría muy poco.' : n.months > n.max ? 'Tienes más efectivo parado del que necesitas.' : 'Tu colchón está en el punto justo.';
+    case 'near-goal': return `${n.goal || 'Un gasto grande'}${n.when ? ` en ${n.when}` : ''} se lleva casi todo tu colchón.`;
+    case 'cashflow': return n.flow < 0 ? 'Cada año sale más dinero del que entra.' : t.status === 'warn' ? 'Te sobra poco para todo lo que quieres cubrir.' : 'Cada año te sobra dinero sin un destino claro.';
+    case 'debt': return n.balance ? 'La tarjeta te cobra casi todo lo que pagas en intereses.' : 'Tus deudas están bajo control.';
+    case 'retirement': return n.runOut !== 'Not applicable' ? `Al ritmo actual, tus ahorros se acaban a los ${n.runOut} años.` : n.gap > 0 ? `Para jubilarte a los ${n.retireAge}, lo ahorrado no alcanza.` : 'Tu jubilación va por buen camino.';
+    case 'education': return 'La universidad de tus hijos todavía no está cubierta.';
+    case 'life': return (n.shortfall || n.coShortfall) ? 'Si faltaras, tu familia recibiría mucho menos de lo que necesita.' : 'Si faltaras, tu familia quedaría protegida.';
+    case 'umbrella': return n.recommended ? 'Una demanda podría alcanzar todo tu patrimonio.' : 'Estás protegido ante demandas.';
+    case 'investments': return n.leveraged ? `${n.leveraged} amplifica las caídas del mercado por tres.` : n.target - n.equity >= 5 ? 'Tu dinero está más quieto de lo que tu horizonte permite.' : n.equity - n.target >= 5 ? 'Asumes más riesgo del que te corresponde.' : 'Tu cartera está equilibrada.';
+    default: return t.headline;
+  }
 }
-function collapse() {
-  const open = document.querySelectorAll('.card.expanded');
-  if (open.length) flip(() => open.forEach((c) => { c.classList.remove('expanded', 'focus'); stopScene(c); }));
-  if (!tour.on) cards.classList.remove('dim');
-  if (!tour.on && O.mode === 'hold') { O.mode = 'idle'; O.nextAct = 0; }
-}
-cards.addEventListener('click', (e) => {
-  const card = e.target.closest('.card');
-  if (!card || tour.on) return;
-  if (e.target.closest('.close')) { e.stopPropagation(); collapse(); return; }
-  if (e.target.closest('.ask')) { e.stopPropagation(); openAsk(); bubble('howCanIHelp', 2200); return; }
-  if (!card.classList.contains('expanded')) { sfx.tap(); expand(card); }
-});
-addEventListener('keydown', (e) => { if (e.key === 'Escape') collapse(); });
 
-// "Explícame el resumen": the orb visits each card and checks in before moving on
-const tour = { on: false, i: 0, list: [] };
-// The last two stops wrap up from the sidebar: the takeaways, then the best next move.
-function sideStops(c) {
-  const bad = c.topics.filter((t) => t.status === 'bad').slice(0, 3).map((t) => t.title.toLowerCase());
-  const best = [...c.moves].sort((a, b) => (b.after - b.before) - (a.after - a.before))[0];
-  const list = bad.length > 1 ? `${bad.slice(0, -1).join(', ')} y ${bad.at(-1)}` : bad[0];
-  return [
-    { el: $('#sumKey'), emo: 'calm', text: bad.length ? `Si te quedas con algo, que sea esto: lo más urgente es ${list}.` : 'Lo esencial: vas por buen camino.', again: 'Esta columna resume lo más importante de todo lo que vimos, para que lo tengas a mano.' },
-    ...(best ? [{ el: $('#sumMoves'), emo: 'happy', text: `Y la buena noticia: con "${MOVES[best.title] ?? best.title}" tu nota subiría de ${best.before} a ${best.after}. Ahora te enseño cómo.`, again: 'Estas son las acciones que Sherpas te propone, ordenadas por cuánto mejoran tu nota.' }] : []),
-  ];
+// ------------------------------------------------------------ build the map
+const world = $('#world'), xRoute = $('#xRoute');
+let camps = [], XL = 0, built = false, flakes = [], mists = [], lanterns = [], sparks = [];
+function buildExpedition(c) {
+  if (built) return; built = true;
+  XL = xRoute.getTotalLength();
+  const stars = $('#xStars');
+  for (let i = 0; i < 140; i++) svgEl(stars, 'circle', { cx: Math.random() * 1600, cy: Math.random() * 460, r: Math.random() * 1.3 + .2, fill: '#cfd6ff', opacity: Math.random() * .6 + .08 });
+  for (let k = 0; k < 4; k++) mists.push({ el: svgEl($('#xMist'), 'rect', { x: 0, y: 610 + k * 26, width: 700, height: 18, rx: 9, fill: '#cfd6ff', opacity: .035 }), x: k * 380, v: 8 + k * 3 });
+  // the intro's yak waits at base camp, facing up the route
+  const yb = document.querySelector('#yakBody').cloneNode(true); yb.removeAttribute('id');
+  const base = xRoute.getPointAtLength(0), ys = .2;
+  const yg = svgEl($('#xYak'), 'g', { transform: `translate(${base.x + 20 + YAK.footX * ys} ${base.y + 6 - YAK.footY * ys}) scale(${-ys} ${ys})` }); yg.append(yb);
+  // summit
+  const top = xRoute.getPointAtLength(XL), sg = $('#xSummit');
+  svgEl(sg, 'line', { x1: top.x, y1: top.y, x2: top.x, y2: top.y - 46, stroke: '#e9ecff', 'stroke-width': 2 });
+  svgEl(sg, 'path', { d: `M${top.x},${top.y - 46} L${top.x + 24},${top.y - 39} L${top.x},${top.y - 32} Z`, fill: '#a9b4f5' });
+  svgEl(sg, 'text', { x: top.x + 32, y: top.y - 34, fill: '#a9b4f5', 'font-family': 'Fraunces', 'font-style': 'italic', 'font-size': 15 }, 'cumbre · 100');
+
+  const weather = $('#xWeather'), campsG = $('#xCamps');
+  // camps are spaced evenly in height (the route only climbs), so their cards can stack on the right
+  const yAt = (y) => { let lo = 0, hi = XL; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2; if (xRoute.getPointAtLength(mid).y > y) lo = mid; else hi = mid; } return xRoute.getPointAtLength(lo); };
+  const yBottom = 772, yTop = top.y + 70;
+  camps = c.topics.map((t, i) => {
+    const p = yAt(yBottom - (yBottom - yTop) * i / Math.max(1, c.topics.length - 1));
+    const nx = 1, ny = 0, col = ACC[t.status];
+    // local weather: what the state of this stretch feels like
+    if (t.status === 'bad') {
+      svgEl(weather, 'ellipse', { cx: p.x, cy: p.y - 80, rx: 130, ry: 64, fill: 'url(#xStorm)' });
+      for (let k = 0; k < 9; k++) flakes.push({ el: svgEl(weather, 'line', { stroke: '#dfe4ff', 'stroke-width': 1.2, opacity: .38, 'stroke-linecap': 'round' }), x0: p.x - 70 + Math.random() * 140, y0: p.y - 130, h: 120, off: Math.random() });
+    } else if (t.status === 'warn') {
+      for (let k = 0; k < 3; k++) mists.push({ el: svgEl(weather, 'rect', { x: p.x - 90, y: p.y - 50 + k * 15, width: 180, height: 7, rx: 4, fill: '#cfd6ff', opacity: .1 }), x: p.x - 90, swing: k * 1.7, local: true });
+    } else {
+      for (let k = 0; k < 3; k++) sparks.push(svgEl(weather, 'path', { d: `M${p.x - 30 + k * 26},${p.y - 58 - (k % 2) * 16} m0,-5 l1.4,3.6 3.6,1.4 -3.6,1.4 -1.4,3.6 -1.4,-3.6 -3.6,-1.4 3.6,-1.4 Z`, fill: '#bff3dc', opacity: .6 }));
+    }
+    const g = svgEl(campsG, 'g', { class: 'camp', tabindex: 0, role: 'button', 'aria-label': `${t.title}: ${t.label}` });
+    // tent with a lantern in the state's colour
+    const glow = svgEl(g, 'circle', { class: 'lantern-glow', cx: p.x, cy: p.y - 4, r: 22, fill: col, opacity: .45, filter: 'url(#xGlow)' });
+    svgEl(g, 'path', { d: `M${p.x - 15},${p.y + 4} L${p.x},${p.y - 18} L${p.x + 15},${p.y + 4} Z`, fill: '#e9ecff' });
+    svgEl(g, 'path', { d: `M${p.x - 4},${p.y + 4} L${p.x},${p.y - 5} L${p.x + 4},${p.y + 4} Z`, fill: '#141a45' });
+    svgEl(g, 'circle', { cx: p.x + 11, cy: p.y - 6, r: 3, fill: col });
+    lanterns.push(glow);
+    // label card to the right of the camp, or to the left when it would leave the screen
+    const card = svgEl(g, 'rect', { class: 'card', rx: 12, fill: 'rgba(16,22,64,.86)', stroke: 'rgba(169,180,245,.25)' });
+    // short figure for the map card; the panel gives the full sentence
+    const fig = t.id === 'emergency' || t.id === 'near-goal' ? `${keyFigure(t)[0]} meses` : t.id === 'investments' ? `${t.numbers.equity}% → ${t.numbers.target}%` : keyFigure(t)[0];
+    const tt = svgEl(g, 'text', { fill: '#e9ecff', 'font-size': 15, 'font-family': 'Poppins', 'font-weight': 500 }, t.title);
+    const st = svgEl(g, 'text', { fill: col, 'font-size': 12.5, 'font-family': 'Fraunces', 'font-style': 'italic' }, `${WEATHER[t.status]} · ${t.label.toLowerCase()}`);
+    const ft = svgEl(g, 'text', { fill: '#e9ecff', 'font-size': 20, 'font-family': 'Fraunces', 'font-weight': 500 }, fig);
+    const w = Math.max(tt.getComputedTextLength(), st.getComputedTextLength() + 2) + ft.getComputedTextLength() + 64, h = 54;
+    const sl = slice(), visRight = (innerWidth - sl.ox) / sl.k - 16;
+    const cardLeft = p.x + 46 + w > visRight, x0 = cardLeft ? p.x - 46 - w : p.x + 46, y0 = p.y - h / 2;
+    const link = svgEl(g, 'line', { x1: p.x + (cardLeft ? -20 : 20), y1: p.y, x2: cardLeft ? x0 + w : x0, y2: p.y, stroke: col, opacity: .5 });
+    g.insertBefore(link, card);
+    card.setAttribute('x', x0); card.setAttribute('y', y0); card.setAttribute('width', w); card.setAttribute('height', h);
+    tt.setAttribute('x', x0 + 14); tt.setAttribute('y', y0 + 23); st.setAttribute('x', x0 + 14); st.setAttribute('y', y0 + 42);
+    ft.setAttribute('x', x0 + w - 14); ft.setAttribute('y', y0 + 35); ft.setAttribute('text-anchor', 'end');
+    g.addEventListener('click', (e) => { e.stopPropagation(); if (!tour.on) openCamp(i); });
+    g.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !tour.on) openCamp(i); });
+    return { t, p, g, cardLeft };
+  });
 }
-function tourShow(again) {
-  const stop = tour.list[tour.i];
-  document.querySelectorAll('.focus').forEach((c) => c.classList.remove('focus'));
-  if (stop.el) {
-    collapse();
-    const side = stop.el.closest('.side');
-    side.classList.add('focus'); side.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => { const r = stop.el.getBoundingClientRect(); O.mode = 'hold'; O.tx = Math.max(60, r.left - 55); O.ty = Math.max(60, r.top + 30); }, 350);
-    O.emo = stop.emo; bubble(again ? stop.again : stop.text, 0);
+// ambient motion: snow in the storms, drifting mist, breathing lanterns, aurora
+function animateMap(now) {
+  const s = now / 1000;
+  for (const f of flakes) { const k = (s * .32 + f.off) % 1, y = f.y0 + k * f.h, x = f.x0 - k * 26; f.el.setAttribute('x1', x); f.el.setAttribute('y1', y); f.el.setAttribute('x2', x - 3); f.el.setAttribute('y2', y + 9); }
+  for (const m of mists) m.el.setAttribute('x', m.local ? m.x + Math.sin(s * .5 + m.swing) * 24 : ((m.x + s * m.v) % 2300) - 700);
+  lanterns.forEach((l, i) => l.setAttribute('opacity', .32 + Math.sin(s * 2 + i) * .12));
+  sparks.forEach((p, i) => p.setAttribute('opacity', .25 + Math.abs(Math.sin(s * 1.4 + i * 1.7)) * .6));
+  $('#xAuroraBand').setAttribute('opacity', .7 + Math.sin(s * .3) * .3);
+  if ($('#summary').classList.contains('show')) requestAnimationFrame(animateMap);
+}
+// parallax: the ranges drift a little with the cursor, deeper ones less
+addEventListener('pointermove', (e) => {
+  if (!built || $('#summary').classList.contains('focused')) return;
+  const mx = e.clientX / innerWidth - .5, my = e.clientY / innerHeight - .5;
+  document.querySelectorAll('#world .layer').forEach((l) => { const d = +l.dataset.depth; l.style.transform = `translate(${-mx * 40 * d}px, ${-my * 16 * d}px)`; });
+});
+// ------------------------------------------------------------ camera
+// The map is a 1600×900 world sliced to fill the screen. The camera is a pan + zoom
+// on top of it, tweened here (not with CSS) so every move is one continuous glide from
+// wherever it is, and so anything anchored in world coordinates — the orb — rides along.
+const cam = { x: 0, y: 0, s: 1 };
+let camGen = 0;
+function slice() { const k = Math.max(innerWidth / 1600, innerHeight / 900); return { k, ox: (innerWidth - 1600 * k) / 2, oy: (innerHeight - 900 * k) / 2 }; }
+function worldToScreen(p) { const b = slice(); return { x: cam.s * (p.x * b.k + b.ox) + cam.x, y: cam.s * (p.y * b.k + b.oy) + cam.y }; }
+window.mapPointToScreen = worldToScreen;
+const mapToScreen = worldToScreen;
+function applyCam() { world.style.transform = `translate3d(${cam.x}px,${cam.y}px,0) scale(${cam.s})`; }
+const easeIO = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+function camTo(target, ms = 1400) {
+  const from = { ...cam }, t0 = performance.now(), gen = ++camGen;
+  return new Promise((res) => {
+    (function f() {
+      if (gen !== camGen) return res();
+      // one clock for start and progress (rAF timestamps can lag performance.now)
+      const k = easeIO(clamp((performance.now() - t0) / ms, 0, 1));
+      cam.x = lerp(from.x, target.x, k); cam.y = lerp(from.y, target.y, k); cam.s = lerp(from.s, target.s, k);
+      applyCam();
+      if (k < 1) requestAnimationFrame(f); else res();
+    })();
+  });
+}
+// where the camera must sit so world point p lands in the free area left of the panel
+function focusOn(p, s = 1.32) {
+  const b = slice(), qx = p.x * b.k + b.ox, qy = p.y * b.k + b.oy, narrow = innerWidth < 860;
+  const free = narrow ? innerWidth : innerWidth - Math.min(580, innerWidth);
+  const sx = narrow ? innerWidth * .5 : free * .42, sy = innerHeight * (narrow ? .3 : .52);
+  // never pull the world past its edges
+  // the panel covers the right side, so the world may slide under it by that much
+  const under = narrow ? 0 : Math.min(580, innerWidth);
+  return { s, x: clamp(sx - s * qx, innerWidth - s * innerWidth - under, 0), y: clamp(sy - s * qy, innerHeight - s * innerHeight, 0) };
+}
+const HOME = { x: 0, y: 0, s: 1 };
+addEventListener('resize', () => { if (!built) return; Object.assign(cam, openIdx >= 0 ? focusOn(camps[openIdx].p) : HOME); applyCam(); });
+window.routeWander = () => {
+  const c = CASES[caseId], f = clamp(c.score.value / 100 + rand(-.14, .14), .05, .97), p = xRoute.getPointAtLength(XL * f);
+  return { x: p.x - 36, y: p.y - 64 };
+};
+function scorePoint(c) { return xRoute.getPointAtLength(XL * Math.min(.97, Math.max(.05, c.score.value / 100))); }
+
+// ------------------------------------------------------------ hero
+function renderHero(c) {
+  const names = c.household.names;
+  $('#xWho').textContent = names.length > 1 ? `${names.join(' y ')} · su expedición` : `${names[0]} · tu expedición`;
+  $('#xBand').textContent = `Salud financiera ${BAND[c.score.band] ?? c.score.band}`;
+  const storms = c.topics.filter((t) => t.status === 'bad').map((t) => t.title.toLowerCase());
+  const caps = c.score.caps.length ? ` Hay ${c.score.caps.length === 1 ? 'un freno' : `${c.score.caps.length} frenos`} que limitan tu nota.` : '';
+  $('#xLede').textContent = (storms.length
+    ? `${storms.length === 1 ? 'Un tramo' : `${storms.length} tramos`} con tormenta: ${listEs(storms)}. El resto de la ruta se puede recorrer.`
+    : 'La ruta está despejada.') + caps + ' Toca un campamento para ver qué pasa en cada uno.';
+  $('#xPillars').innerHTML = c.score.pillars.map((p) => `<div class="xPillar"><span>${p.name}</span><i style="--w:0%;--c:${p.score >= 70 ? 'var(--good)' : p.score >= 40 ? 'var(--warn)' : 'var(--bad)'}" data-w="${p.score}%"></i><b>${p.points}</b></div>`).join('');
+  $('#xMoves').innerHTML = [...c.moves].sort((a, b) => (b.after - b.before) - (a.after - a.before)).map((m) =>
+    `<div class="xMove"><span>${MOVES[m.title] ?? m.title}<small>${EFFORT[m.effort] ?? m.effort}</small></span><b>${m.after > m.before ? `+${m.after - m.before} pts` : m.liftsCap ? 'quita un freno' : 'protege'}</b></div>`).join('');
+}
+function playHero(c) {
+  const el = $('#xScore span'), t0 = performance.now();
+  (function count() { const k = easeOut(Math.min(1, (performance.now() - t0) / 1800)); el.textContent = Math.round(c.score.value * k); if (k < 1) requestAnimationFrame(count); })();
+  setTimeout(() => document.querySelectorAll('.xPillar i').forEach((i) => i.style.setProperty('--w', i.dataset.w)), 400);
+}
+
+// ------------------------------------------------------------ camera + panel
+let openIdx = -1;
+const STATUS_EMO = { bad: 'concerned', warn: 'thinking', good: 'happy' };
+// The orb is anchored in world coordinates: beside the camp, on the side away from its card.
+function anchorOrbAt(k) {
+  O.mode = 'hold'; O.targetScale = .72;
+  // level with the tent, on the open side; the bubble then opens outward from there
+  O.anchor = { x: k.p.x + (k.cardLeft ? 78 : -78), y: k.p.y - 6 };
+  O.bubbleSide = k.cardLeft ? 'right' : 'left';
+}
+async function openCamp(i) {
+  const k = camps[i], c = CASES[caseId], switching = openIdx >= 0 && openIdx !== i;
+  if (openIdx === i) return;
+  openIdx = i; sfx.tap();
+  camps.forEach((o, j) => { o.g.classList.toggle('dim', j !== i); o.g.classList.toggle('active', j === i); });
+  $('#summary').classList.add('focused'); $('#explain').hidden = true;
+  document.querySelectorAll('#world .layer').forEach((l) => { l.style.transform = ''; });
+  // swap the panel's content with a short crossfade instead of sliding it out and in
+  const panel = $('#xPanel');
+  if (switching) { panel.classList.add('swapping'); await wait(240); }
+  fillPanel(k.t, c);
+  panel.classList.remove('swapping');
+  anchorOrbAt(k); O.emo = STATUS_EMO[k.t.status] ?? 'neutral';
+  await camTo(focusOn(k.p), switching ? 1150 : 1400);
+}
+async function closeCamp() {
+  if (openIdx < 0) return;
+  openIdx = -1; panelStop?.(); panelStop = null;
+  $('#summary').classList.remove('focused');
+  camps.forEach((o) => o.g.classList.remove('dim', 'active'));
+  if (!tour.on) { goHome(); $('#explain').hidden = false; }
+  await camTo(HOME, 1300);
+}
+// home: just above the orb's altitude on the route; it wanders around there when idle
+function goHome() {
+  const c = CASES[caseId], sp = scorePoint(c);
+  O.homeMap = { x: sp.x - 40, y: sp.y - 70 };
+  O.anchor = O.homeMap; O.mode = 'hold'; O.targetScale = .8; O.emo = 'neutral'; O.bubbleSide = null;
+  setTimeout(() => { if (O.mode === 'hold' && openIdx < 0 && !tour.on) { O.mode = 'idle'; O.nextAct = performance.now() + 2500; } }, 1700);
+}
+$('#xClose').onclick = (e) => { e.stopPropagation(); closeCamp(); };
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCamp(); });
+$('#xDetailBtn').onclick = () => { $('#xDetailBtn').classList.toggle('open'); $('#xDetail').classList.toggle('open'); };
+
+let panelStop = null;
+function fillPanel(t, c) {
+  panelStop?.(); panelStop = null;
+  $('#xPanel').scrollTop = 0;
+  $('#xEyebrow').innerHTML = `<span class="tag" style="--c:${TONE[t.status]}">${t.title} · ${WEATHER[t.status]}</span>`;
+  $('#xStatement').textContent = statement(t);
+  const [num, unit] = keyFigure(t); $('#xNum').textContent = num; $('#xUnit').textContent = unit;
+  const box = $('#xChart'); box.innerHTML = '';
+  if (CHARTS[t.id]) CHARTS[t.id](t, box);
+  else panelStop = window.mountScene?.(box, t, c, { bare: true });
+  const fix = c.moves.find((m) => (TOPIC_MOVES[t.id] ?? []).includes(m.title));
+  $('#xFix').innerHTML = fix ? `Si lo resuelves con <b>${MOVES[fix.title] ?? fix.title}</b> (${EFFORT[fix.effort] ?? fix.effort}), tu nota pasa de ${fix.before} a <b>${fix.after}</b>.` : '';
+  $('#xDetailRows').innerHTML = (t.detail ?? []).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  $('#xDetailBtn').hidden = !t.detail; $('#xDetailBtn').classList.remove('open'); $('#xDetail').classList.remove('open');
+}
+
+// ------------------------------------------------------------ editorial charts
+// Thin lines, annotations on the chart itself, one accent colour for the state.
+const CHARTS = {};
+const lbl = (s, x, y, txt, a = {}) => svgEl(s, 'text', { x, y, fill: '#a9b4f5', 'font-size': 11, 'font-family': 'Poppins', ...a }, txt);
+function grow(fn, ms = 1300) { const s0 = performance.now(); (function f() { const k = easeOut(clamp((performance.now() - s0) / ms, 0, 1)); fn(k); if (k < 1) requestAnimationFrame(f); })(); }
+function foot(box, text) { const p = document.createElement('p'); p.className = 'xFoot'; p.textContent = text; box.append(p); }
+function control(box, { text, min, max, step, value, show }, onInput) {
+  const w = document.createElement('label'); w.className = 'control';
+  w.innerHTML = `<span>${text}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${value}"><b></b>`;
+  const i = w.querySelector('input'), b = w.querySelector('b'), u = () => { b.textContent = show(+i.value); onInput(+i.value); };
+  i.oninput = u; box.append(w); u();
+}
+
+CHARTS.emergency = (t, box) => {
+  const n = t.numbers, acc = ACC[t.status];
+  const s = svgEl(box, 'svg', { class: 'chart', viewBox: '0 0 460 200' });
+  const max = Math.max(Math.ceil(n.months), n.max) + 2, X = 10, PW = 440, x = (m) => X + PW * m / max, base = 140;
+  svgEl(s, 'rect', { x: x(n.min), y: 82, width: x(n.max) - x(n.min), height: base - 82, fill: 'rgba(169,180,245,.1)' });
+  svgEl(s, 'line', { x1: x(n.min), y1: 82, x2: x(n.max), y2: 82, stroke: '#a9b4f5' });
+  lbl(s, (x(n.min) + x(n.max)) / 2, 72, `RECOMENDADO · ${n.min}–${n.max} MESES`, { 'text-anchor': 'middle', 'letter-spacing': '.08em', 'font-size': 10 });
+  svgEl(s, 'line', { x1: X, y1: base, x2: X + PW, y2: base, stroke: 'rgba(169,180,245,.3)' });
+  for (let m = 0; m <= max; m++) { svgEl(s, 'line', { x1: x(m), y1: base, x2: x(m), y2: base + (m % 3 ? 4 : 8), stroke: 'rgba(169,180,245,.4)' }); if (m % 3 === 0) lbl(s, x(m), base + 22, m, { 'text-anchor': 'middle' }); }
+  lbl(s, X + PW, base + 40, 'meses de gastos', { 'text-anchor': 'end' });
+  const bar = svgEl(s, 'line', { x1: X, y1: base, x2: X, y2: base, stroke: n.months > n.max ? '#a9b4f5' : acc, 'stroke-width': 8, 'stroke-linecap': 'round' });
+  const extra = svgEl(s, 'line', { x1: x(n.max), y1: base, x2: x(n.max), y2: base, stroke: acc, 'stroke-width': 8, 'stroke-linecap': 'round' });
+  const dot = svgEl(s, 'circle', { r: 6, cy: base, fill: '#e9ecff' }), lead = svgEl(s, 'line', { y1: base - 10, y2: 30, stroke: '#e9ecff', 'stroke-width': .8 });
+  const call = svgEl(s, 'text', { y: 22, fill: '#e9ecff', 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic' }, `Hoy · ${fmt(n.months, 1)} meses`);
+  const under = n.months < n.min, over = n.months > n.max;
+  const gapTxt = under ? `faltan ${fmt(n.min - n.months, 1)} meses · ${short((n.min - n.months) * n.expenses)}` : over ? `de más · ${fmt(n.months - n.max, 1)} meses · ${short((n.months - n.max) * n.expenses)}` : '';
+  const gap = svgEl(s, 'line', { y1: base - 24, y2: base - 24, stroke: acc, 'stroke-dasharray': '3 4', opacity: 0 });
+  const gapL = lbl(s, 0, base - 32, gapTxt, { fill: acc, 'text-anchor': 'middle', opacity: 0, 'font-weight': 600 });
+  grow((k) => {
+    const xv = x(n.months * k); bar.setAttribute('x2', Math.min(xv, n.months > n.max ? x(n.max) : xv)); if (n.months > n.max) extra.setAttribute('x2', Math.max(x(n.max), xv)); dot.setAttribute('cx', xv); lead.setAttribute('x1', xv); lead.setAttribute('x2', xv);
+    call.setAttribute('x', Math.min(xv + 8, 330)); call.setAttribute('opacity', k);
+    if (k > .97 && gapTxt) {
+      const a = under ? xv : x(n.max), b = under ? x(n.min) : xv;
+      gap.setAttribute('x1', a); gap.setAttribute('x2', b); gap.setAttribute('opacity', 1); gapL.setAttribute('x', Math.max(70, Math.min(390, (a + b) / 2))); gapL.setAttribute('opacity', 1);
+    }
+  });
+  foot(box, `Un mes de gastos de tu hogar son ${money(n.expenses)}. Sherpas recomienda ${n.min}–${n.max} meses para un hogar como el tuyo.`);
+};
+
+CHARTS.retirement = (t, box) => {
+  const n = t.numbers, acc = ACC[t.status];
+  if (n.runOut !== 'Not applicable') {
+    const to = +n.runOut, from = n.retireAge, end = to + 10;
+    const s = svgEl(box, 'svg', { class: 'chart', viewBox: '0 0 460 200' }), X = 10, PW = 440, Y = 20, PH = 130, x = (a) => X + PW * (a - from) / (end - from);
+    svgEl(s, 'line', { x1: X, y1: Y + PH, x2: X + PW, y2: Y + PH, stroke: 'rgba(169,180,245,.3)' });
+    for (let a = from; a <= end; a += Math.max(2, Math.round((end - from) / 6))) { svgEl(s, 'line', { x1: x(a), y1: Y + PH, x2: x(a), y2: Y + PH + 6, stroke: 'rgba(169,180,245,.4)' }); lbl(s, x(a), Y + PH + 20, a, { 'text-anchor': 'middle' }); }
+    lbl(s, X + PW, Y + PH + 40, 'edad', { 'text-anchor': 'end' });
+    svgEl(s, 'rect', { x: x(to), y: Y, width: x(end) - x(to), height: PH, fill: 'rgba(242,135,154,.07)' });
+    lbl(s, (x(to) + x(end)) / 2, Y + 16, 'SIN AHORROS', { 'text-anchor': 'middle', fill: acc, 'letter-spacing': '.1em', 'font-size': 10 });
+    lbl(s, X + 4, Y + 12, 'tus ahorros', { 'font-size': 10 });
+    const area = svgEl(s, 'path', { fill: 'rgba(169,180,245,.1)' }), curve = svgEl(s, 'polyline', { fill: 'none', stroke: '#e9ecff', 'stroke-width': 2 });
+    const rule = svgEl(s, 'line', { x1: x(to), x2: x(to), y1: Y, y2: Y + PH, stroke: acc, 'stroke-width': 1.2, opacity: 0 });
+    const note = svgEl(s, 'text', { x: x(to) - 8, y: Y + PH - 14, 'text-anchor': 'end', fill: acc, 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic', opacity: 0 }, `se agotan a los ${to}`);
+    grow((k) => {
+      const pts = [], a1 = from + (to - from) * k;
+      for (let a = from; a <= a1; a += .2) pts.push([x(a), Y + PH * (1 - Math.pow(1 - (a - from) / (to - from), .8))]);
+      curve.setAttribute('points', pts.map((p) => p.join(',')).join(' '));
+      area.setAttribute('d', pts.length ? `M${X},${Y + PH} L${pts.map((p) => p.join(',')).join(' L')} L${pts.at(-1)[0]},${Y + PH} Z` : '');
+      rule.setAttribute('opacity', k > .97 ? 1 : 0); note.setAttribute('opacity', k > .97 ? 1 : 0);
+    }, 1800);
+    foot(box, `Tus ingresos garantizados cubren el ${n.incomeShare}% del gasto previsto; el resto sale de tus ahorros, a un ritmo medio del ${fmt(n.draw, 1)}% al año. La forma de la curva es ilustrativa; las edades son las de Sherpas.`);
     return;
   }
-  // each stop opens its card, so the topic's animation plays while the orb explains it
-  const card = stop, t = CASES[caseId].topics.find((x) => x.id === card.dataset.id);
-  if (!card.classList.contains('expanded')) expand(card);
-  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 520);
-  O.emo = t.status === 'bad' ? 'concerned' : t.status === 'good' ? 'happy' : 'speaking';
-  bubble(again ? `${t.title}: ${t.label}. ${t.headline}` : t.headline, 0);
+  if (n.gap > 0) {
+    const need = n.projected + n.gap;
+    const s = svgEl(box, 'svg', { class: 'chart', viewBox: '0 0 460 160' }), X = 10, PW = 440, x = (v) => X + PW * v / need, base = 90;
+    svgEl(s, 'line', { x1: X, y1: base, x2: X + PW, y2: base, stroke: 'rgba(169,180,245,.3)' });
+    svgEl(s, 'rect', { x: x(n.projected), y: base - 14, width: x(need) - x(n.projected), height: 28, fill: 'rgba(242,135,154,.08)', stroke: 'rgba(242,135,154,.35)', 'stroke-dasharray': '3 4' });
+    svgEl(s, 'line', { x1: x(need), y1: base - 34, x2: x(need), y2: base + 20, stroke: '#a9b4f5' });
+    lbl(s, x(need), base - 42, `NECESITAS · ${short(need)}`, { 'text-anchor': 'end', 'letter-spacing': '.06em', 'font-size': 10 });
+    const bar = svgEl(s, 'rect', { x: X, y: base - 14, height: 28, rx: 2, fill: acc });
+    const have = svgEl(s, 'text', { y: base + 44, fill: '#e9ecff', 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic' });
+    const gapL = lbl(s, 0, base + 4, '', { 'text-anchor': 'middle', fill: acc, 'font-weight': 600 });
+    let target = n.projected, cur = 0;
+    const draw = () => {
+      const w = x(cur) - X, done = cur >= need - 1;
+      bar.setAttribute('width', Math.max(0, w)); bar.setAttribute('fill', done ? '#6fd8a8' : acc);
+      have.setAttribute('x', Math.min(X + w, 300)); have.textContent = done ? 'Tendrás lo que necesitas ✓' : `Tendrás · ${short(cur)}`;
+      gapL.setAttribute('x', (x(cur) + x(need)) / 2); gapL.textContent = done || x(need) - x(cur) < 90 ? '' : `brecha · ${short(need - cur)}`;
+    };
+    grow((k) => { cur = target * k; draw(); });
+    control(box, { text: 'Ahorro extra al año', min: 0, max: Math.ceil(n.extraSave * 1.2 / 1000) * 1000, step: 500, value: 0, show: (v) => money(v) }, (v) => {
+      target = n.projected + n.gap * Math.min(1, v / n.extraSave);
+      const s0 = cur; grow((k) => { cur = s0 + (target - s0) * k; draw(); }, 500);
+    });
+    foot(box, `Sherpas calcula que con ${money(n.extraSave)} más al año cerrarías la brecha. La barra interpola entre ese punto y hoy, de forma aproximada.`);
+    return;
+  }
+  return false; // fine: falls back to the praise scene
+};
+// topics without an editorial chart use their scene from scenes.js (headless, in "bare" mode)
+for (const id of ['emergency', 'retirement']) { const f = CHARTS[id]; CHARTS[id] = (t, box) => { const r = f(t, box); if (r === false) panelStop = window.mountScene?.(box, t, CASES[caseId], { bare: true }); }; }
+
+// ------------------------------------------------------------ "Explícame el resumen"
+// The orb walks the route camp by camp, bottom to summit. The camera glides from one
+// camp to the next (never back out in between) and the orb flies along with it.
+const tour = { on: false, i: 0, gen: 0 };
+async function tourShow(again) {
+  const c = CASES[caseId], gen = ++tour.gen;
+  bubbleEl.classList.remove('show');
+  if (tour.i < camps.length) {
+    const { t } = camps[tour.i];
+    if (!again) await openCamp(tour.i);
+    if (gen !== tour.gen) return;
+    O.emo = STATUS_EMO[t.status] ?? 'speaking';
+    const say = { bad: `Aquí hay tormenta: ${t.label.toLowerCase()}.`, warn: `Aquí hay niebla: ${t.label.toLowerCase()}.`, good: `Este tramo está despejado: ${t.label.toLowerCase()}.` }[t.status];
+    bubble(again ? t.headline : `${say} A la derecha tienes el detalle.`, 0);
+    return;
+  }
+  // last stop: back to the whole route, then the best next move in the hero
+  await closeCamp();
+  if (gen !== tour.gen) return;
+  const best = [...c.moves].sort((a, b) => (b.after - b.before) - (a.after - a.before))[0];
+  const storms = c.topics.filter((t) => t.status === 'bad').map((t) => t.title.toLowerCase());
+  $('#xHero').classList.add('focus');
+  const r = document.querySelector('.xMoves').getBoundingClientRect();
+  O.anchor = null; O.bubbleSide = null; O.mode = 'hold'; O.targetScale = .8; O.tx = Math.min(innerWidth - 60, r.right + 56); O.ty = r.top + 40; O.emo = 'happy';
+  bubble(again ? 'Estas son las acciones que Sherpas te propone, ordenadas por cuánto suben tu nota.'
+    : `${storms.length ? `Lo más urgente: ${listEs(storms.slice(0, 3))}. ` : ''}${best ? `La buena noticia: con "${MOVES[best.title] ?? best.title}" tu nota subiría de ${best.before} a ${best.after}.` : ''}`, 0);
 }
 function tourEnd() {
-  tour.on = false; $('#tourbar').hidden = true; $('#explain').hidden = false;
-  collapse();
-  document.querySelectorAll('.focus').forEach((c) => c.classList.remove('focus'));
-  cards.classList.remove('dim'); O.emo = 'neutral'; flashEmo('happy', 1500);
-  bubble('¡Eso es todo! Toca cualquier tarjeta para verla en detalle.', 3500);
-  setTimeout(() => { O.mode = 'idle'; O.nextAct = 0; }, 1500);
+  tour.on = false; tour.gen++;
+  $('#tourbar').hidden = true; $('#explain').hidden = false; $('#xHero').classList.remove('focus');
+  closeCamp(); flashEmo('happy', 1500);
+  bubble('¡Eso es todo! Toca cualquier campamento para verlo con calma.', 3500);
+  goHome();
 }
-$('#explain').onclick = () => {
-  collapse(); sfx.tap();
-  tour.on = true; tour.i = 0; tour.list = [...document.querySelectorAll('.card'), ...sideStops(CASES[caseId])];
-  $('#explain').hidden = true; $('#tourbar').hidden = false; cards.classList.add('dim'); O.targetScale = .8;
-  tourShow(false);
-};
-$('#tourNext').onclick = () => { sfx.tap(); tour.i++; if (tour.i >= tour.list.length) tourEnd(); else tourShow(false); };
-$('#tourAgain').onclick = () => { sfx.tap(); flashEmo('thinking', 900); setTimeout(() => tourShow(true), 700); };
+$('#explain').onclick = () => { sfx.tap(); tour.on = true; tour.i = 0; $('#explain').hidden = true; $('#tourbar').hidden = false; tourShow(false); };
+$('#tourNext').onclick = () => { sfx.tap(); tour.i++; if (tour.i > camps.length) tourEnd(); else tourShow(false); };
+$('#tourAgain').onclick = () => { sfx.tap(); flashEmo('thinking', 800); setTimeout(() => tourShow(true), 600); };
 
 $('#continue').onclick = async () => {
   sfx.tap();
   $('#continue').classList.remove('show');
   const c = CASES[caseId];
   if (!c) { bubble('No encontré los datos de este caso. Corre npm run cases:orb.', 5000); return; }
-  renderSummary(c);
-  $('#summary').classList.add('show');
-  O.mode = 'hold'; O.targetScale = .72; O.tx = W - 70; O.ty = 70;
-  await playSummary(c);
-  flashEmo('happy', 1500);
-  bubble('summaryHere', 2600);
+  await document.fonts.ready; // camp cards are sized from their text
+  buildExpedition(c); renderHero(c);
+  Object.assign(cam, HOME); applyCam();
+  $('#summary').classList.add('show'); requestAnimationFrame(animateMap);
+  // the orb climbs the route to its altitude
+  const sp = scorePoint(c);
+  O.anchor = { x: sp.x - 40, y: sp.y - 70 }; O.mode = 'hold'; O.targetScale = .8;
+  playHero(c);
+  await wait(1900);
+  flashEmo('happy', 1500); bubble('summaryHere', 2600);
   $('#explain').hidden = false;
   await wait(2800);
-  O.mode = 'idle'; O.nextAct = 0;
+  goHome();
 };
 
 // ---------------------------------------------------------------- debug panel

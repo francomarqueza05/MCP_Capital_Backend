@@ -3,14 +3,21 @@
 // the mountain until it becomes the panel, while a hairline keeps the two joined. Inside, one
 // choreographed reveal, in reading order: the title rises word by word, the camp's key figure
 // counts up, the scene comes into focus, and last, what Sherpas proposes.
+// The panel has two tabs: this camp's detail, and the conversation with Cordi, which stays
+// open (and keeps its history) while you move from camp to camp.
 import { animate, AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
 import { useEffect, useState } from "react";
 import type { Case, Topic } from "@/data/cases";
 import { pillarPoints } from "@/data/cases";
 import { byImpact, EFFORT, fixFor, money, moveName, num, short } from "@/lib/copy";
-import { openAsk } from "@/stage/Ask";
-import { showBubble } from "@/stage/stage";
+import { chat, openChat, setTab } from "@/stage/chat";
 import { Scene } from "@/dashboard/scenes";
+import { useStore } from "@/lib/store";
+import { Conversation } from "./Conversation";
+import { CallButton } from "@/stage/CallBar";
+import { ExplainButton } from "@/explain/ExplainUI";
+import { Questions } from "./Questions";
+import { understanding } from "./understanding";
 import type { Step } from "./steps";
 
 const tone = (score: number) => (score >= 70 ? "good" : score >= 40 ? "warn" : "bad");
@@ -99,6 +106,31 @@ const reveal = (delay: number) => ({
   transition: { duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] as const },
 });
 
+/** At the summit: the camps not yet clear, each one a tap away. */
+function Review({ steps, onGo, couple }: { steps: Step[]; onGo: (i: number) => void; couple: boolean }) {
+  const marks = useStore(understanding, (s) => s.marks);
+  const pending = steps.map((s, i) => ({ s, i, m: marks[s.id] })).filter(({ s, m }) => s.kind !== "summit" && m !== "yes");
+  return (
+    <motion.div className="review" {...reveal(1.3)}>
+      <p className="qa-head">{pending.length ? "Para repasar antes de seguir" : "Todo el recorrido"}</p>
+      {pending.length ? (
+        <ul>
+          {pending.map(({ s, i, m }) => (
+            <li key={s.id}>
+              <button className="review-item" onClick={() => onGo(i)}>
+                <span>{s.title}</span>
+                <small>{m === "no" ? "😕 No quedó claro" : m === "meh" ? "🤔 Más o menos" : "Sin confirmar"} · Repasar</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="review-ok">⛳ {couple ? "Habéis" : "Has"} plantado todas las banderas: cada tramo quedó claro.</p>
+      )}
+    </motion.div>
+  );
+}
+
 export function Detail({
   open,
   step,
@@ -108,7 +140,11 @@ export function Detail({
   origin,
   onClose,
   onNext,
+  steps,
+  onGo,
 }: {
+  steps?: Step[];
+  onGo?: (i: number) => void;
   open: boolean;
   step: Step;
   c: Case;
@@ -124,12 +160,14 @@ export function Detail({
   void origin;
   const where = index === 0 ? "Campamento base" : index === total - 1 ? "La cima" : `Campamento ${index} de ${total - 2}`;
   const kind = step.status;
+  const tab = useStore(chat, (s) => s.tab);
+  const asked = useStore(chat, (s) => s.msgs.filter((m) => m.who === "you").length);
 
   return (
     <AnimatePresence>
       {open && (
         <motion.aside
-          key={step.id}
+          key="panel"
           className={`detail k-${kind}`}
           initial={narrow ? { y: "100%" } : { x: "100%" }}
           animate={narrow ? { y: 0 } : { x: 0 }}
@@ -138,6 +176,36 @@ export function Detail({
           aria-label={step.title}
         >
           <span className="detail-glow" aria-hidden />
+          <nav className="tabs" role="tablist" aria-label="Panel">
+            <button role="tab" aria-selected={tab === "detail"} className={tab === "detail" ? "tab on" : "tab"} onClick={() => setTab("detail")}>
+              Detalle
+            </button>
+            <button role="tab" aria-selected={tab === "chat"} className={tab === "chat" ? "tab on" : "tab"} onClick={() => setTab("chat")}>
+              Conversación{asked > 0 && <span className="tab-count">{asked}</span>}
+            </button>
+            <button className="detail-close" onClick={onClose} aria-label="Cerrar el panel">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </nav>
+
+          {tab === "chat" ? (
+            <div className="pane pane-chat" role="tabpanel">
+              <header className="chat-head">
+                <span className="chat-avatar" aria-hidden />
+                <div>
+                  <p className="chat-name">Cordi</p>
+                  <p className="chat-where">
+                    Ahora en {where.toLowerCase()} · {step.title}
+                  </p>
+                </div>
+                <CallButton className="act chat-call" label="Llamar" />
+              </header>
+              <Conversation step={step} c={c} />
+            </div>
+          ) : (
+          <div className="pane" key={step.id} role="tabpanel">
           <header className="detail-head">
             <motion.p className="narr-where" {...reveal(0.3)}>
               {where}
@@ -146,11 +214,9 @@ export function Detail({
             <motion.p className={`narr-label t-${kind}`} {...reveal(0.6)}>
               {step.label}
             </motion.p>
-            <button className="detail-close" onClick={onClose} aria-label="Cerrar el detalle">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
+            <motion.div className="detail-explain" {...reveal(0.8)}>
+              <ExplainButton step={step} c={c} />
+            </motion.div>
           </header>
 
           <div className="detail-body">
@@ -216,17 +282,14 @@ export function Detail({
                 </ol>
               </motion.div>
             )}
+
+            {step.kind === "summit" && steps && onGo && <Review steps={steps} onGo={onGo} couple={c.household.couple} />}
+            <Questions step={step} c={c} delay={1.5} />
           </div>
 
           <motion.footer className="detail-foot" {...reveal(1.2)}>
-            <button
-              className="act act-quiet"
-              onClick={() => {
-                openAsk();
-                showBubble("howCanIHelp", 2200);
-              }}
-            >
-              Preguntar a Cordi sobre esto
+            <button className="act act-quiet" onClick={openChat}>
+              Preguntar a Cordi
             </button>
             {onNext && (
               <button className="act act-main" onClick={onNext}>
@@ -234,6 +297,8 @@ export function Detail({
               </button>
             )}
           </motion.footer>
+          </div>
+          )}
         </motion.aside>
       )}
     </AnimatePresence>

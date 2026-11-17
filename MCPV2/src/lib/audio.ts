@@ -107,6 +107,7 @@ let voiceNow: HTMLAudioElement | null = null;
 export const isTalking = () => Boolean(voiceNow && !voiceNow.paused && !voiceNow.ended);
 
 export function stopVoice() {
+  voiceSeq++;
   if (voiceNow) {
     voiceNow.pause();
     voiceNow = null;
@@ -115,15 +116,73 @@ export function stopVoice() {
 
 export type Spoken = { audio: HTMLAudioElement; words: number[] };
 
-/** Plays a line's pre-rendered audio; resolves to its word timings, or null when silent. */
+// ---------------------------------------------------------------- live voice (any text)
+// Lines that aren't pre-rendered (the explanation's steps, the AI's answers) are spoken through
+// /api/tts. Each text is fetched once per page; word timings are estimated from the audio's
+// length, by the share of letters before each word.
+let tts = true;
+const ttsUrls = new Map<string, Promise<string | null>>();
+export const setLiveVoice = (on: boolean) => {
+  tts = on;
+};
+function ttsUrl(text: string) {
+  let u = ttsUrls.get(text);
+  if (!u) {
+    u = fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) })
+      .then(async (r) => (r.ok ? URL.createObjectURL(await r.blob()) : null))
+      .catch(() => null);
+    ttsUrls.set(text, u);
+    u.then((x) => x === null && ttsUrls.delete(text));
+  }
+  return u;
+}
+/** Starts fetching a line's voice ahead of time, so it plays without a wait. */
+export const prefetchSpeech = (text: string) => {
+  if (tts && !muted && text && !VOICE[text]) void ttsUrl(text);
+};
+const estimate = (text: string, dur: number) => {
+  const words = text.split(" ");
+  const total = words.reduce((n, w) => n + w.length + 1, 0);
+  let acc = 0;
+  return words.map((w) => {
+    const t = (acc / total) * dur;
+    acc += w.length + 1;
+    return t;
+  });
+};
+const metadata = (a: HTMLAudioElement) =>
+  Number.isFinite(a.duration) && a.duration > 0 ? Promise.resolve() : new Promise<void>((r) => a.addEventListener("loadedmetadata", () => r(), { once: true }));
+
+let voiceSeq = 0;
+
+/**
+ * Plays a line: its pre-rendered audio when it has one, or else (for any text) the live voice.
+ * Resolves to its word timings, or null when silent.
+ */
 export function speak(id: string): Promise<Spoken | null> {
   stopVoice();
+  const my = ++voiceSeq;
   const v = VOICE[id];
-  if (muted || !v?.file) return Promise.resolve(null);
-  const a = new Audio(`/audio/voice/${v.file}`);
-  voiceNow = a;
-  return a
-    .play()
-    .then(() => ({ audio: a, words: v.words ?? [] }))
-    .catch(() => null);
+  if (muted) return Promise.resolve(null);
+  if (v?.file) {
+    const a = new Audio(`/audio/voice/${v.file}`);
+    voiceNow = a;
+    return a
+      .play()
+      .then(() => ({ audio: a, words: v.words ?? [] }))
+      .catch(() => null);
+  }
+  if (v || !tts || !id.trim()) return Promise.resolve(null);
+  return ttsUrl(id).then(async (url) => {
+    if (!url || my !== voiceSeq || muted) return null;
+    const a = new Audio(url);
+    voiceNow = a;
+    try {
+      await a.play();
+      await metadata(a);
+      return { audio: a, words: estimate(id, a.duration) };
+    } catch {
+      return null;
+    }
+  });
 }

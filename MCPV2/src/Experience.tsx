@@ -7,10 +7,18 @@ import { CASE_IDS, CASES, DEFAULT_CASE, getCase } from "@/data/cases";
 import { names } from "@/lib/copy";
 import { isMuted, setMuted, tones, unlock } from "@/lib/audio";
 import { Orb } from "@/orb/Orb";
-import { Ask, openAsk } from "@/stage/Ask";
+import { Ask } from "@/stage/Ask";
 import { Bubble } from "@/stage/Caption";
+import { chat, openChat } from "@/stage/chat";
+import { CallBar } from "@/stage/CallBar";
+import { checkAI, session } from "@/ai/client";
+import { ExplainStage } from "@/explain/ExplainUI";
+import { RemarkCard } from "@/explain/RemarkCard";
+import { inCall } from "@/stage/call";
+import { useStore } from "@/lib/store";
 import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
+import { Login, ProfileChip } from "@/intro/Login";
 
 export function Experience() {
   const [started, setStarted] = useState(false);
@@ -18,11 +26,30 @@ export function Experience() {
   const [sound, setSound] = useState(true);
   const [phase, setPhase] = useState<Phase>("wait");
   const exp = useRef<ExpeditionHandle>(null);
+  const talked = useStore(chat, (s) => s.msgs.filter((m) => m.who === "you").length);
 
+  // who's climbing: picked on the start screen (or already in the link, ?case=...)
+  const [picked, setPicked] = useState<string | null>(null);
   useEffect(() => {
     const id = new URLSearchParams(location.search).get("case");
-    if (id && CASES[id]) setCaseId(id);
+    if (id && CASES[id]) {
+      setCaseId(id);
+      setPicked(id);
+    }
+    void checkAI();
   }, []);
+  const pick = (id: string | null) => {
+    setPicked(id);
+    if (!id) return;
+    setCaseId(id);
+    const u = new URL(location.href);
+    u.searchParams.set("case", id);
+    history.replaceState(null, "", u.toString());
+  };
+  // the AI answers about this family
+  useEffect(() => {
+    session.set({ caseId });
+  }, [caseId]);
 
   const begin = (withSound: boolean) => {
     unlock();
@@ -32,11 +59,11 @@ export function Experience() {
     exp.current?.start();
   };
 
-  const switchCase = (id: string) => {
-    if (id === caseId) return;
+  /** Back to "¿Quién sube hoy?": a fresh start for another profile. */
+  const switchProfile = () => {
     tones.tap();
     const u = new URL(location.href);
-    u.searchParams.set("case", id);
+    u.searchParams.delete("case");
     location.href = u.toString();
   };
 
@@ -45,27 +72,27 @@ export function Experience() {
       <Expedition ref={exp} c={getCase(caseId)} key={caseId} onPhase={setPhase} />
       <Orb
         onTap={() => {
-          openAsk();
+          if (inCall()) return;
+          openChat();
           showBubble("howCanIHelp", 2200);
         }}
       />
       <Bubble />
       <Ask />
+      <ExplainStage c={getCase(caseId)} />
+      <RemarkCard />
+      <CallBar />
 
       {started && (
         <header className="topbar">
           <span className="wordmark">cordada</span>
           <div className="topbar-right">
-            <label className="family">
-              <span className="sr">Familia de ejemplo</span>
-              <select value={caseId} onChange={(e) => switchCase(e.target.value)}>
-                {CASE_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {names(CASES[id])}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ProfileChip c={getCase(caseId)} onSwitch={switchProfile} />
+            {talked > 0 && (
+              <button className="act act-quiet" onClick={openChat}>
+                Conversación ({talked})
+              </button>
+            )}
             <button
               className="act act-quiet"
               onClick={() => {
@@ -89,18 +116,7 @@ export function Experience() {
         {!started && (
           <motion.div key="start" className="start" exit={{ opacity: 0 }} transition={{ duration: 0.9 }}>
             <div className="start-inner">
-              <h1 className="start-mark">cordada</h1>
-              <p className="start-tag">
-                {names(getCase(caseId))}, {getCase(caseId).household.couple ? "vuestro" : "tu"} plan financiero es una montaña. Cordi {getCase(caseId).household.couple ? "os" : "te"} acompaña a subirla.
-              </p>
-              <div className="start-actions">
-                <button className="act act-main act-large" onClick={() => begin(true)}>
-                  Empezar la ruta
-                </button>
-                <button className="act act-quiet" onClick={() => begin(false)}>
-                  Empezar sin sonido
-                </button>
-              </div>
+              <Login selected={picked} onSelect={pick} onBegin={begin} />
             </div>
           </motion.div>
         )}

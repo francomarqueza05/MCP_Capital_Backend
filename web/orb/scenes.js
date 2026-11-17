@@ -17,9 +17,11 @@
   const tone = (s) => (s === 'good' ? C.good : s === 'warn' ? C.warn : C.bad);
 
   // ------------------------------------------------------------- toolkit
+  // bare: the host already shows the title, so crop off each scene's own two-line heading
+  let BARE = false;
   function svg(box) {
     const s = document.createElementNS(NS, 'svg');
-    s.setAttribute('viewBox', `0 0 ${W} ${H}`); s.classList.add('scene-svg');
+    s.setAttribute('viewBox', BARE ? `0 50 ${W} ${H - 50}` : `0 0 ${W} ${H}`); s.classList.add('scene-svg');
     box.append(s);
     const defs = el(s, 'defs');
     for (const [k, c] of Object.entries({ good: C.good, warn: C.warn, bad: C.bad, lav: C.lav })) {
@@ -79,7 +81,7 @@
   scenes.cashflow = (box, t) => {
     const n = t.numbers, s = svg(box), income = n.income, out0 = income - n.flow;
     head(s, n.flow < 0 ? 'Cada año sale más de lo que entra' : 'Cada año te sobra dinero', 'Ingresos frente a lo que sale: gastos, impuestos y ahorro', n.flow < 0 ? C.bad : C.white);
-    const x0 = 78, full = 290, max = Math.max(income, out0) * 1.04, wOf = (v) => full * v / max;
+    const x0 = 70, full = 240, max = Math.max(income, out0) * 1.04, wOf = (v) => full * v / max;
     txt(s, 0, 88, 'Entra', { fill: C.lav, 'font-size': 13 }); txt(s, 0, 146, 'Sale', { fill: C.lav, 'font-size': 13 });
     const inBar = el(s, 'rect', { x: x0, y: 70, height: 28, rx: 8, fill: 'url(#g-lav)' });
     const outBar = el(s, 'rect', { x: x0, y: 128, height: 28, rx: 8 });
@@ -423,8 +425,8 @@
   };
 
   // Entry point: picks the scene for a topic; anything fine (or unknown) gets the praise scene.
-  window.mountScene = (box, topic, c) => {
-    box.innerHTML = '';
+  window.mountScene = (box, topic, c, opts = {}) => {
+    box.innerHTML = ''; BARE = !!opts.bare;
     const own = scenes[topic.id];
     if (!own || (topic.status === 'good' && !['emergency', 'investments', 'umbrella'].includes(topic.id))) return scenes.praise(box, topic);
     return own(box, topic, c) ?? (() => {});

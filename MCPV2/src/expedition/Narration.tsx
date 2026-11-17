@@ -13,6 +13,8 @@ export type Line = {
   step?: number;
   times?: number[];
   key?: number;
+  /** The whole line is out (tapped, or done appearing): words show at once, and ▼ invites a tap. */
+  whole?: boolean;
 };
 
 export function Narration({ line, total, hidden, actions }: { line: Line | null; total: number; hidden?: boolean; actions?: ReactNode }) {
@@ -28,12 +30,17 @@ export function Narration({ line, total, hidden, actions }: { line: Line | null;
           <p className={`narr-label t-${line.status}`}>{line.label}</p>
         </header>
       )}
-      <p className="narr-text">
+      <p className={line.whole ? "narr-text whole" : "narr-text"}>
         {words.map((w, i) => (
-          <span key={i} className="w" style={{ animationDelay: `${(line.times?.[i] ?? i * 0.05) * 1000}ms` }}>
+          <span key={i} className="w" style={line.whole ? undefined : { animationDelay: `${(line.times?.[i] ?? i * 0.05) * 1000}ms` }}>
             {w}{" "}
           </span>
         ))}
+        {!titled && line.whole && (
+          <span className="narr-next" aria-hidden>
+            ▼
+          </span>
+        )}
       </p>
       {actions && <div className="narr-actions">{actions}</div>}
     </div>

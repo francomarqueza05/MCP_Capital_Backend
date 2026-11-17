@@ -53,12 +53,30 @@ window.ORB_CASES = {
     "status": "warn",
     "label": "Justo, con muchas cosas que pagar",
     "scene": "split-pull",
-    "headline": "Te quedan $15,032 al año para repartir entre varias metas.",
+    "headline": "Te quedan $15.032 al año para repartir entre varias metas.",
     "numbers": {
      "flow": 15032.01,
      "saveRate": 0.0929,
      "income": 280000
-    }
+    },
+    "detail": [
+     [
+      "Ingresos brutos al año",
+      "$280.000"
+     ],
+     [
+      "Flujo neto este año",
+      "$15.032"
+     ],
+     [
+      "Ahorro anual",
+      "$26.000 (9,3% de los ingresos)"
+     ],
+     [
+      "Fiabilidad del dato de ahorro",
+      "fiable"
+     ]
+    ]
    },
    {
     "id": "emergency",
@@ -71,8 +89,43 @@ window.ORB_CASES = {
      "months": 1.4,
      "after": 1.1,
      "min": 8,
-     "max": 9
-    }
+     "max": 9,
+     "expenses": 13357.5
+    },
+    "detail": [
+     [
+      "Efectivo accesible hoy",
+      "$19.000"
+     ],
+     [
+      "De ello, en fondos monetarios",
+      "$5.000"
+     ],
+     [
+      "Gastos mensuales",
+      "$13.358"
+     ],
+     [
+      "Meses cubiertos",
+      "1,4"
+     ],
+     [
+      "Rango recomendado",
+      "8–9 meses ($106.860 – $120.218)"
+     ],
+     [
+      "Por qué ese rango",
+      "2 ingresos en el hogar, diferencia de ingresos baja"
+     ],
+     [
+      "Meses tras las metas cercanas",
+      "1,1"
+     ],
+     [
+      "Veredicto Sherpas",
+      "Vulnerable (R)"
+     ]
+    ]
    },
    {
     "id": "debt",
@@ -80,13 +133,43 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "Tarjeta cara que no baja",
     "scene": "hamster-wheel",
-    "headline": "Debes $18,000 en tarjetas y el pago apenas cubre los intereses.",
+    "headline": "Debes $18.000 en tarjetas y el pago apenas cubre los intereses.",
     "numbers": {
      "balance": 18000,
      "monthly": 450,
      "interest": 373.5,
      "capped": "false"
-    }
+    },
+    "detail": [
+     [
+      "Deuda de tarjetas",
+      "$18.000"
+     ],
+     [
+      "Pago mensual de tarjetas",
+      "$450"
+     ],
+     [
+      "Interés mensual (pago que solo cubre intereses)",
+      "$374"
+     ],
+     [
+      "Tarjetas sobre ingresos",
+      "6,4%"
+     ],
+     [
+      "Deuda total sobre ingresos (DTI)",
+      "27,3%"
+     ],
+     [
+      "Vivienda sobre ingresos",
+      "21,6%"
+     ],
+     [
+      "Deudas que siguen en la jubilación",
+      "sí, nivel >10%"
+     ]
+    ]
    },
    {
     "id": "retirement",
@@ -94,7 +177,7 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "Lo ahorrado no alcanza",
     "scene": "two-mountains",
-    "headline": "Faltan $1,427,456 para jubilarte como planeas.",
+    "headline": "Faltan $1.427.456 para jubilarte como planeas.",
     "numbers": {
      "gap": 1427455.89,
      "extraSave": 34164.77,
@@ -104,7 +187,49 @@ window.ORB_CASES = {
      "shortYears": 0,
      "retireAge": 62,
      "projected": 523442.34
-    }
+    },
+    "detail": [
+     [
+      "Edad de jubilación",
+      "62 (en 17 años)"
+     ],
+     [
+      "Gasto anual en la jubilación",
+      "$124.071 (media de 31 años de jubilación)"
+     ],
+     [
+      "Ingresos garantizados",
+      "$59.466/año · 49% del gasto"
+     ],
+     [
+      "Lo que deben cubrir tus ahorros",
+      "$62.932/año"
+     ],
+     [
+      "Ahorros previstos al jubilarte",
+      "$523.442"
+     ],
+     [
+      "Brecha al jubilarte",
+      "$1.427.456"
+     ],
+     [
+      "Ahorro extra necesario",
+      "$34.165/año"
+     ],
+     [
+      "Retiro anual medio de la cartera",
+      "5.5%"
+     ],
+     [
+      "Edad en que se agotan los ahorros",
+      "No se agotan"
+     ],
+     [
+      "Supuestos",
+      "inflación 3.0%, rentabilidad media 7.58%; cifras en dinero de hoy"
+     ]
+    ]
    },
    {
     "id": "education",
@@ -112,13 +237,35 @@ window.ORB_CASES = {
     "status": "warn",
     "label": "Falta dinero",
     "scene": "piggy-banks",
-    "headline": "Faltan $106,552 para la universidad.",
+    "headline": "Faltan $106.552 para la universidad.",
     "numbers": {
      "gap": 106552.38,
      "extraSave": 1927.57,
      "need": 136552.38,
      "have": 30000
-    }
+    },
+    "detail": [
+     [
+      "Coste total de la universidad (dinero de hoy)",
+      "$136.552"
+     ],
+     [
+      "Ahorrado en cuentas 529",
+      "$30.000"
+     ],
+     [
+      "Aportes anuales a 529",
+      "$8.000"
+     ],
+     [
+      "Brecha",
+      "$106.552"
+     ],
+     [
+      "Rentabilidad esperada",
+      "7,3%"
+     ]
+    ]
    },
    {
     "id": "life",
@@ -142,7 +289,21 @@ window.ORB_CASES = {
        "need": 1200000
       }
      ]
-    }
+    },
+    "detail": [
+     [
+      "Daniel",
+      "Under insured · cubre $250.000; mínimo recomendado $1.600.000"
+     ],
+     [
+      "Emily",
+      "Under insured · cubre $200.000; mínimo recomendado $1.200.000"
+     ],
+     [
+      "Hijos dependientes",
+      "sí"
+     ]
+    ]
    },
    {
     "id": "umbrella",
@@ -150,10 +311,24 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "No tiene",
     "scene": "umbrella-lightning",
-    "headline": "Recomendado: $1,000,000 de cobertura.",
+    "headline": "Recomendado: $1.000.000 de cobertura.",
     "numbers": {
      "recommended": 1000000
-    }
+    },
+    "detail": [
+     [
+      "Póliza umbrella",
+      "no tiene"
+     ],
+     [
+      "Cobertura recomendada",
+      "$1.000.000"
+     ],
+     [
+      "Veredicto Sherpas",
+      "No coverage (R)"
+     ]
+    ]
    },
    {
     "id": "investments",
@@ -167,7 +342,33 @@ window.ORB_CASES = {
      "target": 66,
      "sector": "Technology",
      "leveraged": ""
-    }
+    },
+    "detail": [
+     [
+      "Acciones / renta fija hoy",
+      "54% / 46%"
+     ],
+     [
+      "Objetivo para tu horizonte",
+      "66% / 34%"
+     ],
+     [
+      "Glide path de jubilación",
+      "80% equity and 20% fixed income"
+     ],
+     [
+      "Sector más concentrado",
+      "Technology"
+     ],
+     [
+      "Productos apalancados",
+      "ninguno"
+     ],
+     [
+      "Cartera dentro de su banda de riesgo",
+      "no"
+     ]
+    ]
    }
   ],
   "moves": [
@@ -243,12 +444,30 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "Gastas más de lo que entra",
     "scene": "bucket-leak",
-    "headline": "Este año salen $8,336 más de lo que entra.",
+    "headline": "Este año salen $8.336 más de lo que entra.",
     "numbers": {
      "flow": -8336,
      "saveRate": 0.2389,
      "income": 180000
-    }
+    },
+    "detail": [
+     [
+      "Ingresos brutos al año",
+      "$180.000"
+     ],
+     [
+      "Flujo neto este año",
+      "−$8.336"
+     ],
+     [
+      "Ahorro anual",
+      "$43.000 (23,9% de los ingresos)"
+     ],
+     [
+      "Fiabilidad del dato de ahorro",
+      "fiable"
+     ]
+    ]
    },
    {
     "id": "emergency",
@@ -261,8 +480,43 @@ window.ORB_CASES = {
      "months": 3.2,
      "after": 0,
      "min": 5,
-     "max": 6
-    }
+     "max": 6,
+     "expenses": 9306
+    },
+    "detail": [
+     [
+      "Efectivo accesible hoy",
+      "$30.000"
+     ],
+     [
+      "De ello, en fondos monetarios",
+      "$3.000"
+     ],
+     [
+      "Gastos mensuales",
+      "$9.306"
+     ],
+     [
+      "Meses cubiertos",
+      "3,2"
+     ],
+     [
+      "Rango recomendado",
+      "5–6 meses ($46.530 – $55.836)"
+     ],
+     [
+      "Por qué ese rango",
+      "1 ingreso en el hogar"
+     ],
+     [
+      "Meses tras las metas cercanas",
+      "0"
+     ],
+     [
+      "Veredicto Sherpas",
+      "Not enough (Y)"
+     ]
+    ]
    },
    {
     "id": "near-goal",
@@ -277,7 +531,25 @@ window.ORB_CASES = {
      "goal": "Comprar casa",
      "amount": 113300,
      "when": "enero de 2027"
-    }
+    },
+    "detail": [
+     [
+      "Meses cubiertos hoy",
+      "3,2"
+     ],
+     [
+      "Meses tras la meta cercana",
+      "0"
+     ],
+     [
+      "Meta: Take a vacation",
+      "$3.500 · anual · 2027-01"
+     ],
+     [
+      "Meta: Purchase a home",
+      "$113.300 · pago único · 2027-01"
+     ]
+    ]
    },
    {
     "id": "debt",
@@ -288,7 +560,37 @@ window.ORB_CASES = {
     "headline": "Tus deudas están bajo control.",
     "numbers": {
      "dti": 0.2537
-    }
+    },
+    "detail": [
+     [
+      "Deuda de tarjetas",
+      "$3.500"
+     ],
+     [
+      "Pago mensual de tarjetas",
+      "$200"
+     ],
+     [
+      "Interés mensual (pago que solo cubre intereses)",
+      "$58"
+     ],
+     [
+      "Tarjetas sobre ingresos",
+      "1,9%"
+     ],
+     [
+      "Deuda total sobre ingresos (DTI)",
+      "25,4%"
+     ],
+     [
+      "Vivienda sobre ingresos",
+      "19%"
+     ],
+     [
+      "Deudas que siguen en la jubilación",
+      "no"
+     ]
+    ]
    },
    {
     "id": "retirement",
@@ -306,7 +608,49 @@ window.ORB_CASES = {
      "shortYears": 0,
      "retireAge": 58,
      "projected": 789636.22
-    }
+    },
+    "detail": [
+     [
+      "Edad de jubilación",
+      "58 (en 20 años)"
+     ],
+     [
+      "Gasto anual en la jubilación",
+      "$89.649 (media de 33 años de jubilación)"
+     ],
+     [
+      "Ingresos garantizados",
+      "$30.036/año · 34% del gasto"
+     ],
+     [
+      "Lo que deben cubrir tus ahorros",
+      "$59.613/año"
+     ],
+     [
+      "Ahorros previstos al jubilarte",
+      "$789.636"
+     ],
+     [
+      "Brecha al jubilarte",
+      "$1.177.586"
+     ],
+     [
+      "Ahorro extra necesario",
+      "$20.231/año"
+     ],
+     [
+      "Retiro anual medio de la cartera",
+      "5.6%"
+     ],
+     [
+      "Edad en que se agotan los ahorros",
+      "85"
+     ],
+     [
+      "Supuestos",
+      "inflación 3.0%, rentabilidad media 7.76%; cifras en dinero de hoy"
+     ]
+    ]
    },
    {
     "id": "life",
@@ -325,7 +669,17 @@ window.ORB_CASES = {
        "need": 900000
       }
      ]
-    }
+    },
+    "detail": [
+     [
+      "Michael",
+      "Slightly under insured · cubre $180.000; mínimo recomendado $900.000"
+     ],
+     [
+      "Hijos dependientes",
+      "no"
+     ]
+    ]
    },
    {
     "id": "umbrella",
@@ -333,10 +687,24 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "No tiene",
     "scene": "umbrella-lightning",
-    "headline": "Recomendado: $1,000,000 de cobertura.",
+    "headline": "Recomendado: $1.000.000 de cobertura.",
     "numbers": {
      "recommended": 1000000
-    }
+    },
+    "detail": [
+     [
+      "Póliza umbrella",
+      "no tiene"
+     ],
+     [
+      "Cobertura recomendada",
+      "$1.000.000"
+     ],
+     [
+      "Veredicto Sherpas",
+      "No coverage (R)"
+     ]
+    ]
    },
    {
     "id": "investments",
@@ -350,7 +718,33 @@ window.ORB_CASES = {
      "target": 67,
      "sector": "Technology",
      "leveraged": ""
-    }
+    },
+    "detail": [
+     [
+      "Acciones / renta fija hoy",
+      "59% / 41%"
+     ],
+     [
+      "Objetivo para tu horizonte",
+      "67% / 33%"
+     ],
+     [
+      "Glide path de jubilación",
+      "98% equity and 2% fixed income"
+     ],
+     [
+      "Sector más concentrado",
+      "Technology"
+     ],
+     [
+      "Productos apalancados",
+      "ninguno"
+     ],
+     [
+      "Cartera dentro de su banda de riesgo",
+      "sí"
+     ]
+    ]
    }
   ],
   "moves": [
@@ -429,12 +823,30 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "Gastas más de lo que entra",
     "scene": "bucket-leak",
-    "headline": "Este año salen $6,418 más de lo que entra.",
+    "headline": "Este año salen $6.418 más de lo que entra.",
     "numbers": {
      "flow": -6417.99,
      "saveRate": 0.24,
      "income": 250000
-    }
+    },
+    "detail": [
+     [
+      "Ingresos brutos al año",
+      "$250.000"
+     ],
+     [
+      "Flujo neto este año",
+      "−$6.418"
+     ],
+     [
+      "Ahorro anual",
+      "$60.000 (24% de los ingresos)"
+     ],
+     [
+      "Fiabilidad del dato de ahorro",
+      "fiable"
+     ]
+    ]
    },
    {
     "id": "emergency",
@@ -447,8 +859,43 @@ window.ORB_CASES = {
      "months": 7.9,
      "after": 6.1,
      "min": 5,
-     "max": 6
-    }
+     "max": 6,
+     "expenses": 10125
+    },
+    "detail": [
+     [
+      "Efectivo accesible hoy",
+      "$80.000"
+     ],
+     [
+      "De ello, en fondos monetarios",
+      "$0"
+     ],
+     [
+      "Gastos mensuales",
+      "$10.125"
+     ],
+     [
+      "Meses cubiertos",
+      "7,9"
+     ],
+     [
+      "Rango recomendado",
+      "5–6 meses ($50.625 – $60.750)"
+     ],
+     [
+      "Por qué ese rango",
+      "1 ingreso en el hogar"
+     ],
+     [
+      "Meses tras las metas cercanas",
+      "6,1"
+     ],
+     [
+      "Veredicto Sherpas",
+      "Over-reserved (Y)"
+     ]
+    ]
    },
    {
     "id": "debt",
@@ -459,7 +906,37 @@ window.ORB_CASES = {
     "headline": "Tus deudas están bajo control.",
     "numbers": {
      "dti": 0.054
-    }
+    },
+    "detail": [
+     [
+      "Deuda de tarjetas",
+      "$0"
+     ],
+     [
+      "Pago mensual de tarjetas",
+      "$0"
+     ],
+     [
+      "Interés mensual (pago que solo cubre intereses)",
+      "$0"
+     ],
+     [
+      "Tarjetas sobre ingresos",
+      "0%"
+     ],
+     [
+      "Deuda total sobre ingresos (DTI)",
+      "5,4%"
+     ],
+     [
+      "Vivienda sobre ingresos",
+      "5,4%"
+     ],
+     [
+      "Deudas que siguen en la jubilación",
+      "no"
+     ]
+    ]
    },
    {
     "id": "retirement",
@@ -477,7 +954,49 @@ window.ORB_CASES = {
      "shortYears": 1,
      "retireAge": 65,
      "projected": 0
-    }
+    },
+    "detail": [
+     [
+      "Edad de jubilación",
+      "65 (en 17 años)"
+     ],
+     [
+      "Gasto anual en la jubilación",
+      "$153.672 (media de 26 años de jubilación)"
+     ],
+     [
+      "Ingresos garantizados",
+      "$38.336/año · 25% del gasto"
+     ],
+     [
+      "Lo que deben cubrir tus ahorros",
+      "$115.335/año"
+     ],
+     [
+      "Ahorros previstos al jubilarte",
+      "$0"
+     ],
+     [
+      "Brecha al jubilarte",
+      "$0"
+     ],
+     [
+      "Ahorro extra necesario",
+      "$0/año"
+     ],
+     [
+      "Retiro anual medio de la cartera",
+      "12.2%"
+     ],
+     [
+      "Edad en que se agotan los ahorros",
+      "73"
+     ],
+     [
+      "Supuestos",
+      "inflación 3.0%, rentabilidad media 0.00%; cifras en dinero de hoy"
+     ]
+    ]
    },
    {
     "id": "education",
@@ -485,13 +1004,35 @@ window.ORB_CASES = {
     "status": "warn",
     "label": "Falta dinero",
     "scene": "piggy-banks",
-    "headline": "Faltan $98,838 para la universidad.",
+    "headline": "Faltan $98.838 para la universidad.",
     "numbers": {
      "gap": 98837.55,
      "extraSave": -179275.57,
      "need": 98837.55,
      "have": 0
-    }
+    },
+    "detail": [
+     [
+      "Coste total de la universidad (dinero de hoy)",
+      "$98.838"
+     ],
+     [
+      "Ahorrado en cuentas 529",
+      "$0"
+     ],
+     [
+      "Aportes anuales a 529",
+      "$0"
+     ],
+     [
+      "Brecha",
+      "$98.838"
+     ],
+     [
+      "Rentabilidad esperada",
+      "7,8%"
+     ]
+    ]
    },
    {
     "id": "life",
@@ -510,7 +1051,17 @@ window.ORB_CASES = {
        "need": 1250000
       }
      ]
-    }
+    },
+    "detail": [
+     [
+      "Samantha",
+      "Adequately insured · cubre $2.000.000; mínimo recomendado $1.250.000"
+     ],
+     [
+      "Hijos dependientes",
+      "sí"
+     ]
+    ]
    },
    {
     "id": "umbrella",
@@ -521,7 +1072,21 @@ window.ORB_CASES = {
     "headline": "Tienes un seguro que cubre demandas.",
     "numbers": {
      "current": 2000000
-    }
+    },
+    "detail": [
+     [
+      "Póliza umbrella",
+      "$2.000.000"
+     ],
+     [
+      "Cobertura recomendada",
+      "$2.000.000"
+     ],
+     [
+      "Veredicto Sherpas",
+      "Adequately insured (G)"
+     ]
+    ]
    },
    {
     "id": "investments",
@@ -535,7 +1100,33 @@ window.ORB_CASES = {
      "target": 65,
      "sector": "Technology",
      "leveraged": ""
-    }
+    },
+    "detail": [
+     [
+      "Acciones / renta fija hoy",
+      "68% / 32%"
+     ],
+     [
+      "Objetivo para tu horizonte",
+      "65% / 35%"
+     ],
+     [
+      "Glide path de jubilación",
+      "80% equity and 20% fixed income"
+     ],
+     [
+      "Sector más concentrado",
+      "Technology"
+     ],
+     [
+      "Productos apalancados",
+      "ninguno"
+     ],
+     [
+      "Cartera dentro de su banda de riesgo",
+      "sí"
+     ]
+    ]
    }
   ],
   "moves": [
@@ -618,12 +1209,30 @@ window.ORB_CASES = {
     "status": "good",
     "label": "Te sobra dinero",
     "scene": "idle-money",
-    "headline": "Te sobran $36,961 al año.",
+    "headline": "Te sobran $36.961 al año.",
     "numbers": {
      "flow": 36960.75,
      "saveRate": 0.2278,
      "income": 270000
-    }
+    },
+    "detail": [
+     [
+      "Ingresos brutos al año",
+      "$270.000"
+     ],
+     [
+      "Flujo neto este año",
+      "$36.961"
+     ],
+     [
+      "Ahorro anual",
+      "$61.500 (22,8% de los ingresos)"
+     ],
+     [
+      "Fiabilidad del dato de ahorro",
+      "estimado (Sherpas lo marca como poco fiable)"
+     ]
+    ]
    },
    {
     "id": "emergency",
@@ -636,8 +1245,43 @@ window.ORB_CASES = {
      "months": 16,
      "after": 15.4,
      "min": 8,
-     "max": 9
-    }
+     "max": 9,
+     "expenses": 9397.5
+    },
+    "detail": [
+     [
+      "Efectivo accesible hoy",
+      "$150.800"
+     ],
+     [
+      "De ello, en fondos monetarios",
+      "$800"
+     ],
+     [
+      "Gastos mensuales",
+      "$9.398"
+     ],
+     [
+      "Meses cubiertos",
+      "16"
+     ],
+     [
+      "Rango recomendado",
+      "8–9 meses ($75.180 – $84.578)"
+     ],
+     [
+      "Por qué ese rango",
+      "2 ingresos en el hogar, diferencia de ingresos baja"
+     ],
+     [
+      "Meses tras las metas cercanas",
+      "15,4"
+     ],
+     [
+      "Veredicto Sherpas",
+      "Very over-reserved (R)"
+     ]
+    ]
    },
    {
     "id": "debt",
@@ -645,13 +1289,47 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "Tarjeta cara que no baja",
     "scene": "hamster-wheel",
-    "headline": "Debes $18,000 en tarjetas y el pago apenas cubre los intereses.",
+    "headline": "Debes $18.000 en tarjetas y el pago apenas cubre los intereses.",
     "numbers": {
      "balance": 18000,
      "monthly": 300,
      "interest": 270,
      "capped": "true"
-    }
+    },
+    "detail": [
+     [
+      "Deuda de tarjetas",
+      "$18.000"
+     ],
+     [
+      "Pago mensual de tarjetas",
+      "$300"
+     ],
+     [
+      "Interés mensual (pago que solo cubre intereses)",
+      "$270"
+     ],
+     [
+      "Tarjetas sobre ingresos",
+      "6,7%"
+     ],
+     [
+      "Deuda total sobre ingresos (DTI)",
+      "15,1%"
+     ],
+     [
+      "Vivienda sobre ingresos",
+      "10,8%"
+     ],
+     [
+      "Deudas que siguen en la jubilación",
+      "no"
+     ],
+     [
+      "Tope en la nota",
+      "Sí: saldo de tarjeta alto con interés alto"
+     ]
+    ]
    },
    {
     "id": "retirement",
@@ -669,7 +1347,49 @@ window.ORB_CASES = {
      "shortYears": 0,
      "retireAge": 62,
      "projected": 1425552.5
-    }
+    },
+    "detail": [
+     [
+      "Edad de jubilación",
+      "62 (en 21 años)"
+     ],
+     [
+      "Gasto anual en la jubilación",
+      "$184.304 (media de 31 años de jubilación)"
+     ],
+     [
+      "Ingresos garantizados",
+      "$171.056/año · 93% del gasto"
+     ],
+     [
+      "Lo que deben cubrir tus ahorros",
+      "$12.853/año"
+     ],
+     [
+      "Ahorros previstos al jubilarte",
+      "$1.425.553"
+     ],
+     [
+      "Brecha al jubilarte",
+      "$0"
+     ],
+     [
+      "Ahorro extra necesario",
+      "$0/año"
+     ],
+     [
+      "Retiro anual medio de la cartera",
+      "1.0%"
+     ],
+     [
+      "Edad en que se agotan los ahorros",
+      "No se agotan"
+     ],
+     [
+      "Supuestos",
+      "inflación 3.0%, rentabilidad media 7.56%; cifras en dinero de hoy"
+     ]
+    ]
    },
    {
     "id": "education",
@@ -677,13 +1397,35 @@ window.ORB_CASES = {
     "status": "warn",
     "label": "Falta dinero",
     "scene": "piggy-banks",
-    "headline": "Faltan $113,509 para la universidad.",
+    "headline": "Faltan $113.509 para la universidad.",
     "numbers": {
      "gap": 113508.6,
      "extraSave": 4609.22,
      "need": 113508.6,
      "have": 0
-    }
+    },
+    "detail": [
+     [
+      "Coste total de la universidad (dinero de hoy)",
+      "$113.509"
+     ],
+     [
+      "Ahorrado en cuentas 529",
+      "$0"
+     ],
+     [
+      "Aportes anuales a 529",
+      "$0"
+     ],
+     [
+      "Brecha",
+      "$113.509"
+     ],
+     [
+      "Rentabilidad esperada",
+      "7,5%"
+     ]
+    ]
    },
    {
     "id": "life",
@@ -707,7 +1449,21 @@ window.ORB_CASES = {
        "need": 600000
       }
      ]
-    }
+    },
+    "detail": [
+     [
+      "Timothy",
+      "Under insured · cubre $140.000; mínimo recomendado $750.000"
+     ],
+     [
+      "Melanie",
+      "Under insured · cubre $110.000; mínimo recomendado $600.000"
+     ],
+     [
+      "Hijos dependientes",
+      "sí"
+     ]
+    ]
    },
    {
     "id": "umbrella",
@@ -715,10 +1471,24 @@ window.ORB_CASES = {
     "status": "bad",
     "label": "No tiene",
     "scene": "umbrella-lightning",
-    "headline": "Recomendado: $1,000,000 de cobertura.",
+    "headline": "Recomendado: $1.000.000 de cobertura.",
     "numbers": {
      "recommended": 1000000
-    }
+    },
+    "detail": [
+     [
+      "Póliza umbrella",
+      "no tiene"
+     ],
+     [
+      "Cobertura recomendada",
+      "$1.000.000"
+     ],
+     [
+      "Veredicto Sherpas",
+      "No coverage (R)"
+     ]
+    ]
    },
    {
     "id": "investments",
@@ -732,7 +1502,33 @@ window.ORB_CASES = {
      "target": 40,
      "sector": "Technology",
      "leveraged": "UPRO"
-    }
+    },
+    "detail": [
+     [
+      "Acciones / renta fija hoy",
+      "45% / 55%"
+     ],
+     [
+      "Objetivo para tu horizonte",
+      "40% / 60%"
+     ],
+     [
+      "Glide path de jubilación",
+      "98% equity and 2% fixed income"
+     ],
+     [
+      "Sector más concentrado",
+      "Technology"
+     ],
+     [
+      "Productos apalancados",
+      "UPRO"
+     ],
+     [
+      "Cartera dentro de su banda de riesgo",
+      "no"
+     ]
+    ]
    }
   ],
   "moves": [

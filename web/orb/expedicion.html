@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cordada · Expedición</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Prototype: the summary lives in the intro's landscape. The mountain is the frame
+     (altitude = score, weather = status); the panels are precise editorial charts. */
+  :root {
+    --navy: #0b1030; --navy-2: #141a45; --lav: #a9b4f5; --ink: #e9ecff;
+    --good: #6fd8a8; --warn: #f5c76b; --bad: #f2879a; --hair: rgba(169,180,245,.22);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--navy); color: var(--ink); font-family: "Poppins", system-ui, sans-serif; }
+  .serif { font-family: "Fraunces", Georgia, serif; }
+
+  #world { position: fixed; inset: 0; width: 100%; height: 100%; transform-origin: 0 0; transition: transform 1.1s cubic-bezier(.65,0,.25,1), filter 1.1s; }
+  body.focused #world { filter: saturate(.85); }
+  .camp { cursor: pointer; }
+  .camp .ring { transition: r .3s, opacity .3s; }
+  .camp:hover .ring { r: 22; opacity: .9; }
+  .camp text { pointer-events: none; }
+
+  /* hero: the score, editorial */
+  #hero { position: fixed; left: 56px; top: 48px; max-width: 460px; transition: opacity .6s, transform .6s; }
+  body.focused #hero { opacity: 0; transform: translateX(-20px); pointer-events: none; }
+  .eyebrow { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--lav); }
+  .score { font-size: 132px; line-height: .9; font-weight: 300; letter-spacing: -.04em; margin: 14px 0 4px; }
+  .score small { font-size: 22px; letter-spacing: 0; color: var(--lav); font-weight: 300; }
+  .band { font-size: 22px; font-style: italic; font-weight: 300; }
+  .lede { margin: 18px 0 26px; font-size: 15px; line-height: 1.6; color: rgba(233,236,255,.82); }
+  .pillars { display: grid; gap: 9px; max-width: 360px; }
+  .pillar { display: grid; grid-template-columns: 100px 1fr 46px; align-items: center; gap: 12px; font-size: 12px; color: var(--lav); }
+  .pillar i { display: block; height: 2px; background: var(--hair); position: relative; }
+  .pillar i::after { content: ""; position: absolute; left: 0; top: -1px; height: 4px; width: var(--w); background: var(--c); transition: width 1.4s cubic-bezier(.2,.7,.2,1); }
+  .pillar b { text-align: right; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #legend { position: fixed; right: 56px; top: 52px; display: flex; gap: 22px; font-size: 12px; color: var(--lav); transition: opacity .6s; }
+  #legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: var(--c); }
+  body.focused #legend { opacity: 0; }
+
+  /* panel: one topic, editorial sheet */
+  #panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); padding: 44px 48px 40px; overflow-y: auto;
+    background: linear-gradient(90deg, rgba(11,16,48,0), #0b1030 7%);
+    transform: translateX(100%); transition: transform .9s cubic-bezier(.65,0,.25,1); scrollbar-width: thin; scrollbar-color: var(--hair) transparent;
+  }
+  body.focused #panel { transform: none; }
+  #close { position: absolute; top: 28px; right: 32px; background: none; border: 0; color: var(--lav); font: 500 13px "Poppins"; cursor: pointer; letter-spacing: .08em; }
+  .statement { font-size: 34px; line-height: 1.15; font-weight: 400; margin: 14px 0 24px; letter-spacing: -.01em; }
+  .figure { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+  .figure .num { font-size: 72px; font-weight: 300; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .figure .unit { font-size: 14px; color: var(--lav); max-width: 200px; line-height: 1.4; }
+  .chart { width: 100%; margin: 18px 0 6px; overflow: visible; }
+  .chart text { font-family: "Poppins"; }
+  .control { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; margin: 12px 0 4px; font-size: 12px; color: var(--lav); }
+  .control b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
+  .control input { -webkit-appearance: none; appearance: none; height: 2px; background: var(--hair); outline: none; }
+  .control input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); cursor: pointer; }
+  .control input::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--ink); cursor: pointer; }
+  .foot { font-size: 12px; color: var(--lav); line-height: 1.55; margin-top: 8px; }
+  #detailBtn { margin-top: 28px; background: none; border: 0; border-top: 1px solid var(--hair); width: 100%; text-align: left; padding: 16px 0 0; color: var(--ink); font: 500 13px "Poppins"; letter-spacing: .06em; cursor: pointer; }
+  #detailBtn::after { content: " ↓"; color: var(--lav); }
+  #detailBtn.open::after { content: " ↑"; }
+  #detail { max-height: 0; overflow: hidden; transition: max-height .6s ease; }
+  #detail.open { max-height: 900px; }
+  #detail table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12.5px; }
+  #detail td { padding: 10px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  #detail td:first-child { color: var(--lav); width: 46%; padding-right: 14px; }
+  #detail td:last-child { font-variant-numeric: tabular-nums; }
+  #detail .src { margin-top: 12px; font-size: 11px; color: var(--lav); opacity: .7; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; }
+  .tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+
+  @media (max-width: 820px) {
+    #hero { left: 20px; right: 20px; top: 24px; } .score { font-size: 92px; } .pillars { display: none; }
+    #legend { left: 20px; right: auto; top: auto; bottom: 20px; } #panel { padding: 32px 22px; background: rgba(11,16,48,.97); }
+  }
+</style>
+</head>
+<body>
+<svg id="world" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Mapa de la expedición">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070a22"/><stop offset=".55" stop-color="#121848"/><stop offset="1" stop-color="#1c2360"/></linearGradient>
+    <radialGradient id="halo"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".25" stop-color="#a9b4f5" stop-opacity=".45"/><stop offset="1" stop-color="#a9b4f5" stop-opacity="0"/></radialGradient>
+    <radialGradient id="storm"><stop offset="0" stop-color="#05071a" stop-opacity=".75"/><stop offset="1" stop-color="#05071a" stop-opacity="0"/></radialGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .05 0"/></filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <g id="stars"></g>
+  <path fill="#10153f" d="M0,520 L120,430 L250,490 L420,360 L560,460 L700,420 L860,500 L1010,380 L1180,250 L1330,400 L1460,330 L1600,410 L1600,900 L0,900 Z"/>
+  <path fill="#232b70" d="M1180,250 L1222,286 L1204,282 L1190,294 L1172,280 L1150,284 Z"/>
+  <path fill="#232b70" d="M420,360 L452,386 L436,384 L424,394 L410,384 L396,386 Z"/>
+  <path fill="#151b4b" d="M0,640 L160,560 L330,610 L520,520 L700,600 L880,540 L1060,610 L1240,520 L1420,590 L1600,540 L1600,900 L0,900 Z"/>
+  <path fill="#1a2156" d="M0,760 L200,700 L420,740 L640,690 L860,750 L1080,710 L1300,760 L1600,720 L1600,900 L0,900 Z"/>
+  <path id="route" d="M110,830 C300,800 380,760 520,730 S760,690 860,620 S1000,560 1060,500 S1140,360 1180,250" fill="none" stroke="#a9b4f5" stroke-width="2.5" stroke-linecap="round" stroke-dasharray=".1 10" opacity=".75"/>
+  <g id="weather"></g>
+  <g id="camps"></g>
+  <g id="orb"><circle r="70" fill="url(#halo)"/><circle r="15" fill="#fff"/><rect x="-6" y="-3" width="3.4" height="6" rx="1.7" fill="#0b1030"/><rect x="2.6" y="-3" width="3.4" height="6" rx="1.7" fill="#0b1030"/></g>
+  <rect width="1600" height="900" filter="url(#grain)" pointer-events="none"/>
+</svg>
+
+<section id="hero">
+  <div class="eyebrow" id="who"></div>
+  <div class="score serif"><span id="score">0</span><small> / 100</small></div>
+  <div class="band serif" id="band"></div>
+  <p class="lede" id="lede"></p>
+  <div class="pillars" id="pillars"></div>
+</section>
+<div id="legend">
+  <span style="--c:var(--good)">Despejado · bien</span>
+  <span style="--c:var(--warn)">Niebla · atención</span>
+  <span style="--c:var(--bad)">Tormenta · a resolver</span>
+</div>
+
+<aside id="panel" aria-live="polite">
+  <button id="close">CERRAR ✕</button>
+  <div class="eyebrow" id="pEyebrow"></div>
+  <h2 class="statement serif" id="pStatement"></h2>
+  <div class="figure"><span class="num serif" id="pNum"></span><span class="unit" id="pUnit"></span></div>
+  <div id="pChart"></div>
+  <button id="detailBtn">VER DETALLE</button>
+  <div id="detail"><table id="pDetail"></table><div class="src">Fuente: informe de salud financiera de Sherpas. Sin estimaciones propias.</div></div>
+</aside>
+
+<script src="data/cases.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const CASES = window.ORB_CASES || {};
+const c = CASES[new URLSearchParams(location.search).get('case')] || Object.values(CASES)[0];
+const TONE = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' };
+const WEATHER = { good: 'Despejado', warn: 'Niebla', bad: 'Tormenta' };
+const BAND = { critical: 'crítica', vulnerable: 'vulnerable', stable: 'estable', strong: 'fuerte' };
+const fmt = (n, d = 0) => n.toLocaleString('es-ES', { maximumFractionDigits: d, minimumFractionDigits: d, useGrouping: 'always' });
+const money = (n) => `$${fmt(Math.round(Math.abs(n)))}`;
+const short = (n) => Math.abs(n) >= 1e6 ? `$${fmt(Math.abs(n) / 1e6, 2)}M` : Math.abs(n) >= 1e4 ? `$${fmt(Math.round(Math.abs(n) / 1e3))}k` : money(n);
+const el = (p, tag, a = {}, text) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text != null) e.textContent = text; p.append(e); return e; };
+const ease = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+
+// ------------------------------------------------------------ hero
+const names = c.household.names;
+$('#who').textContent = names.length > 1 ? `${names.join(' y ')} · su expedición` : `${names[0]} · tu expedición`;
+$('#band').textContent = `Salud financiera ${BAND[c.score.band] ?? c.score.band}`;
+const storms = c.topics.filter((t) => t.status === 'bad').map((t) => t.title.toLowerCase());
+const list = (a) => a.length > 1 ? `${a.slice(0, -1).join(', ')} y ${a.at(-1)}` : a[0];
+$('#lede').textContent = storms.length
+  ? `${storms.length === 1 ? 'Un tramo' : `${storms.length} tramos`} con tormenta: ${list(storms)}. El resto de la ruta se puede recorrer. Toca un campamento para ver qué pasa en cada uno.`
+  : 'La ruta está despejada. Toca un campamento para ver el detalle.';
+$('#pillars').innerHTML = c.score.pillars.map((p) => `<div class="pillar"><span>${p.name}</span><i style="--w:0%;--c:${p.score >= 70 ? 'var(--good)' : p.score >= 40 ? 'var(--warn)' : 'var(--bad)'}" data-w="${p.score}%"></i><b>${p.points}</b></div>`).join('');
+const t0 = performance.now();
+(function count() { const k = ease((performance.now() - t0) / 1600); $('#score').textContent = Math.round(c.score.value * k); if (k < 1) requestAnimationFrame(count); })();
+setTimeout(() => document.querySelectorAll('.pillar i').forEach((i) => i.style.setProperty('--w', i.dataset.w)), 300);
+
+// ------------------------------------------------------------ the map
+const route = $('#route'), L = route.getTotalLength();
+const stars = $('#stars');
+for (let i = 0; i < 90; i++) el(stars, 'circle', { cx: Math.random() * 1600, cy: Math.random() * 420, r: Math.random() * 1.3 + .2, fill: '#cfd6ff', opacity: Math.random() * .6 + .1 });
+// the orb climbs to the height of the score
+const orbAt = route.getPointAtLength(L * Math.min(.97, Math.max(.04, c.score.value / 100)));
+const orb = $('#orb');
+// camps spread along the route, in the order Sherpas reports the topics
+const weather = $('#weather'), campsG = $('#camps'), flakes = [], mists = [];
+const camps = c.topics.map((t, i) => {
+  const at = L * (.1 + i * .86 / Math.max(1, c.topics.length - 1)), p = route.getPointAtLength(at);
+  // labels sit off the route on alternating sides, along its normal, so neighbours never collide
+  const q = route.getPointAtLength(Math.min(L, at + 2)), dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
+  const side = i % 2 ? 1 : -1, nx = -dy / len * side, ny = dx / len * side;
+  const g = el(campsG, 'g', { class: 'camp', tabindex: 0, role: 'button', 'aria-label': `${t.title}: ${t.label}` });
+  const col = { good: '#6fd8a8', warn: '#f5c76b', bad: '#f2879a' }[t.status];
+  // local weather around the camp
+  if (t.status === 'bad') {
+    el(weather, 'ellipse', { cx: p.x, cy: p.y - 70, rx: 120, ry: 60, fill: 'url(#storm)' });
+    for (let k = 0; k < 8; k++) flakes.push({ el: el(weather, 'line', { stroke: '#dfe4ff', 'stroke-width': 1.2, opacity: .4, 'stroke-linecap': 'round' }), x0: p.x - 60 + Math.random() * 120, y0: p.y - 110, h: 110, off: Math.random() });
+  } else if (t.status === 'warn') {
+    for (let k = 0; k < 3; k++) mists.push({ el: el(weather, 'rect', { x: p.x - 80, y: p.y - 44 + k * 16, width: 160, height: 7, rx: 4, fill: '#cfd6ff', opacity: .12 }), x: p.x - 80, off: k * 1.7 });
+  } else {
+    el(weather, 'circle', { cx: p.x, cy: p.y - 54, r: 30, fill: 'none', stroke: '#6fd8a8', opacity: .25 });
+  }
+  el(g, 'circle', { class: 'ring', cx: p.x, cy: p.y, r: 16, fill: 'none', stroke: col, 'stroke-width': 1.5, opacity: .6 });
+  el(g, 'circle', { cx: p.x, cy: p.y, r: 6.5, fill: col });
+  el(g, 'line', { x1: p.x, y1: p.y - 6, x2: p.x, y2: p.y - 34, stroke: '#e9ecff', 'stroke-width': 1.4 });
+  el(g, 'path', { d: `M${p.x},${p.y - 34} L${p.x + 14},${p.y - 30} L${p.x},${p.y - 26} Z`, fill: col });
+  const tx = p.x + nx * 46, ty = p.y + ny * 46, anchor = nx > .2 ? 'start' : nx < -.2 ? 'end' : 'middle';
+  el(g, 'line', { x1: p.x + nx * 18, y1: p.y + ny * 18, x2: p.x + nx * 38, y2: p.y + ny * 38, stroke: col, opacity: .5 });
+  el(g, 'text', { x: tx, y: ty + (ny < 0 ? -12 : 10), 'text-anchor': anchor, fill: '#e9ecff', 'font-size': 17, 'font-family': 'Poppins', 'font-weight': 500 }, t.title);
+  el(g, 'text', { x: tx, y: ty + (ny < 0 ? 8 : 30), 'text-anchor': anchor, fill: col, 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic' }, `${WEATHER[t.status]} · ${t.label.toLowerCase()}`);
+  g.addEventListener('click', () => open(t, p));
+  g.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(t, p); });
+  return { t, p, g };
+});
+(function animate(now) {
+  const s = now / 1000;
+  for (const f of flakes) { const y = f.y0 + ((s * .35 + f.off) % 1) * f.h, x = f.x0 - ((s * .35 + f.off) % 1) * 30; f.el.setAttribute('x1', x); f.el.setAttribute('y1', y); f.el.setAttribute('x2', x - 3); f.el.setAttribute('y2', y + 9); }
+  for (const m of mists) m.el.setAttribute('x', m.x + Math.sin(s * .5 + m.off) * 26);
+  const climb = ease((now - t0) / 2600), op = route.getPointAtLength(L * .02 + (orbAt.x ? (L * Math.min(.97, Math.max(.04, c.score.value / 100)) - L * .02) * climb : 0));
+  orb.setAttribute('transform', `translate(${op.x - 40} ${op.y - 70 + Math.sin(s * 1.6) * 4})`);
+  requestAnimationFrame(animate);
+})(performance.now());
+
+// ------------------------------------------------------------ camera + panel
+const world = $('#world');
+function toScreen(p) { const m = world.getScreenCTM(); return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }; }
+function open(t, p) {
+  world.style.transform = 'none';
+  const q = toScreen(p), s = 1.8, narrow = innerWidth < 820;
+  const tx = (narrow ? innerWidth * .5 : innerWidth * .26) - q.x * s, ty = innerHeight * (narrow ? .3 : .55) - q.y * s;
+  requestAnimationFrame(() => { world.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`; });
+  document.body.classList.add('focused');
+  fill(t);
+}
+function close() { document.body.classList.remove('focused'); world.style.transform = 'none'; }
+$('#close').onclick = close;
+addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+$('#detailBtn').onclick = () => { $('#detailBtn').classList.toggle('open'); $('#detail').classList.toggle('open'); };
+
+function fill(t) {
+  $('#pEyebrow').innerHTML = `<span class="tag" style="--c:${TONE[t.status]}">${t.title} · ${WEATHER[t.status]}</span>`;
+  $('#pDetail').innerHTML = (t.detail ?? [['Resumen', t.headline]]).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  $('#detailBtn').classList.remove('open'); $('#detail').classList.remove('open');
+  $('#detailBtn').hidden = !t.detail;
+  const box = $('#pChart'); box.innerHTML = '';
+  (CHARTS[t.id] ?? CHARTS.generic)(t, box);
+}
+
+// ------------------------------------------------------------ editorial charts
+// Thin lines, annotations on the chart itself, one accent colour for the state.
+const CHARTS = {};
+const ACC = { good: '#6fd8a8', warn: '#f5c76b', bad: '#f2879a' };
+function chartSvg(box, h = 210) { const s = el(box, 'svg', { class: 'chart', viewBox: `0 0 460 ${h}` }); return s; }
+const label = (s, x, y, txt, a = {}) => el(s, 'text', { x, y, fill: '#a9b4f5', 'font-size': 11, ...a }, txt);
+function control(box, { text, min, max, step, value, show }, onInput) {
+  const w = document.createElement('label'); w.className = 'control';
+  w.innerHTML = `<span>${text}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${value}"><b></b>`;
+  const i = w.querySelector('input'), b = w.querySelector('b'), u = () => { b.textContent = show(+i.value); onInput(+i.value); };
+  i.oninput = u; box.append(w); u();
+}
+function grow(fn, ms = 1300) { const s0 = performance.now(); (function f(now) { const k = ease((now - s0) / ms); fn(k); if (k < 1) requestAnimationFrame(f); })(s0); }
+
+CHARTS.emergency = (t, box) => {
+  const n = t.numbers, acc = ACC[t.status];
+  $('#pStatement').textContent = n.months < n.min ? 'Si mañana dejaras de cobrar, el colchón duraría muy poco.' : n.months > n.max ? 'Tienes más efectivo parado del que necesitas.' : 'Tu colchón está en el punto justo.';
+  $('#pNum').textContent = fmt(n.months, n.months % 1 ? 1 : 0); $('#pUnit').textContent = 'meses de gastos cubiertos con tu efectivo';
+  const s = chartSvg(box), max = Math.max(Math.ceil(n.months), n.max) + 2, X = 10, PW = 440, x = (m) => X + PW * m / max, base = 150;
+  el(s, 'rect', { x: x(n.min), y: 92, width: x(n.max) - x(n.min), height: base - 92, fill: 'rgba(169,180,245,.1)' });
+  el(s, 'line', { x1: x(n.min), y1: 92, x2: x(n.max), y2: 92, stroke: '#a9b4f5', 'stroke-width': 1 });
+  label(s, (x(n.min) + x(n.max)) / 2, 82, `RECOMENDADO · ${n.min}–${n.max} MESES`, { 'text-anchor': 'middle', 'letter-spacing': '.08em', 'font-size': 10 });
+  el(s, 'line', { x1: X, y1: base, x2: X + PW, y2: base, stroke: 'rgba(169,180,245,.3)' });
+  for (let m = 0; m <= max; m++) { el(s, 'line', { x1: x(m), y1: base, x2: x(m), y2: base + (m % 3 ? 4 : 8), stroke: 'rgba(169,180,245,.4)' }); if (m % 3 === 0) label(s, x(m), base + 22, m, { 'text-anchor': 'middle' }); }
+  label(s, X + PW, base + 22, 'meses', { 'text-anchor': 'end' });
+  const bar = el(s, 'line', { x1: X, y1: base, x2: X, y2: base, stroke: acc, 'stroke-width': 7, 'stroke-linecap': 'round' });
+  const dot = el(s, 'circle', { r: 6, cy: base, fill: '#e9ecff' }), lead = el(s, 'line', { y1: base - 10, y2: 40, stroke: '#e9ecff', 'stroke-width': .8 });
+  const call = el(s, 'text', { y: 32, fill: '#e9ecff', 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic' }, `Hoy · ${fmt(n.months, 1)} meses`);
+  const gapTxt = n.months < n.min ? `faltan ${fmt(n.min - n.months, 1)} meses · ${short((n.min - n.months) * n.expenses)}` : n.months > n.max ? `de más · ${fmt(n.months - n.max, 1)} meses · ${short((n.months - n.max) * n.expenses)}` : '';
+  const gap = el(s, 'line', { y1: base - 22, y2: base - 22, stroke: acc, 'stroke-dasharray': '3 4', opacity: 0 });
+  const gapL = label(s, 0, base - 30, gapTxt, { fill: acc, 'text-anchor': 'middle', opacity: 0 });
+  grow((k) => {
+    const xv = x(n.months * k); bar.setAttribute('x2', xv); dot.setAttribute('cx', xv); lead.setAttribute('x1', xv); lead.setAttribute('x2', xv);
+    call.setAttribute('x', Math.min(xv + 6, 330)); call.setAttribute('opacity', k);
+    if (k > .95 && gapTxt) {
+      const a = n.months < n.min ? xv : x(n.max), b = n.months < n.min ? x(n.min) : xv;
+      gap.setAttribute('x1', a); gap.setAttribute('x2', b); gap.setAttribute('opacity', 1); gapL.setAttribute('x', (a + b) / 2); gapL.setAttribute('opacity', 1);
+    }
+  });
+  const f = document.createElement('p'); f.className = 'foot';
+  f.textContent = `Un mes de gastos de tu hogar son ${money(n.expenses)}. Sherpas recomienda ${n.min}–${n.max} meses para un hogar como el tuyo.`;
+  box.append(f);
+};
+
+CHARTS.retirement = (t, box) => {
+  const n = t.numbers, acc = ACC[t.status];
+  if (n.runOut !== 'Not applicable') {
+    const to = +n.runOut, from = n.retireAge, end = to + 10;
+    $('#pStatement').textContent = `Al ritmo actual, tus ahorros se acaban a los ${to} años.`;
+    $('#pNum').textContent = to; $('#pUnit').textContent = `años: edad en que se agotan tus ahorros (te jubilas a los ${from})`;
+    const s = chartSvg(box), X = 10, PW = 440, Y = 30, PH = 120, x = (a) => X + PW * (a - from) / (end - from);
+    el(s, 'line', { x1: X, y1: Y + PH, x2: X + PW, y2: Y + PH, stroke: 'rgba(169,180,245,.3)' });
+    for (let a = from; a <= end; a += Math.max(2, Math.round((end - from) / 6))) { el(s, 'line', { x1: x(a), y1: Y + PH, x2: x(a), y2: Y + PH + 6, stroke: 'rgba(169,180,245,.4)' }); label(s, x(a), Y + PH + 20, a, { 'text-anchor': 'middle' }); }
+    label(s, X + PW, Y + PH + 36, 'edad', { 'text-anchor': 'end' });
+    el(s, 'rect', { x: x(to), y: Y, width: x(end) - x(to), height: PH, fill: 'rgba(242,135,154,.07)' });
+    label(s, (x(to) + x(end)) / 2, Y + 14, 'SIN AHORROS', { 'text-anchor': 'middle', fill: acc, 'letter-spacing': '.1em', 'font-size': 10 });
+    const curve = el(s, 'polyline', { fill: 'none', stroke: '#e9ecff', 'stroke-width': 2 });
+    const rule = el(s, 'line', { x1: x(to), x2: x(to), y1: Y, y2: Y + PH, stroke: acc, 'stroke-width': 1.2, opacity: 0 });
+    const note = el(s, 'text', { x: x(to) - 8, y: Y + PH - 12, 'text-anchor': 'end', fill: acc, 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic', opacity: 0 }, `se agotan a los ${to}`);
+    label(s, X + 4, Y + 10, 'tus ahorros', { 'font-size': 10 });
+    grow((k) => {
+      const pts = [], a1 = from + (to - from) * k;
+      for (let a = from; a <= a1; a += .2) pts.push(`${x(a)},${Y + PH * (1 - Math.pow(1 - (a - from) / (to - from), .8))}`);
+      curve.setAttribute('points', pts.join(' ')); rule.setAttribute('opacity', k > .97 ? 1 : 0); note.setAttribute('opacity', k > .97 ? 1 : 0);
+    }, 1800);
+    const f = document.createElement('p'); f.className = 'foot';
+    f.textContent = `Tus ingresos garantizados cubren el ${n.incomeShare}% del gasto previsto; el resto sale de tus ahorros, a un ritmo medio del ${String(n.draw).replace('.', ',')}% al año. La forma de la curva es ilustrativa; las edades son las de Sherpas.`;
+    box.append(f);
+    return;
+  }
+  if (n.gap > 0) {
+    const need = n.projected + n.gap;
+    $('#pStatement').textContent = `Para jubilarte a los ${n.retireAge}, lo ahorrado no alcanza.`;
+    $('#pNum').textContent = short(n.gap); $('#pUnit').textContent = `de brecha al jubilarte, en dinero de hoy`;
+    const s = chartSvg(box, 170), X = 10, PW = 440, x = (v) => X + PW * v / need, base = 100;
+    el(s, 'line', { x1: X, y1: base, x2: X + PW, y2: base, stroke: 'rgba(169,180,245,.3)' });
+    el(s, 'rect', { x: x(n.projected), y: base - 14, width: x(need) - x(n.projected), height: 28, fill: 'rgba(242,135,154,.08)', stroke: 'rgba(242,135,154,.35)', 'stroke-dasharray': '3 4' });
+    el(s, 'line', { x1: x(need), y1: base - 34, x2: x(need), y2: base + 20, stroke: '#a9b4f5' });
+    label(s, x(need), base - 42, `NECESITAS · ${short(need)}`, { 'text-anchor': 'end', 'letter-spacing': '.06em', 'font-size': 10 });
+    const bar = el(s, 'rect', { x: X, y: base - 14, height: 28, rx: 2, fill: acc });
+    const have = el(s, 'text', { y: base + 44, fill: '#e9ecff', 'font-size': 13, 'font-family': 'Fraunces', 'font-style': 'italic' });
+    const gapL = label(s, 0, base + 4, '', { 'text-anchor': 'middle', fill: acc });
+    let target = n.projected, cur = 0;
+    const draw = () => {
+      const w = x(cur) - X, done = cur >= need - 1;
+      bar.setAttribute('width', Math.max(0, w)); bar.setAttribute('fill', done ? '#6fd8a8' : acc);
+      have.setAttribute('x', Math.min(X + w, 330)); have.textContent = done ? 'Tendrás lo que necesitas ✓' : `Tendrás · ${short(cur)}`;
+      gapL.setAttribute('x', (x(cur) + x(need)) / 2); gapL.textContent = done || x(need) - x(cur) < 70 ? '' : `brecha · ${short(need - cur)}`;
+    };
+    grow((k) => { cur = target * k; draw(); });
+    control(box, { text: 'Ahorro extra al año', min: 0, max: Math.ceil(n.extraSave * 1.2 / 1000) * 1000, step: 500, value: 0, show: (v) => money(v) }, (v) => {
+      target = n.projected + n.gap * Math.min(1, v / n.extraSave);
+      const s0 = cur; grow((k) => { cur = s0 + (target - s0) * k; draw(); }, 500);
+    });
+    const f = document.createElement('p'); f.className = 'foot';
+    f.textContent = `Sherpas calcula que con ${money(n.extraSave)} más al año cerrarías la brecha. La barra interpola entre ese punto y hoy, de forma aproximada.`;
+    box.append(f);
+    return;
+  }
+  CHARTS.generic(t, box);
+};
+
+// topics not designed yet in this prototype: statement + key figure + detail
+CHARTS.generic = (t, box) => {
+  $('#pStatement').textContent = t.headline;
+  const fig = (t.headline.match(/\$[\d.,]+|\d+([.,]\d+)?%?/) || [''])[0];
+  $('#pNum').textContent = fig; $('#pUnit').textContent = fig ? t.label.toLowerCase() : '';
+  const f = document.createElement('p'); f.className = 'foot';
+  f.textContent = 'Prototipo: el gráfico editorial de este tema llega en el siguiente paso.';
+  box.append(f);
+};
+</script>
+</body>
+</html>
