@@ -269,7 +269,6 @@ export class OrbEngine {
       this.y = lerp(sun.y + 50, top.y, e);
       this.scale = lerp(0.4, 0.55, e);
       this.spin = 0;
-      if (Math.random() < 0.2) emit(this.x + rand(-20, 20), this.y, 1, { vy: -10, life: 1.4, size: 1.1 });
     } else if (t < TL.land) {
       // glides to centre stage along a curve, turning once on its axis
       const e = easeInOut((t - TL.fly) / (TL.land - TL.fly));
@@ -279,7 +278,6 @@ export class OrbEngine {
       this.y = (1 - e) ** 2 * top.y + 2 * (1 - e) * e * cy + e * e * r.y;
       this.scale = lerp(0.55, 1, e);
       this.spin = e * 2 * Math.PI;
-      if (Math.random() < 0.4) emit(this.x, this.y, 1, { life: 1, size: 1.2 });
     } else if (t < TL.end) {
       if (!it.landed) {
         it.landed = true;
@@ -406,7 +404,19 @@ export class OrbEngine {
     }
     this.scale += (this.targetScale - this.scale) * Math.min(1, dt * 4);
     this.spin += (this.spinTarget - this.spin) * Math.min(1, dt * 5);
-    if (Math.random() < dt * 1.2) emit(this.x + rand(-12, 12), this.y + rand(10, 20) * this.scale, 1, { vy: 12, life: 1.3, size: 1 });
+  }
+
+  /**
+   * Puts it somewhere new as if it had always been there: no travel, so the jelly doesn't read
+   * the jump as a violent move and stretch (it appears round, not deformed).
+   */
+  teleport(x: number, y: number) {
+    this.x = this.px = x;
+    this.y = this.py = y;
+    this.mvx = this.mvy = this.ax = this.ay = 0;
+    this.jx = this.jy = this.jvx = this.jvy = 0;
+    this.th = this.thv = 0;
+    this.sq = this.sqv = 0;
   }
 
   // ------------------------------------------------------------- soft body

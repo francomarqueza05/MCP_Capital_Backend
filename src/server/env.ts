@@ -43,6 +43,12 @@ export const env = {
     return get("VOICE_ID") || "eZxqQzb5CuYo3Kl6EXfZ";
   },
   get voiceModel() {
-    return get("VOICE_MODEL_LIVE") || "eleven-flash-v2.5";
+    // v3: the most natural and expressive by far (real intonation, takes direction through
+    // audio tags). It's slower to make a line (~2 s), so lines are fetched ahead of time
+    return get("VOICE_MODEL_LIVE") || "eleven-v3";
+  },
+  /** A touch faster than the default pace, so Cordi sounds awake rather than reading. */
+  get voiceSpeed() {
+    return Number(get("VOICE_SPEED")) || 1.05;
   },
 };

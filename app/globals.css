@@ -2910,65 +2910,124 @@ select {
 /* the flag is planted: progress, and the next camp one tap away */
 .nextup {
   display: grid;
-  justify-items: start;
-  gap: 0.9rem;
+  grid-template-columns: minmax(120px, 190px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  /* room for the focus ring and the flag's bounce: nothing gets clipped by the stage */
+  padding: 10px;
 }
-.nextup-flag {
-  font-size: 2.75rem;
-  line-height: 1;
+.nextup-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.art-mound {
+  fill: #1c2462;
+}
+.art-pole {
+  fill: #e8ebff;
+}
+.art-pennant {
+  fill: #eef0ff;
+}
+.nextup-text {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.nextup-kicker {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--good);
 }
 .nextup-title {
   margin: 0;
-  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 800;
+  font-stretch: 115%;
+  line-height: 1.05;
   color: var(--ink);
 }
 .nextup-progress {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
+  align-items: flex-end;
+  gap: 0.75rem;
 }
-.nextup-progress span {
-  width: 1.6rem;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(238, 240, 255, 0.14);
+.nextup-flags {
+  display: flex;
+  gap: 0.3rem;
 }
-.nextup-progress span.on {
-  background: var(--good);
+.mini svg {
+  display: block;
+  width: 16px;
+  height: 22px;
 }
-.nextup-progress span.next {
-  background: var(--ink);
+.mini-pole {
+  stroke: rgba(238, 240, 255, 0.28);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.mini-flag {
+  fill: rgba(238, 240, 255, 0.12);
+}
+.mini.on .mini-pole {
+  stroke: rgba(238, 240, 255, 0.8);
+}
+.mini.on .mini-flag {
+  fill: var(--good);
+}
+.mini.next .mini-flag {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
   animation: nextup-pulse 1.4s ease-in-out infinite;
 }
 .nextup-progress small {
-  margin-left: 0.5rem;
   font-size: var(--t-sm);
   color: var(--lichen);
+  font-variant-numeric: tabular-nums;
 }
 @keyframes nextup-pulse {
   50% {
-    opacity: 0.4;
+    opacity: 0.35;
   }
 }
-.nextup-go {
+.nextup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   margin-top: 0.4rem;
+}
+.nextup-go {
   gap: 0.6rem;
 }
 .nextup-all {
-  margin: 0.25rem 0 0;
+  margin: 0;
   font-size: var(--t-md);
   font-weight: 600;
   color: var(--good);
 }
-.nextup-more {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+@media (max-width: 640px) {
+  .nextup {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .nextup-art {
+    width: 130px;
+  }
+  .nextup-text {
+    justify-items: center;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nextup-progress span.next {
+  .mini.next .mini-flag {
     animation: none;
   }
 }
@@ -3398,5 +3457,28 @@ select {
   .auto-fill {
     animation: none;
     opacity: 0;
+  }
+}
+
+/* switching to the chat on a wide screen: the columns glide to make room (the card narrows,
+   Cordi's column too) instead of jumping, and the chat column grows from nothing */
+@media (min-width: 1101px) {
+  .theater {
+    grid-template-columns: 24vw minmax(0, 1fr) 0vw;
+    column-gap: 0;
+    transition: grid-template-columns 0.75s cubic-bezier(0.65, 0, 0.2, 1);
+  }
+  .theater.how-chat {
+    grid-template-columns: 17vw minmax(0, 1fr) 28vw;
+  }
+  .theater-stage,
+  .theater-chat {
+    margin-left: clamp(1rem, 2.5vw, 2.5rem);
+    min-width: 0;
+  }
+}
+@media (min-width: 1101px) and (prefers-reduced-motion: reduce) {
+  .theater {
+    transition: none;
   }
 }

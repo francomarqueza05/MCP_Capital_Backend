@@ -18,7 +18,7 @@ import { mark } from "@/expedition/understanding";
 import { useStore } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { tones } from "@/lib/audio";
-import { endExplain, explain, goNextCamp, nextCampAfter, known, progress, goTo, hold, inTheater, next, proceed, notClear, offerExplain, prev, repeat, switchHow, togglePause } from "./player";
+import { endExplain, explain, goNextCamp, setCouple, nextCampAfter, known, progress, goTo, hold, inTheater, next, proceed, notClear, offerExplain, prev, repeat, switchHow, togglePause } from "./player";
 import { Visual } from "./Visual";
 import { beatsFor } from "./beats";
 
@@ -68,10 +68,10 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
           gently pulsing when it waits for the person to move on */}
       {goOn && !done && (
         <button
-          className={`act act-main xp-go${waiting ? " ready" : ""}`}
+          className={`act act-main xp-go${waiting || paused ? " ready" : ""}`}
           onClick={proceed}
-          disabled={!waiting}
-          title={waiting ? "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)" : "Cordi está explicando"}
+          disabled={!waiting && !paused}
+          title={waiting ? "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)" : paused ? "Seguir desde aquí" : "Cordi está explicando"}
         >
           {last ? "Listo" : "Seguimos"} <IconPlay />
         </button>
@@ -104,35 +104,99 @@ function NextUp({ c, stepId }: { c: Case; stepId: string }) {
     explain.set({ nextId });
   }, [nextId]);
   const goNext = goNextCamp;
+  const order = steps.filter((s) => s.kind !== "summit");
   return (
-    <motion.div className="nextup" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 140, damping: 20 }}>
-      <motion.span className="nextup-flag" initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.1 }} aria-hidden>
-        ⛳
-      </motion.span>
-      <p className="nextup-title">Bandera plantada: {title}</p>
-      <div className="nextup-progress" aria-label={`${planted} de ${flags} banderas`}>
-        {steps
-          .filter((s) => s.kind !== "summit")
-          .map((s) => (
-            <span key={s.id} className={clear(s.id) ? "on" : s.id === ahead?.id ? "next" : ""} title={s.title} />
-          ))}
-        <small>
-          {planted} de {flags} banderas
-        </small>
-      </div>
-      {ahead ? (
-        <button className="act act-main act-large nextup-go" onClick={goNext} autoFocus>
-          Siguiente: {ahead.title} <IconPlay />
-        </button>
-      ) : (
-        <p className="nextup-all">{we ? "¡Habéis" : "¡Has"} plantado todas las banderas! La cima os espera con el resumen y el primer paso.</p>
-      )}
-      <div className="nextup-more">
-        <button className="act act-quiet" onClick={() => endExplain()}>
-          Volver al mapa
-        </button>
+    <motion.div className="nextup" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ type: "spring", stiffness: 140, damping: 20 }}>
+      <PlantedFlag />
+      <div className="nextup-text">
+        <motion.span className="nextup-kicker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }}>
+          Bandera plantada
+        </motion.span>
+        <motion.h3 className="nextup-title" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}>
+          {title}
+        </motion.h3>
+        <motion.div className="nextup-progress" aria-label={`${planted} de ${flags} banderas`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+          <div className="nextup-flags">
+            {order.map((s, i) => (
+              <motion.span
+                key={s.id}
+                className={clear(s.id) ? "mini on" : s.id === ahead?.id ? "mini next" : "mini"}
+                title={s.title}
+                initial={{ y: 6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.85 + i * 0.05, type: "spring", stiffness: 260, damping: 18 }}
+              >
+                <svg viewBox="0 0 14 20" aria-hidden>
+                  <path d="M3 19V2" className="mini-pole" />
+                  <path d="M3.6 2.4 L12.5 5.6 L3.6 8.8 Z" className="mini-flag" />
+                </svg>
+              </motion.span>
+            ))}
+          </div>
+          <small>
+            {planted} de {flags}
+          </small>
+        </motion.div>
+        <motion.div className="nextup-actions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05, duration: 0.5 }}>
+          {ahead ? (
+            <button className="act act-main act-large nextup-go" onClick={goNext} autoFocus>
+              Siguiente: {ahead.title} <IconPlay />
+            </button>
+          ) : (
+            <p className="nextup-all">{we ? "¡Habéis" : "¡Has"} plantado todas las banderas! La cima os espera con el resumen y el primer paso.</p>
+          )}
+          <button className="act act-quiet" onClick={() => endExplain()}>
+            Volver al mapa
+          </button>
+        </motion.div>
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * The flag itself, plain: the pole rises out of a small mound, then the cloth runs out from the
+ * pole and keeps waving gently. Flat colours, no glow, no sparkles.
+ */
+const WAVE = [
+  "M60 20C72 16 84 24 96 20C100 19 104 18 108 19L108 43C104 42 100 43 96 44C84 48 72 40 60 44Z",
+  "M60 20C72 24 84 16 96 20C100 21 104 23 108 22L108 46C104 47 100 45 96 44C84 40 72 48 60 44Z",
+  "M60 20C72 18 84 22 96 22C100 22 104 19 108 17L108 41C104 43 100 46 96 46C84 46 72 42 60 44Z",
+];
+function PlantedFlag() {
+  return (
+    <div className="nextup-art" aria-hidden>
+      <svg viewBox="0 0 120 120">
+        <defs>
+          {/* the cloth is revealed from the pole outwards: left to right */}
+          <clipPath id="cloth-reveal">
+            <motion.rect x="60" y="0" height="120" initial={{ width: 0 }} animate={{ width: 60 }} transition={{ delay: 0.55, duration: 0.6, ease: [0.16, 1, 0.3, 1] }} />
+          </clipPath>
+        </defs>
+        <path d="M18 106 Q60 84 102 106 Z" className="art-mound" />
+        <g clipPath="url(#cloth-reveal)">
+          <motion.path
+            className="art-pennant"
+            d={WAVE[0]}
+            animate={{ d: [WAVE[0], WAVE[1], WAVE[2], WAVE[0]] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: 1.1 }}
+          />
+        </g>
+        {/* the pole grows up out of the middle of the mound (drawn over the cloth's edge) */}
+        <motion.rect
+          x="58"
+          y="16"
+          width="4"
+          height="80"
+          rx="2"
+          className="art-pole"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          style={{ originY: 1, transformBox: "fill-box" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -371,6 +435,9 @@ export function ExplainStage({ c }: { c: Case }) {
     };
   }, [on]);
 
+  // "¿Os parece si seguimos?" for a couple
+  useEffect(() => setCouple(c.household.couple), [c]);
+
   // what Cordi may say on its own knows where we are, and keeps quiet while it's talking
   const beat = beats[Math.min(i, beats.length - 1)] ?? null;
   useEffect(() => {
@@ -381,7 +448,8 @@ export function ExplainStage({ c }: { c: Case }) {
   useEffect(() => {
     if (!on) return;
     const k = (e: KeyboardEvent) => {
-      if ((e.target as Element).closest("input, [role=slider]")) return;
+      // typing (the chat's box, the call's box): every key, the space included, is the text's
+      if ((e.target as Element).closest("input, textarea, [contenteditable], [role=slider]")) return;
       if (e.key === "ArrowRight") next();
       else if (e.key === "ArrowLeft") prev();
       else if (e.key === " ") togglePause();
@@ -460,8 +528,18 @@ export function ExplainStage({ c }: { c: Case }) {
             </footer>
           </motion.section>
 
+          {/* the chat opens beside the card: its column widens (CSS) while the panel fades and
+              slides in on top of it, a beat later, so it never appears squeezed */}
+          <AnimatePresence>
           {how === "chat" && step && (
-            <motion.aside className="theater-chat" aria-label="Conversación con Cordi" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }} transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.1 }}>
+            <motion.aside
+              key="chat"
+              className="theater-chat"
+              aria-label="Conversación con Cordi"
+              initial={{ opacity: 0, x: 48, scale: 0.97, filter: "blur(8px)" }}
+              animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)", transition: { delay: 0.28, duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
+              exit={{ opacity: 0, x: 36, scale: 0.98, filter: "blur(6px)", transition: { duration: 0.28, ease: [0.7, 0, 0.84, 0] } }}
+            >
               <header className="chat-head">
                 <span className="chat-avatar" aria-hidden />
                 <div>
@@ -472,6 +550,7 @@ export function ExplainStage({ c }: { c: Case }) {
               <Conversation step={step} c={c} compact />
             </motion.aside>
           )}
+          </AnimatePresence>
 
         </motion.div>
       )}

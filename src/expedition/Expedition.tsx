@@ -24,6 +24,7 @@ import { inCall } from "@/stage/call";
 import { nav, remember, session } from "@/ai/client";
 import { offerExplain, startExplain } from "@/explain/player";
 import { ExplainButton } from "@/explain/ExplainUI";
+import { beatsFor } from "@/explain/beats";
 import { explain, inTheater } from "@/explain/player";
 
 const HOVER = 78; // Cordi floats this far above the trail, in world units
@@ -34,7 +35,11 @@ type Cordi =
   | { mode: "hidden" }
   | { mode: "rise"; t0: number; dur: number }
   | { mode: "walk"; from: number; to: number; t0: number; dur: number; wide?: boolean }
-  | { mode: "camp"; at: number };
+  | { mode: "camp"; at: number }
+  /** Pops out of (or into) existence at a point of the world: a little swell, then gone. */
+  | { mode: "pop"; x: number; y: number; t0: number; dur: number; out: boolean; keep?: number; at?: number; placed?: boolean; leap?: boolean }
+  /** A spark of light with a trail, looping and twirling from one point of the world to another. */
+  | { mode: "fairy"; from: readonly [number, number]; to: readonly [number, number]; t0: number; dur: number };
 
 export type ExpeditionHandle = { start: () => void; skip: () => void };
 export type Phase = "wait" | "intro" | "overview" | "tour";
@@ -128,6 +133,10 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   const draw = useRef<{ t0: number; dur: number; popped: number } | null>(null);
   const popT = useRef<number[]>([]);
   const occlude = useRef(false);
+  /** The opening's camera follows the route's light as it climbs. */
+  const follow = useRef(false);
+  /** Where the fairy spark was last frame, to lay its trail without gaps. */
+  const fairyLast = useRef<[number, number] | null>(null);
   const size = useRef({ W: 1440, H: 900, dpr: 1 });
 
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -256,20 +265,19 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         const k = clamp((now - dr.t0) / dr.dur, 0, 1);
         const e = easeInOut(k);
         routeK.current = e;
-        if (k < 1) {
-          spark = e;
-          if (Math.random() < 0.6) {
-            const [x, y] = ROUTE.at(e);
-            const [sx, sy] = toScreen(x, y);
-            emit(sx, sy, 1, { min: 4, max: 18, life: 1.1, size: 1.3 });
-          }
+        // the light at the tip is drawn on the mountain itself (render.ts). No screen-space
+        // sparks or rings here: the camera moves with the light, so they were left hanging in
+        // the sky (a stray dotted trail and a circle over the summit)
+        if (k < 1) spark = e;
+        // in the opening the camera rides with the light, flag after flag, up to the summit
+        if (follow.current && k < 1) {
+          const [fx, fy] = ROUTE.at(e);
+          frame(fx, fy - 30, campZ() * 0.82);
         }
         while (dr.popped < n && e >= campU(dr.popped, n) - 0.002) {
           const i = dr.popped++;
           popT.current[i] = now;
           if (dr.dur > 1) {
-            const [sx, sy] = toScreen(campPos[i][0], campPos[i][1]);
-            ring(sx, sy, 4, 30, 0.8);
             playSfx(i === n - 1 ? "flag" : "chime", { vol: i === n - 1 ? 0.32 : 0.16, rate: 0.85 + (i / Math.max(1, n - 2)) * 0.75 });
           }
         }
@@ -339,7 +347,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       // Cordi on screen
       const scale = clamp(c.z / campZ(), 0.42, 1) * (isNarrow() ? 0.62 : 0.8);
       const spot = orbSpot.get().at;
-      if (spot && cd.mode !== "hidden" && cd.mode !== "rise") {
+      if (spot && cd.mode !== "hidden" && cd.mode !== "rise" && cd.mode !== "pop") {
         // called away from the mountain (beside a call's explanation): fly there on a spring,
         // in screen space; when released, the world spring picks up from wherever it is
         const s = cs.current;
@@ -361,7 +369,6 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         orb.y = s.y;
         orb.scale += (spot.scale - orb.scale) * Math.min(1, dt * 4);
         cw.current.ready = false;
-        if (Math.hypot(s.vx, s.vy) > 220 && Math.random() < 0.3) emit(s.x, s.y + 20, 1, { vy: 8, life: 0.9, size: 0.9 });
       } else if (cd.mode === "rise") {
         // it floats up like something light, not on a rail: a soft overshoot at the top, a
         // lazy side-to-side sway that dies down, and a breathing bob once it's up
@@ -374,7 +381,81 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         orb.x = sx;
         orb.y = sy;
         orb.scale = scale * lerp(0.7, 1, Math.min(1, e));
-        if (Math.random() < 0.25) emit(sx + (Math.random() - 0.5) * 30, sy + 30, 1, { vy: -14, life: 1.4, size: 1.1 });
+      } else if (cd.mode === "pop") {
+        const k = clamp((now - cd.t0) / cd.dur, 0, 1);
+        let grow: number;
+        const keep = cd.keep ?? 0;
+        if (cd.out) {
+          // swells a touch, then shrinks fast (to nothing, or to a spark of light)
+          grow = k < 0.32 ? lerp(1, 1.28, Math.sin((k / 0.32) * (Math.PI / 2))) : lerp(1.28, keep, Math.pow((k - 0.32) / 0.68, 2));
+        } else {
+          // from nothing (or a spark), past its size, and settles
+          const e = 1 - Math.pow(1 - k, 3);
+          grow = k < 0.62 ? lerp(keep, 1.22, e / (1 - Math.pow(0.38, 3))) : lerp(1.22, 1, (k - 0.62) / 0.38);
+        }
+        // a leap into being: it springs up from just below its spot, goes past it, and drops
+        // back onto it while it grows (the jelly stretches up on the way and squashes landing)
+        let lift = 0;
+        if (cd.leap && !cd.out) {
+          if (k < 0.5) lift = lerp(60, -70, 1 - Math.pow(1 - k / 0.5, 2));
+          else lift = lerp(-70, 0, Math.pow((k - 0.5) / 0.5, 1.6));
+        }
+        const [lx, ly] = toScreen(cd.x, cd.y + lift);
+        orb.mode = "puppet";
+        // appearing from nowhere: placed there, still, so it pops in round instead of stretched
+        if (!cd.placed) {
+          cd.placed = true;
+          if (!cd.out) {
+            orb.teleport(lx, ly);
+            if (cd.leap) orb.hop(0.8);
+          }
+        }
+        orb.x = lx;
+        orb.y = ly;
+        orb.scale = scale * Math.max(0.001, grow);
+        if (k >= 1 && !(cd.out && keep > 0)) {
+          cw.current.ready = false;
+          cordi.current = cd.out ? { mode: "hidden" } : { mode: "camp", at: cd.at ?? 0 };
+        }
+      } else if (cd.mode === "fairy") {
+        // a fairy's flight, unhurried: a tiny spark gliding down a soft arc to base camp at a
+        // steady pace (a gentle ease, no rush in the middle), with two medium loops on the way,
+        // the first one way round and the second the other, and a trail of light all along
+        const k = clamp((now - cd.t0) / cd.dur, 0, 1);
+        const e = 0.75 * k + 0.25 * ((1 - Math.cos(Math.PI * k)) / 2);
+        const [ax, ay] = cd.from;
+        const [bx, by] = cd.to;
+        const cx = (ax + bx) / 2 - 200;
+        const cy = Math.min(ay, by) + 30;
+        const px = (1 - e) * (1 - e) * ax + 2 * (1 - e) * e * cx + e * e * bx;
+        const py = (1 - e) * (1 - e) * ay + 2 * (1 - e) * e * cy + e * e * by;
+        const R = 62;
+        // each loop is a full circle drawn over its own stretch of the flight
+        const loopAt = (from: number, to: number) => {
+          const w = clamp((e - from) / (to - from), 0, 1);
+          return (1 - Math.cos(Math.PI * w)) / 2 * Math.PI * 2;
+        };
+        const a1 = loopAt(0.18, 0.46);
+        const a2 = loopAt(0.56, 0.84);
+        const fx = px + Math.sin(a1) * R - Math.sin(a2) * R;
+        const fy = py - (1 - Math.cos(a1)) * R - (1 - Math.cos(a2)) * R;
+        const [sx, sy] = toScreen(fx, fy);
+        // the trail: sparks laid evenly along the path travelled since the last frame, so it
+        // stays continuous however fast the spark goes
+        const lp = fairyLast.current ?? [sx, sy];
+        const dist = Math.hypot(sx - lp[0], sy - lp[1]);
+        const steps = Math.max(1, Math.round(dist / 3));
+        for (let j = 1; j <= steps; j++) {
+          const t = j / steps;
+          emit(lp[0] + (sx - lp[0]) * t, lp[1] + (sy - lp[1]) * t, 1, { min: 0, max: 5, vy: 3, life: 1.8, size: 0.95 });
+        }
+        fairyLast.current = [sx, sy];
+        orb.mode = "puppet";
+        orb.x = sx;
+        orb.y = sy;
+        orb.scale = scale * (0.07 + Math.sin(now / 70) * 0.008);
+        if (k >= 1) fairyLast.current = null;
+        if (k >= 1) cordi.current = { mode: "pop", x: bx, y: by, t0: now, dur: 600, out: false, keep: 0.07 };
       } else if (cd.mode !== "hidden") {
         const b = cw.current;
         if (!b.ready) {
@@ -395,6 +476,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         orb.x = sx;
         orb.y = sy;
         orb.scale += (scale - orb.scale) * Math.min(1, dt * 4);
+      }
+      if (cd.mode === "hidden") {
+        // not on stage yet (or gone): truly out of sight, not left standing where it was
+        orb.mode = "puppet";
+        orb.x = -400;
+        orb.y = -400;
+        orb.scale = 0.001;
       }
       if (!spot) cs.current.ready = false;
       raf = requestAnimationFrame(tick);
@@ -481,7 +569,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       dialog.current?.();
     };
     const key = (e: KeyboardEvent) => {
-      if ((e.key === " " || e.key === "Enter") && !(e.target as Element).closest("button, input, select")) {
+      if ((e.key === " " || e.key === "Enter") && !(e.target as Element).closest("button, input, textarea, select, [contenteditable]")) {
         e.preventDefault();
         dialog.current?.();
       }
@@ -514,6 +602,8 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       if (!pending.current) narrate({ title: st.title, label: st.label, status: st.status, text: st.say, voice: st.say, step: i });
       // the next camp's line, ready before Cordi gets there
       if (steps[i + 1]) prefetchSpeech(steps[i + 1].say);
+      // and the start of this camp's explanation, in case "Explícame esto" comes next
+      beatsFor(st, c).slice(0, 2).forEach((b) => prefetchSpeech(b.say));
     },
     [steps, campPos, narrate],
   );
@@ -638,63 +728,91 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     prefetchSpeech(mountainLine);
     prefetchSpeech(steps[0].say);
 
-    await pause(reduced ? 0 : 2300);
-    draw.current = { t0: performance.now(), dur: reduced || skipped.current ? 1 : 2600, popped: 0 };
-    await pause(2900);
+    // the ranges rise and the yak walks in (render.ts: from 1.7 s); the camera leans in on it
+    await pause(reduced ? 0 : 1900);
+    const lively = !reduced && !skipped.current;
+    if (lively) {
+      const [yx, yy] = [campPos[0][0] - 190, campPos[0][1] + 14];
+      cc.k = 1.1;
+      cc.kz = 0.9;
+      frame(yx + 70, yy - 40, campZ() * 0.95);
+      await pause(2200);
+    }
+
+    // a light climbs the route from the yak to the summit, the camera on its heels, and each
+    // flag pops up with its chime as it passes
+    follow.current = lively;
+    cc.k = 2.4;
+    cc.kz = 1.8;
+    draw.current = { t0: performance.now(), dur: lively ? 5200 : 1, popped: 0 };
+    await pause(lively ? 5400 : 300);
+    follow.current = false;
     if (skipped.current) {
       introT0.current = -1e9;
       if (draw.current) draw.current.t0 = -1e9;
       await wait(60);
     }
 
-    cc.k = 1.4;
-    if (!skipped.current) {
-      occlude.current = true;
-      orb.mode = "puppet";
-      // it peeks out curious, with a little stretch, rather than rising stiff and sleepy
-      orb.setEmo("curious");
-      orb.hop(0.4);
-      setTimeout(() => orb.flashEmo("happy", 900), 1700);
-      playSfx("swell", { vol: 0.42 });
-      cordi.current = { mode: "rise", t0: performance.now(), dur: 2800 };
-      await pause(2900);
-      occlude.current = false;
-      const [sx, sy] = toScreen(SUMMIT.x, SUMMIT.y - 130);
-      ring(sx, sy, 30, 120, 1.1);
-      tones.form();
-      orb.hop(0.5);
-      orb.flashEmo("happy", 1400);
+    // at the summit, close up: Cordi pops into being and says hello
+    cc.kz = undefined;
+    cc.k = 1.8;
+    const top = ROUTE.at(1);
+    const peak = [top[0], top[1] - HOVER] as const;
+    const base = ROUTE.at(0);
+    const landing = [base[0], base[1] - HOVER] as const;
+    frame(peak[0], peak[1] + HOVER * 0.4, campZ() * 1.1);
+    // Cordi only appears once the camera has finished closing in
+    orb.setEmo("happy");
+    {
+      const t0 = performance.now();
+      while (!skipped.current && performance.now() - t0 < 3000 && (Math.abs(cc.z - cc.tz) / cc.tz > 0.01 || Math.hypot(cc.x - cc.tx, cc.y - cc.ty) > 6 || Math.hypot(cc.vx, cc.vy) > 8)) await wait(40);
     }
-    occlude.current = false;
-    if (skipped.current) {
-      const [rx, ry] = toScreen(SUMMIT.x, SUMMIT.y - 130);
-      orb.x = rx;
-      orb.y = ry;
-    }
-    cw.current.ready = false;
-    cordi.current = { mode: "camp", at: 1 };
     u.current = 1;
-    await pause(700);
+    cordi.current = { mode: "pop", x: peak[0], y: peak[1], t0: performance.now(), dur: skipped.current ? 200 : 900, out: false, at: 1, leap: !skipped.current };
+    tones.popIn();
+    // the camera is still now: a ring where it appears stays put
+    if (!skipped.current) {
+      const [sx, sy] = toScreen(peak[0], peak[1]);
+      ring(sx, sy, 16, 70, 0.7);
+    }
+    await pause(skipped.current ? 300 : 700);
     await narrate({ text: line("hello"), voice: line("hello") });
     await pause(250);
     await narrate({ text: line("intro"), voice: line("intro") });
-    await pause(250);
-    orb.setEmo("speaking");
-    // no pre-rendered recording for this line: the live voice says it (fetched at the start)
-    await narrate({ text: mountainLine, voice: mountainLine });
-    await pause(400);
-
+    await pause(300);
     setNarr(null);
-    orb.setEmo("happy");
-    cc.k = 2;
-    const dive = skipped.current ? 1600 : 3600;
-    cordi.current = { mode: "walk", from: 1, to: 0, t0: performance.now(), dur: dive, wide: true };
-    tones.descend(dive);
-    await wait(dive + 200);
-    cordi.current = { mode: "camp", at: 0 };
+    hideBubble();
+
+    // pop: gone, still close up...
+    const at = [cw.current.ready ? cw.current.x : peak[0], cw.current.ready ? cw.current.y : peak[1]] as const;
+    cordi.current = { mode: "pop", x: at[0], y: at[1], t0: performance.now(), dur: skipped.current ? 160 : 360, out: true };
+    tones.popOut();
+    await wait(skipped.current ? 160 : 360);
+    // ...the camera pulls back quickly to the whole mountain...
+    cc.k = 4.5;
+    cc.kz = 4.5;
+    frameWide();
+    const t0 = performance.now();
+    while (performance.now() - t0 < 1600 && (Math.abs(cc.z - cc.tz) / cc.tz > 0.02 || Math.hypot(cc.x - cc.tx, cc.y - cc.ty) > 12)) await wait(40);
+    // ...and once it's there, pop: Cordi is back, at base camp
     u.current = 0;
+    cordi.current = { mode: "pop", x: landing[0], y: landing[1], t0: performance.now(), dur: 560, out: false, at: 0 };
+    tones.popIn();
+    {
+      const [bx, by] = toScreen(landing[0], landing[1]);
+      ring(bx, by, 12, 70, 0.8);
+      emit(bx, by, 12, { min: 20, max: 80, life: 0.7, size: 1 });
+    }
+    cc.kz = undefined;
+    orb.flashEmo("happy", 1400);
+    await wait(700);
     touring.current = true;
     cc.k = 3;
+    // with the whole mountain in view: what it means
+    orb.setEmo("speaking");
+    await narrate({ text: mountainLine, voice: mountainLine });
+    await pause(300);
+    setNarr(null);
     setPhase("overview");
     orb.flashEmo("happy", 1200);
   }, [frameWide, narrate, setPhase, mountainLine]);
@@ -742,7 +860,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   // keyboard
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if ((e.target as Element).closest("input") || inTheater()) return;
+      if ((e.target as Element).closest("input, textarea, [contenteditable]") || inTheater()) return;
       if (e.key === "ArrowRight" || e.key === "ArrowUp") go(Math.min(n - 1, idx + 1), phase === "overview");
       if (e.key === "ArrowLeft" || e.key === "ArrowDown") go(Math.max(0, idx - 1), phase === "overview");
       if (e.key === "Escape") {

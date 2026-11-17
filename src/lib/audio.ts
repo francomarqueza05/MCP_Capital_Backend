@@ -102,7 +102,59 @@ function descend(ms: number, vol = 0.05) {
   bell(523, vol * 0.6, d - 0.05);
 }
 
+/** A soft bubble pop: a tiny, low, very short blip (no sweep long enough to read as a whistle). */
+function blip(up: boolean, vol = 0.05) {
+  if (muted || !ctx) return;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(up ? 380 : 620, t);
+  o.frequency.exponentialRampToValueAtTime(up ? 620 : 300, t + 0.05);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  o.connect(g).connect(ctx.destination);
+  o.start(t);
+  o.stop(t + 0.1);
+}
+
+/**
+ * A fairy's flight, kept simple: one soft, airy tone that glides gently down with a slight
+ * shimmer, fading in and out, and a single light chime as it lands.
+ */
+function twinkle(ms: number, vol = 0.03) {
+  if (muted || !ctx) return;
+  const c = ctx;
+  const t = c.currentTime;
+  const d = ms / 1000;
+  const o = c.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(1500, t);
+  o.frequency.exponentialRampToValueAtTime(900, t + d);
+  // the shimmer: a gentle, quick wobble in pitch
+  const lfo = c.createOscillator();
+  const depth = c.createGain();
+  lfo.frequency.value = 7;
+  depth.gain.value = 18;
+  lfo.connect(depth).connect(o.frequency);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.35);
+  g.gain.setValueAtTime(vol, t + d - 0.5);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g).connect(c.destination);
+  o.start(t);
+  lfo.start(t);
+  o.stop(t + d + 0.05);
+  lfo.stop(t + d + 0.05);
+  bell(1319, vol * 1.2, d - 0.05);
+}
+
 export const tones = {
+  twinkle: (ms: number) => twinkle(ms),
+  popOut: () => blip(false),
+  popIn: () => blip(true),
   descend: (ms: number) => descend(ms),
   form: () => {
     bell(659);
@@ -278,17 +330,9 @@ export function speak(id: string): Promise<Spoken | null> {
   const my = ++voiceSeq;
   const v = VOICE[id];
   if (muted) return Promise.resolve(null);
-  // the old recording, only when the live voice can't be had
-  const recording = () => {
-    if (!v?.file || my !== voiceSeq || muted) return Promise.resolve(null);
-    const a = new Audio(`/audio/voice/${v.file}`);
-    a.muted = voiceQuiet;
-    voiceNow = a;
-    return a
-      .play()
-      .then(() => ({ audio: a, words: v.words ?? [] }))
-      .catch(() => null);
-  };
+  // no fallback to the old recordings: they're another voice, and Cordi must always sound the
+  // same. If the live voice can't be had (rare: it's retried), the line shows in the bubble
+  const recording = () => Promise.resolve(null);
   // every line, the stock ones included ("¿En qué te ayudo?"), in the one live voice, so Cordi
   // never changes voice mid-experience
   const text = v ? v.text : id;

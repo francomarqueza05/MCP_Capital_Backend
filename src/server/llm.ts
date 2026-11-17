@@ -35,7 +35,9 @@ export async function ask(tier: Tier, messages: ChatMessage[], { json = false } 
         const res = await fetch(`${env.llmProxyUrl}/v1/chat/completions`, {
           method: "POST",
           headers: { Authorization: `Bearer ${env.teamKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, messages, ...(json ? { response_format: { type: "json_object" } } : {}) }),
+          // a little more variety in the wording where the model allows it (the GPT-5 family only
+          // takes its default temperature)
+          body: JSON.stringify({ model, messages, ...(model.startsWith("gemini") ? { temperature: 0.9 } : {}), ...(json ? { response_format: { type: "json_object" } } : {}) }),
           signal: AbortSignal.timeout(timeoutMs),
         });
         if (!res.ok) throw new Error(`${model} ${res.status}`);

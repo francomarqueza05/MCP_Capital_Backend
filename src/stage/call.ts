@@ -12,7 +12,7 @@ import { orb } from "@/orb/engine";
 import { logMsg } from "./chat";
 import { askCordi, checkAI, remember, session } from "@/ai/client";
 import { agentActive, agentMute, agentQuiet, agentSay, endAgent, startAgent } from "./agent";
-import { explain, proceed, takeWheel } from "@/explain/player";
+import { explain, explaining, interject, proceed, resumeCut, takeWheel, writeDuring } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
 import { captionInBubble, hideBubble, holdBubble, setCaptions } from "./stage";
 
@@ -175,13 +175,25 @@ async function endTurn() {
   if (my !== turn) return;
   // its own voice coming back through the mic: not a turn, keep listening
   if (raw && isEcho(raw)) {
-    if (inCall()) listen();
+    if (!resumeCut() && inCall()) listen();
     return;
   }
   const heard = raw;
   if (!heard && rec) {
-    // a noise, nothing said: keep listening without interrupting anyone
-    if (inCall()) listen();
+    // a noise, nothing said: Cordi carries on if it had stopped, or keeps listening
+    if (!resumeCut() && inCall()) listen();
+    return;
+  }
+  // during an explanation on this call: a yes goes on, anything else is a question to it
+  if (heard && explaining() && explain.get().how === "call") {
+    const ex = explain.get();
+    if (isGo(heard) && (ex.waiting || ex.paused)) {
+      logMsg("you", heard, ex.title);
+      if (ex.waiting) call.set({ state: "speaking" });
+      proceed();
+      return;
+    }
+    void interject(heard);
     return;
   }
   if (!heard) {
@@ -384,35 +396,24 @@ export async function typeInCall(text: string) {
     else agentSay(q);
     return;
   }
-  const ex = explain.get();
-  const explaining = ex.how === "call" && ex.phase === "playing";
-  if (explaining && ex.waiting && isGo(q)) {
-    logMsg("you", q, ex.title);
-    call.set({ state: "speaking" });
-    proceed();
+  // during an explanation: on to the chat, where it can be read (see writeDuring)
+  if (explaining()) {
+    void writeDuring(q);
     return;
   }
   takeWheel();
-  const my = turn;
-  // talking: stop the line (the explanation pauses on its own and repeats the step after)
   if (call.get().state === "speaking") {
     const cut = line;
     line = null;
     cut?.stop();
   }
-  const wasWaiting = explain.get().waiting;
   heardAt = 0;
   call.set({ state: "thinking" });
   orb.setEmo("thinking");
-  logMsg("you", q, explaining ? ex.title : TOPIC);
+  logMsg("you", q, TOPIC);
+  const my = turn;
   await reply(q);
-  if (my !== turn || !inCall()) return;
-  const now = explain.get();
-  if (now.how === "call" && now.phase === "playing" && !wasWaiting && now.paused) {
-    // back to the explanation, from the step it was on
-    call.set({ state: "speaking" });
-    explain.set({ paused: false });
-  } else listen();
+  if (my === turn && inCall()) listen();
 }
 
 export const toggleMute = () => {

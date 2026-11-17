@@ -6,9 +6,8 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { Case } from "@/data/cases";
 import { useStore } from "@/lib/store";
-import { chat, converse, logMsg, type Msg } from "@/stage/chat";
-import { explain, proceed, takeWheel } from "@/explain/player";
-import { isGo } from "@/explain/confirm";
+import { chat, converse, type Msg } from "@/stage/chat";
+import { explain, writeDuring } from "@/explain/player";
 import { pick as pickRemark } from "@/explain/remarks";
 import { goExplain } from "@/ai/client";
 import { buildSteps } from "./steps";
@@ -147,22 +146,19 @@ function ChatInput() {
   useEffect(() => {
     input.current?.focus();
   }, []);
+  const ex = useStore(explain, (s) => s.phase === "playing" || s.phase === "done");
+  // during an explanation a question can come at any moment: it stops Cordi, who answers and
+  // asks to go on (writeDuring); outside one, it waits for the answer in progress
+  const locked = busy && !ex;
   const send = () => {
     const q = text.trim();
-    if (!q || busy) return;
+    if (!q || locked) return;
     setText("");
-    const ex = explain.get();
-    const explaining = ex.phase === "playing" && ex.how === "chat";
-    // a clear "sí, seguimos" while it waits moves the explanation on, like the button
-    if (explaining && ex.waiting && isGo(q)) {
-      logMsg("you", q, ex.title);
-      proceed();
+    if (ex) {
+      void writeDuring(q);
       return;
     }
-    // a question takes the wheel: no more countdowns in this camp, like writing on a call
-    if (explaining) takeWheel();
-    // during an explanation, questions belong to it (and to its current step)
-    converse(q, null, explaining ? ex.title : "Preguntas libres");
+    converse(q, null, "Preguntas libres");
   };
   return (
     <form
@@ -176,7 +172,7 @@ function ChatInput() {
           setText(e.target.value);
           chat.set({ typedAt: Date.now() });
         }} placeholder="Escribe tu pregunta sobre el plan" aria-label="Tu pregunta" />
-      <button type="submit" className="ask-icon solid" title="Enviar" disabled={busy || !text.trim()}>
+      <button type="submit" className="ask-icon solid" title="Enviar" disabled={locked || !text.trim()}>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12h13M13 6l6 6-6 6" />
         </svg>

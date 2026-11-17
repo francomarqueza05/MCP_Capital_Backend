@@ -6,15 +6,16 @@
 import type { Case } from "@/data/cases";
 import { buildSteps, type Step } from "@/expedition/steps";
 import { understanding } from "@/expedition/understanding";
-import { holdVoice, prefetchSpeech, releaseVoice, stopVoice, tones } from "@/lib/audio";
+import { holdVoice, line as voiceLine, prefetchSpeech, releaseVoice, stopVoice, tones } from "@/lib/audio";
 import { createStore, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { call, hangUp, inCall, listenInCall, sayInCall, startCall, stopLine } from "@/stage/call";
-import { chat, closePanel, cordiWrites, logMsg, openChat } from "@/stage/chat";
+import { chat, closePanel, converse, cordiWrites, logMsg, openChat } from "@/stage/chat";
 import { advanceLive, agentActive, agentSay, allowAdvance, startAgent } from "@/stage/agent";
-import { checkAI, goExplain } from "@/ai/client";
+import { askCordi, checkAI, goExplain } from "@/ai/client";
 import { hideBubble } from "@/stage/stage";
 import { beatsFor, type Beat } from "./beats";
+import { isGo } from "./confirm";
 
 export type How = "chat" | "call";
 type Phase = "off" | "choose" | "playing" | "done";
@@ -75,6 +76,13 @@ export const explain = createStore({
   manual: false,
   /** Finished a camp: the next one still to explain (what "Siguiente" or a "vamos" goes to). */
   nextId: null as string | null,
+  /**
+   * Cordi was cut off mid-step by the person (talking or writing): when they say to go on, that
+   * step is told again from the top instead of skipping to the next one.
+   */
+  redo: false,
+  /** Paused because the person talked over Cordi (not with the pause button). */
+  cutOff: false,
 });
 
 /**
@@ -147,7 +155,7 @@ export function offerExplain(step: Step, c: Case, quiet = false) {
   tones.tap();
   const beats = beatsFor(step, c);
   const saved = progress.get().at[step.id] ?? 0;
-  explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false, manual: false, left: null });
+  explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false, manual: false, left: null, redo: false, cutOff: false });
   if (quiet) return;
   // never asked how: it starts right away, the way the person used last (a call the first time)
   void startExplain(savedHow());
@@ -194,7 +202,7 @@ export function cancelExplain() {
   run++;
   // leaving while paused: nothing stays frozen (the next time starts playing normally)
   if (explain.get().paused) stopVoice();
-  explain.set({ phase: "off", paused: false, saying: false, fresh: false, waiting: false, until: null, nextId: null });
+  explain.set({ phase: "off", paused: false, saying: false, fresh: false, waiting: false, until: null, nextId: null, redo: false, cutOff: false });
   chat.set({ busy: false, live: null });
   orb.setEmo("neutral");
 }
@@ -208,6 +216,8 @@ export async function startExplain(how: How) {
   // captions, so nothing else would replace them and the old line would stay up
   stopVoice();
   hideBubble();
+  // every step's voice on its way now: the expressive voice takes a moment to make each line
+  s.beats.slice(s.from).forEach((b) => prefetchSpeech(b.say));
   tones.tap();
   orb.hop(0.4);
   const from = s.from;
@@ -226,6 +236,10 @@ export async function startExplain(how: How) {
     explain.set({ how: "chat" });
     openChat();
     chat.set({ busy: true });
+  } else if (inCall()) {
+    // the call may already be open (it stays on from the last camp) and listening: Cordi takes
+    // the turn to start, or the step would read as "the person is talking" and start paused
+    call.set({ state: "speaking" });
   }
   if (my !== run) return;
   if (from) await recap(my, from);
@@ -252,7 +266,7 @@ async function loop(my: number) {
     const s = explain.get();
     if (s.i >= s.beats.length) break;
     // on a call, the person talking (or Cordi answering them) holds the explanation
-    if (s.how === "call" && !s.paused && (call.get().state === "listening" || call.get().state === "thinking")) explain.set({ paused: true });
+    if (s.how === "call" && !s.paused && (call.get().state === "listening" || call.get().state === "thinking")) explain.set({ paused: true, cutOff: true });
     if (explain.get().paused) {
       await wait(120);
       continue;
@@ -262,8 +276,8 @@ async function loop(my: number) {
     const whole = await sayBeat(s.beats[s.i], my);
     if (my !== run) return;
     if (!whole) {
-      // cut off (talked over on a call): wait for the person to resume
-      explain.set({ paused: true });
+      // cut off (talked over on a call): what they say decides (see interject / resumeCut)
+      explain.set({ paused: true, cutOff: true });
       continue;
     }
     if (s.how === "call" || s.how === "chat") {
@@ -363,6 +377,7 @@ export const togglePause = () => {
     return;
   }
   releaseVoice();
+  explain.set({ cutOff: false });
   // cut off earlier by the person talking: Cordi takes the turn back to go on
   if (!s.waiting && !s.saying && s.how === "call" && inCall() && call.get().state === "listening") call.set({ state: "speaking" });
   explain.set({ paused: false, until: s.left !== null ? now + s.left : s.until, left: null });
@@ -386,6 +401,12 @@ export const next = () => jump(explain.get().i + 1);
 /** "Seguimos": on to the next step (or to the end, after the last). */
 export const proceed = () => {
   tones.tap();
+  // stopped mid-step (the pause button, or cut off): "Seguimos" carries on from there
+  const s0 = explain.get();
+  if (s0.paused && !s0.waiting && !live()) {
+    togglePause();
+    return;
+  }
   explain.set({ waiting: false, until: null });
   if (live()) {
     // the next block goes on screen now; on the last one, the agent wraps the camp up
@@ -445,6 +466,117 @@ export async function notClear() {
   explain.set((x) => ({ i: x.i + 1 }));
   if (s.how === "chat") chat.set({ busy: true });
   await loop(my);
+}
+
+// ---------------------------------------------------------------- talking over Cordi
+// The person talks or writes during an explanation: Cordi stops right there, answers, asks if
+// they go on, and waits. A yes (said, written, or "Seguimos") picks up where it was: the step it
+// was cut off in, told again, or the next one if the step had finished.
+const GO_ON = ["¿Seguimos?", "¿Te parece si seguimos?", "¿Lo dejamos aquí o seguimos?", "¿Continuamos?", "Cuando quieras, seguimos."];
+let goOnTurn = 0;
+const goOnLine = (couple: boolean) => {
+  const l = GO_ON[goOnTurn++ % GO_ON.length];
+  return couple ? l.replace("¿Te parece", "¿Os parece") : l;
+};
+let couple = false;
+export const setCouple = (v: boolean) => {
+  couple = v;
+};
+
+/** Is an explanation on screen that a question would interrupt? */
+export const explaining = () => {
+  const s = explain.get();
+  return s.phase === "playing" || s.phase === "done";
+};
+
+/**
+ * A question in the middle of an explanation. Returns once Cordi has answered and asked to go
+ * on; the explanation itself resumes later, on the person's yes.
+ */
+export async function interject(question: string, wasMid?: boolean) {
+  const s = explain.get();
+  if (!explaining()) return false;
+  takeWheel();
+  const midStep = wasMid ?? (s.saying || s.cutOff || (s.paused && !s.waiting));
+  const my = ++run; // whatever was playing stops listening for its turn
+  jumped = false;
+  cut();
+  releaseVoice();
+  explain.set({ saying: false, fresh: false, paused: false, cutOff: false, waiting: false, redo: s.redo || midStep });
+  const done = s.phase === "done";
+  if (s.how === "call" && inCall()) {
+    call.set({ state: "thinking" });
+    orb.setEmo("thinking");
+    logMsg("you", question, s.title);
+    const answer = (await askCordi(question, s.title)) ?? voiceLine("placeholderAnswer");
+    if (my !== run) return true;
+    logMsg("cordi", answer, s.title);
+    await sayInCall(answer);
+    if (my !== run) return true;
+    if (!done) {
+      const ask = goOnLine(couple);
+      logMsg("cordi", ask, s.title);
+      await sayInCall(ask);
+    }
+    if (my !== run) return true;
+    listenInCall();
+  } else {
+    chat.set({ busy: false, live: null });
+    await converse(question, null, s.title);
+    if (my !== run) return true;
+    if (!done) await cordiWrites(goOnLine(couple), s.title, undefined, () => my === run);
+    chat.set({ busy: false });
+  }
+  if (my !== run || done) return true;
+  // waiting for the go-ahead
+  explain.set({ waiting: true, until: null, waitFrom: performance.now() });
+  while (my === run && explain.get().waiting && !jumped) await wait(80);
+  if (my !== run) return true;
+  const redo = explain.get().redo;
+  explain.set({ redo: false });
+  if (!jumped && !redo) explain.set((x) => ({ i: x.i + 1 }));
+  if (explain.get().how === "call" && inCall()) call.set({ state: "speaking" });
+  else chat.set({ busy: true });
+  await loop(my);
+  return true;
+}
+
+/**
+ * Something written during an explanation. A clear "sí, seguimos" while it waits (or stopped)
+ * goes on; anything else is a question. Writing on a call moves the explanation to the chat,
+ * where the question and the answer can be read.
+ */
+export async function writeDuring(q: string) {
+  const s = explain.get();
+  if (!explaining()) return false;
+  if (isGo(q) && (s.waiting || s.paused)) {
+    logMsg("you", q, s.title);
+    proceed();
+    return true;
+  }
+  const wasMid = s.saying || s.cutOff || (s.paused && !s.waiting);
+  if (s.how === "call") {
+    saveHow("chat");
+    // the mode first, so hanging up doesn't read as leaving the explanation
+    explain.set({ how: "chat" });
+    run++;
+    cut();
+    hangUp();
+    openChat();
+  }
+  return interject(q, wasMid);
+}
+
+/**
+ * The person talked over Cordi but nothing came of it (a cough, a word the recognizer didn't
+ * catch): Cordi carries on with the step instead of staying stopped.
+ */
+export function resumeCut() {
+  const s = explain.get();
+  if (!s.cutOff || s.how !== "call" || !inCall()) return false;
+  explain.set({ paused: false, cutOff: false });
+  call.set({ state: "speaking" });
+  return true;
 }
 
 /** Stops what Cordi is saying right now, without ending the explanation. */
