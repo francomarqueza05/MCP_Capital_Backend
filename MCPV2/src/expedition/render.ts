@@ -299,7 +299,11 @@ export function drawWorld(g: CanvasRenderingContext2D, f: Frame) {
   g.globalAlpha = 1;
 }
 
-/** The peak again, in front of Cordi, only around the summit: it rises from behind it. */
+/**
+ * The peak again, in front of Cordi, only around the summit: it rises from behind it. Its edge
+ * fades out softly: a hard-edged patch showed as a rectangle, since Cordi's glow lights the
+ * mountain outside it but not the copy drawn over it.
+ */
 export function drawOccluder(g: CanvasRenderingContext2D, f: Frame, on: boolean) {
   const { W, H, dpr } = f;
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -308,15 +312,24 @@ export function drawOccluder(g: CanvasRenderingContext2D, f: Frame, on: boolean)
   const gr = gradsFor(g);
   layer(g, f, 1);
   g.save();
-  g.beginPath();
-  g.rect(SUMMIT.x - 200, SUMMIT.y - 12, 400, 190);
-  g.clip();
-  mountain(g, gr, false);
+  // no clip: a clipped edge is anti-aliased into a half-covered line that the fade below
+  // can't fully clear (that was the rectangle seen on the peak). The fade alone shapes it.
+  mountain(g, gr, true);
   g.setLineDash([0.1, 12]);
   g.lineCap = "round";
   g.strokeStyle = "rgba(238,240,255,.42)";
   g.lineWidth = 3;
   routeBetween(g, 0, 1);
   g.setLineDash([]);
+  // whole where Cordi passes behind the peak, fading to nothing around it; everything else on
+  // this canvas is cleared (the fill covers it all, with zero alpha outside the circle)
+  const cx = SUMMIT.x;
+  const cy = SUMMIT.y + 40;
+  const fade = g.createRadialGradient(cx, cy, 55, cx, cy, 125);
+  fade.addColorStop(0, "rgba(0,0,0,1)");
+  fade.addColorStop(1, "rgba(0,0,0,0)");
+  g.globalCompositeOperation = "destination-in";
+  g.fillStyle = fade;
+  g.fillRect(cx - 6000, cy - 6000, 12000, 12000);
   g.restore();
 }

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Case } from "@/data/cases";
 import { useStore } from "@/lib/store";
 import { chat, converse, logMsg, type Msg } from "@/stage/chat";
-import { explain, proceed } from "@/explain/player";
+import { explain, proceed, takeWheel } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
 import { pick as pickRemark } from "@/explain/remarks";
 import { goExplain } from "@/ai/client";
@@ -159,6 +159,8 @@ function ChatInput() {
       proceed();
       return;
     }
+    // a question takes the wheel: no more countdowns in this camp, like writing on a call
+    if (explaining) takeWheel();
     // during an explanation, questions belong to it (and to its current step)
     converse(q, null, explaining ? ex.title : "Preguntas libres");
   };

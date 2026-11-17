@@ -38,14 +38,18 @@ function Num({ to, f, delay = 0 }: { to: number; f: Fmt; delay?: number }) {
   return <motion.span>{txt}</motion.span>;
 }
 
-/** How far Cordi is through the line: live while it speaks, whole otherwise. */
-function useProgress(live: boolean) {
+/**
+ * How far Cordi is through the line: live while it speaks, whole otherwise. `empty`: the step
+ * is about to be told, so it waits at the start instead of showing whole first (and then
+ * building again from zero once Cordi starts).
+ */
+function useProgress(live: boolean, empty: boolean) {
   const p = useStore(speech, (s) => s.p);
-  return live ? p : 1;
+  return empty ? 0 : live ? p : 1;
 }
 
-export function Visual({ v, c, live = false }: { v: V; c: Case; live?: boolean }) {
-  const p = useProgress(live);
+export function Visual({ v, c, live = false, empty = false }: { v: V; c: Case; live?: boolean; empty?: boolean }) {
+  const p = useProgress(live, empty);
   switch (v.kind) {
     case "scene":
       return (

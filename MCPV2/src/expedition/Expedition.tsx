@@ -118,10 +118,9 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   const touring = useRef(false);
   const cw = useRef({ x: 0, y: 0, vx: 0, vy: 0, ready: false });
   const cs = useRef({ x: 0, y: 0, vx: 0, vy: 0, ready: false }); // Cordi held at a screen spot
-  // the guided tour walks on by itself, camp after camp, until the person takes the wheel
+  // the guided tour has started (by itself or by tap); camps never move on without a tap: a
+  // countdown to the next camp felt like pressure
   const [auto, setAuto] = useState(false);
-  const [autoAt, setAutoAt] = useState<{ ms: number; key: number } | null>(null);
-  const narrEnd = useRef(0);
   const live = useRef({ idx: -1, detail: false, phase: "wait" as Phase, hover: null as number | null, visited: 0 });
   live.current = { idx, detail: sheet && !theater, phase, hover, visited };
   const introT0 = useRef(-1);
@@ -429,8 +428,6 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     // the words go in Cordi's bubble; on the tour it stays a while so it can be read again
     lineInBubble(l.text, times, (times.at(-1) ?? 0) * 1000 + (l.title !== undefined ? 6000 : 900));
     const ms = (times.at(-1) ?? 0) * 1000 + 450;
-    // when this line will be over (voice, or a reading pace without it): the tour moves on after
-    narrEnd.current = performance.now() + Math.max(ms, voice ? 0 : words.length * 300);
     const pulses = times.map((t) => setTimeout(() => orb.pulse(0.35, 0.9), t * 1000));
     if (!voice) orb.speakFor(ms - 300);
     if (l.title !== undefined) return;
@@ -611,26 +608,16 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     return () => clearTimeout(t);
   }, [phase, idx, auto, guide]);
 
-  // on the tour: once Cordi has said the camp, on to the next one (paused while the detail or
-  // an explanation is open, and stopped when the person picks a flag or the whole mountain)
-  useEffect(() => {
-    if (!auto || phase !== "tour" || walking || sheet || theater || transit || idx < 0 || idx >= n - 1 || !narr || narr.step !== idx) {
-      setAutoAt(null);
-      return;
-    }
-    // time to think whether to dig in ("Explícame esto") before walking on
-    const ms = Math.max(9000, narrEnd.current - performance.now() + 6000);
-    setAutoAt({ ms, key: Math.random() });
-    const t = setTimeout(() => go(idx + 1), ms);
-    return () => clearTimeout(t);
-  }, [auto, phase, walking, sheet, theater, transit, idx, narr?.key]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ---------------------------------------------------------------- the opening
   // The camera drifts in on the night; the ranges rise back to front; the yak arrives; the
   // route draws itself up the face, lighting each camp with a chime; dawn breaks behind the
   // peak; Cordi rises from behind it like the sun, turns once, says hello, and comes down the
   // real route to base camp while the whole mountain stays in view.
+  const opened = useRef(false);
   const start = useCallback(async () => {
+    // one opening per mountain, however many times start is asked for
+    if (opened.current) return;
+    opened.current = true;
     setPhase("intro");
     setStars(1);
     stopSfx(0);
@@ -724,8 +711,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   useImperativeHandle(ref, () => ({ start, skip }), [start, skip]);
 
   useEffect(() => {
+    // a tap makes Cordi hop; rapid taps don't stack into a launch off the screen
+    let lastHop = 0;
     orb.onTapHook = () => {
-      cw.current.vy -= 380;
+      const now = performance.now();
+      if (now - lastHop < 350) return;
+      lastHop = now;
+      cw.current.vy = Math.min(cw.current.vy, 0) - 380;
     };
     return () => {
       orb.onTapHook = undefined;
@@ -848,15 +840,8 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
                 Ver el detalle
               </button>
               {idx < n - 1 && (
-                <button
-                  key={autoAt?.key ?? "manual"}
-                  className={autoAt ? "act auto" : "act"}
-                  style={autoAt ? { ["--auto-ms" as string]: `${autoAt.ms}ms` } : undefined}
-                  onClick={() => go(idx + 1)}
-                  disabled={walking}
-                >
-                  {autoAt && <span className="auto-fill" aria-hidden />}
-                  <span className="auto-label">Siguiente campamento</span>
+                <button className="act" onClick={() => go(idx + 1)} disabled={walking}>
+                  Siguiente campamento
                 </button>
               )}
             </>

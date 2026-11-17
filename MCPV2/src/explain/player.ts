@@ -1,20 +1,43 @@
-// Plays "Explícame esto". First Cordi asks how: by chat or by call. Then it walks through the
+// Plays "Explícame esto". It starts right away, as a call (or the chat, if that's what the
+// person switched to last time); the two can be swapped at any moment. Then it walks through the
 // camp's beats on its own, one visual and one line at a time, with a short pause between them.
 // The person can pause, go back, skip ahead, hear a step again, or say "no lo entiendo" and get
 // it said another way. Talking over Cordi on a call pauses it. At the end: "is it clear?".
 import type { Case } from "@/data/cases";
-import type { Step } from "@/expedition/steps";
+import { buildSteps, type Step } from "@/expedition/steps";
+import { understanding } from "@/expedition/understanding";
 import { holdVoice, prefetchSpeech, releaseVoice, stopVoice, tones } from "@/lib/audio";
 import { createStore, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { call, hangUp, inCall, listenInCall, sayInCall, startCall, stopLine } from "@/stage/call";
 import { chat, closePanel, cordiWrites, logMsg, openChat } from "@/stage/chat";
-import { agentActive, agentSay, allowAdvance, startAgent } from "@/stage/agent";
-import { checkAI } from "@/ai/client";
+import { advanceLive, agentActive, agentSay, allowAdvance, startAgent } from "@/stage/agent";
+import { checkAI, goExplain } from "@/ai/client";
+import { hideBubble } from "@/stage/stage";
 import { beatsFor, type Beat } from "./beats";
 
 export type How = "chat" | "call";
 type Phase = "off" | "choose" | "playing" | "done";
+
+/**
+ * How the person likes to be explained to: a call by default (nothing to decide to start), or
+ * the chat if they switched to it last time (it keeps the whole conversation to read again).
+ */
+const HOW_KEY = "cordada.how";
+function savedHow(): How {
+  try {
+    return localStorage.getItem(HOW_KEY) === "chat" ? "chat" : "call";
+  } catch {
+    return "call";
+  }
+}
+function saveHow(how: How) {
+  try {
+    localStorage.setItem(HOW_KEY, how);
+  } catch {
+    // no storage (private window): it just starts as a call next time
+  }
+}
 
 export const explain = createStore({
   phase: "off" as Phase,
@@ -26,6 +49,12 @@ export const explain = createStore({
   paused: false,
   /** Cordi is saying the current beat right now. */
   saying: false,
+  /**
+   * What Cordi is saying is the step itself (its narration, a repeat, a simpler retelling), so
+   * the visual builds along with it. False for anything else said on that step ("¿sigues
+   * ahí?", an answer to a question): the visual stays whole then.
+   */
+  fresh: false,
   /**
    * On a call, after each step Cordi waits ("¿Seguimos?") so the visual can be explored.
    * `until` is when it moves on by itself; null once the person has touched the visual, so it
@@ -44,6 +73,8 @@ export const explain = createStore({
    * countdowns in this camp, they move on with "Seguimos" when they want.
    */
   manual: false,
+  /** Finished a camp: the next one still to explain (what "Siguiente" or a "vamos" goes to). */
+  nextId: null as string | null,
 });
 
 /**
@@ -57,6 +88,20 @@ export const progress = createStore({ at: {} as Record<string, number> });
  * whole explanation was. The map's chat only gives detail on what's here.
  */
 export const known = createStore({ seen: {} as Record<string, number>, done: {} as Record<string, true> });
+
+/**
+ * The camp that comes after `stepId`: the next one along the route not yet understood (round
+ * to the start if needed), or null when every flag is planted. One rule for the "Siguiente"
+ * button and for what Cordi proposes at the end of a camp, so the two always agree.
+ */
+export function nextCampAfter(c: Case, stepId: string): Step | null {
+  const steps = buildSteps(c);
+  const marks = understanding.get().marks;
+  const done = known.get().done;
+  const clear = (id: string) => marks[id] === "yes" || (done[id] && marks[id] !== "meh" && marks[id] !== "no");
+  const here = steps.findIndex((s) => s.id === stepId);
+  return [...steps.slice(here + 1), ...steps.slice(0, here)].find((s) => !clear(s.id) && s.id !== stepId) ?? null;
+}
 
 const save = (stepId: string, i: number) => {
   progress.set((p) => ({ at: { ...p.at, [stepId]: i } }));
@@ -76,9 +121,8 @@ let run = 0; // bumps on every start/stop, so an old loop knows to quit
 let jumped = false; // a control moved the position: the loop shouldn't advance on its own
 
 const DWELL = 1300; // pause after each beat in the chat, so the visual can be read
-// After each step the visual stays a good while to be looked at, with a slow countdown on the
-// "Seguimos" button; then it moves on by itself. Touching the visual starts the countdown again.
-export const AUTO = 12000;
+// After each step the visual stays for as long as the person wants: no countdown, they move on
+// with "Seguimos" (or a clear yes). A timer there read as pressure.
 
 /** The person asked, wrote, or didn't understand: they'll move on themselves from now on. */
 export function takeWheel() {
@@ -105,8 +149,8 @@ export function offerExplain(step: Step, c: Case, quiet = false) {
   const saved = progress.get().at[step.id] ?? 0;
   explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false, manual: false, left: null });
   if (quiet) return;
-  // never asked how: Cordi starts talking right away, as a call
-  void startExplain("call");
+  // never asked how: it starts right away, the way the person used last (a call the first time)
+  void startExplain(savedHow());
 }
 
 /**
@@ -119,6 +163,7 @@ export async function switchHow(how: How) {
   const my = ++run;
   const old = s.how;
   tones.tap();
+  saveHow(how);
   // the new mode first, so hanging up the call doesn't read as leaving the explanation
   explain.set({ how, paused: false, waiting: false, saying: false });
   chat.set({ live: null });
@@ -149,7 +194,7 @@ export function cancelExplain() {
   run++;
   // leaving while paused: nothing stays frozen (the next time starts playing normally)
   if (explain.get().paused) stopVoice();
-  explain.set({ phase: "off", paused: false, saying: false, waiting: false, until: null });
+  explain.set({ phase: "off", paused: false, saying: false, fresh: false, waiting: false, until: null, nextId: null });
   chat.set({ busy: false, live: null });
   orb.setEmo("neutral");
 }
@@ -158,6 +203,11 @@ export async function startExplain(how: How) {
   const s = explain.get();
   if (s.phase !== "choose" || !s.beats.length) return;
   const my = ++run;
+  // the camp's own narration stops here (and one still on its way never starts): otherwise it
+  // talks over Cordi's explanation. Its words go from the bubble too: on a call there are no
+  // captions, so nothing else would replace them and the old line would stay up
+  stopVoice();
+  hideBubble();
   tones.tap();
   orb.hop(0.4);
   const from = s.from;
@@ -220,7 +270,7 @@ async function loop(my: number) {
       // "¿Seguimos?": the visual stays to be explored; on by itself only if left untouched
       // the on-screen bar asks "¿Seguimos?": Cordi doesn't say it after every step
       // it waits for "Seguimos" (or a chapter, an arrow, "No lo entiendo"): never on its own
-      explain.set({ waiting: true, until: explain.get().manual ? null : performance.now() + AUTO, waitFrom: performance.now(), left: null });
+      explain.set({ waiting: true, until: null, waitFrom: performance.now(), left: null });
       // in the chat, the person can write to Cordi while it waits; on a call, Cordi listens
       // (a spoken "sí, seguimos" moves on; anything else is a question it answers)
       if (s.how === "chat") chat.set({ busy: false });
@@ -262,7 +312,7 @@ async function sayBeat(b: Beat, my: number, text = b.say) {
     const nb = s.beats[s.i + 1];
     if (nb) prefetchSpeech(nb.say);
   }
-  explain.set({ saying: true });
+  explain.set({ saying: true, fresh: true });
   let whole = true;
   if (s.how === "call" && inCall()) {
     logMsg("cordi", text, s.title, b.visual);
@@ -270,7 +320,7 @@ async function sayBeat(b: Beat, my: number, text = b.say) {
   } else {
     await cordiWrites(text, s.title, b.visual, () => my === run && !jumped);
   }
-  explain.set({ saying: false });
+  explain.set({ saying: false, fresh: false });
   return whole && my === run;
 }
 
@@ -299,8 +349,10 @@ export const togglePause = () => {
   const s = explain.get();
   const p = !s.paused;
   if (live()) {
+    // the agent goes silent (and comes back) with the pause itself: see watchPause in agent.ts
     explain.set({ paused: p });
-    agentSay(p ? "Espera un momento, por favor." : "Ya está, sigue.");
+    if (p) orb.setEmo("neutral");
+    else agentSay("Ya está, sigue.");
     return;
   }
   const now = performance.now();
@@ -336,15 +388,14 @@ export const proceed = () => {
   tones.tap();
   explain.set({ waiting: false, until: null });
   if (live()) {
-    allowAdvance();
+    // the next block goes on screen now; on the last one, the agent wraps the camp up
+    if (!advanceLive()) allowAdvance();
     agentSay("Sí, seguimos.");
   } else if (explain.get().how === "call" && inCall()) call.set({ state: "speaking" });
 };
-/** The person is exploring the visual: Cordi waits for them instead of moving on. */
-export const hold = () => {
-  const s = explain.get();
-  if (s.waiting && s.until !== null && !s.paused) explain.set({ until: performance.now() + AUTO, waitFrom: performance.now() });
-};
+/** The person is exploring the visual. Steps never move on by themselves any more, so there's
+ * nothing to hold off; kept as the stage's touch hook. */
+export const hold = () => {};
 /** A chapter tapped: that step, from the top (also from the end, to look again). */
 export function goTo(k: number) {
   const s = explain.get();
@@ -421,6 +472,17 @@ export async function replay() {
     await cordiWrites("Vamos otra vez, más despacio.", s.title, undefined, () => my === run);
   }
   if (my === run) await loop(my);
+}
+
+/** On to the next camp's explanation, the same way (its button, or a "vamos" said at the end). */
+export function goNextCamp() {
+  const s = explain.get();
+  if (!s.nextId) return;
+  const to = s.nextId;
+  const how = s.how ?? "call";
+  tones.tap();
+  leaveExplain();
+  goExplain(to, how);
 }
 
 /** Ends this explanation but keeps the call on (on the way to the next camp's). */

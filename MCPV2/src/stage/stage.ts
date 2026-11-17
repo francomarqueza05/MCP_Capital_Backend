@@ -136,7 +136,12 @@ export async function choose(id: string, options: Choice[]) {
 // ---------------------------------------------------------------- bubble
 // Cordi's narration of the climb only: short lines and reactions. Conversations live in the
 // side panel's "Conversación" tab, so the two never step on each other.
-export const bubble = createStore({ text: "", visible: false });
+/**
+ * Cordi's bubble. `full` is the whole line when it's known ahead (a narrated line, a call's
+ * scripted line): the bubble takes that size from the first word, so it doesn't grow as the
+ * words come in and jump when it meets the screen's edge.
+ */
+export const bubble = createStore({ text: "", full: "", visible: false });
 let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
 
 /**
@@ -162,13 +167,23 @@ export function showBubble(idOrText: string, ms = 2800) {
   if (bubbleHeld) return;
   clearTimeout(bubbleTimer);
   if (hasVoice(idOrText)) speak(idOrText);
-  bubble.set({ text: line(idOrText), visible: true });
+  bubble.set({ text: line(idOrText), full: "", visible: true });
   if (ms) bubbleTimer = setTimeout(() => bubble.set({ visible: false }), ms);
 }
 /** A short line in the bubble that stays until replaced, even while a call holds it. */
+/**
+ * Subtitles on a call: off by default (the voice tells it, and the eyes belong to the visual),
+ * on only while Cordi's voice is silenced, when they're the only way to follow it.
+ */
+let captions = false;
+export const setCaptions = (on: boolean) => {
+  captions = on;
+};
+export const captionsOn = () => captions;
+
 export function noteInBubble(text: string) {
   clearTimeout(bubbleTimer);
-  bubble.set({ text, visible: true });
+  bubble.set({ text, full: "", visible: true });
 }
 /**
  * A narrated line in the bubble (the intro, each camp on the tour): its words appear on the
@@ -182,7 +197,7 @@ export function lineInBubble(text: string, times: number[], ms: number) {
   lineTimers = [];
   clearTimeout(bubbleTimer);
   const words = text.split(" ");
-  bubble.set({ text: words[0] ?? "", visible: true });
+  bubble.set({ text: words[0] ?? "", full: text, visible: true });
   words.forEach((_, i) => {
     if (i) lineTimers.push(setTimeout(() => bubble.set({ text: words.slice(0, i + 1).join(" ") }), (times[i] ?? i * 0.3) * 1000));
   });
@@ -206,10 +221,10 @@ export function captionInBubble(id: string) {
   let stopped = false;
   let finish = () => {};
   const done = new Promise<void>((r) => (finish = r));
-  bubble.set({ text: "", visible: true });
+  bubble.set({ text: "", full: words.join(" "), visible: captions });
   speech.set((s) => ({ p: 0, key: s.key + 1 }));
   const show = (n: number) => {
-    bubble.set({ text: words.slice(0, n).join(" ") });
+    bubble.set({ text: words.slice(0, n).join(" "), visible: captions });
     speech.set({ p: n / words.length });
   };
   const end = () => {

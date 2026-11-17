@@ -14,7 +14,7 @@ import { askCordi, checkAI, remember, session } from "@/ai/client";
 import { agentActive, agentMute, agentQuiet, agentSay, endAgent, startAgent } from "./agent";
 import { explain, proceed, takeWheel } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
-import { captionInBubble, hideBubble, holdBubble } from "./stage";
+import { captionInBubble, hideBubble, holdBubble, setCaptions } from "./stage";
 
 export type CallState = "idle" | "connecting" | "speaking" | "listening" | "thinking";
 
@@ -365,6 +365,9 @@ export const toggleQuiet = () => {
   call.set({ quiet: q });
   setVoiceQuiet(q);
   agentQuiet(q);
+  // Cordi silenced: subtitles take over; its voice back: they go
+  setCaptions(q);
+  if (!q && inCall()) hideBubble();
 };
 
 /**
@@ -375,7 +378,10 @@ export async function typeInCall(text: string) {
   const q = text.trim();
   if (!q || !inCall()) return;
   if (agentActive()) {
-    agentSay(q);
+    // a written "sí, seguimos" while the step waits moves on, like the button
+    const ex = explain.get();
+    if (ex.phase === "playing" && ex.waiting && isGo(q)) proceed();
+    else agentSay(q);
     return;
   }
   const ex = explain.get();
