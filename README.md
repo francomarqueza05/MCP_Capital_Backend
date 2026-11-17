@@ -31,6 +31,8 @@ npm run dev            # http://localhost:3100
 
 ## Cómo está hecho
 
+La arquitectura completa, con los flujos, la sincronización de voz y gráficos y quién paga qué, está en [docs/arquitectura.md](docs/arquitectura.md).
+
 ```
 app/                    layout, página, globals.css (tokens y estilos)
 app/api/                rutas del servidor: agent/session y agent/tool (agente en vivo),
