@@ -18,8 +18,8 @@ export type Line = {
 };
 
 export function Narration({ line, total, hidden, actions }: { line: Line | null; total: number; hidden?: boolean; actions?: ReactNode }) {
-  if (!line) return <div className="narr" aria-live="polite" />;
-  const words = line.text.split(" ");
+  // what Cordi says shows in its bubble; here only where we are, and what to do
+  if (!line || line.title === undefined) return <div className="narr" aria-live="polite" />;
   const titled = line.title !== undefined;
   return (
     <div className={`narr${titled ? " titled" : " intro"}${hidden ? " hidden" : ""}`} aria-live="polite" key={line.key}>
@@ -30,18 +30,6 @@ export function Narration({ line, total, hidden, actions }: { line: Line | null;
           <p className={`narr-label t-${line.status}`}>{line.label}</p>
         </header>
       )}
-      <p className={line.whole ? "narr-text whole" : "narr-text"}>
-        {words.map((w, i) => (
-          <span key={i} className="w" style={line.whole ? undefined : { animationDelay: `${(line.times?.[i] ?? i * 0.05) * 1000}ms` }}>
-            {w}{" "}
-          </span>
-        ))}
-        {!titled && line.whole && (
-          <span className="narr-next" aria-hidden>
-            ▼
-          </span>
-        )}
-      </p>
       {actions && <div className="narr-actions">{actions}</div>}
     </div>
   );

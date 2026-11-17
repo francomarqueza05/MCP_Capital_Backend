@@ -275,6 +275,33 @@ const arc = (from: number, to: number) => {
   return `M${x1.toFixed(2)} ${y1.toFixed(2)} A${G.r} ${G.r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
 };
 
+/**
+ * The gauge's needle, drawn from its angle every frame (rather than rotating an SVG group, whose
+ * pivot browsers place inconsistently): a tapered blade from the hub to just inside the scale,
+ * with a short tail. It sweeps up from 0 on arrival and settles with a small overshoot.
+ */
+function Needle({ value }: { value: number }) {
+  const v = useSpring(0, { stiffness: 80, damping: 13, mass: 1 });
+  useEffect(() => {
+    v.set(Math.max(0, Math.min(100, value)));
+  }, [value, v]);
+  const blade = useTransform(v, (k) => {
+    const a = Math.PI * (1 - k / 100);
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    const len = G.r - 20;
+    const tail = 14;
+    const half = 3.2;
+    const tip = [G.cx + len * c, G.cy - len * sn];
+    const back = [G.cx - tail * c, G.cy + tail * sn];
+    // perpendicular to the blade, for its width at the hub
+    const px = sn * half;
+    const py = c * half;
+    return `M${tip[0].toFixed(2)} ${tip[1].toFixed(2)} L${(G.cx + px).toFixed(2)} ${(G.cy + py).toFixed(2)} L${back[0].toFixed(2)} ${back[1].toFixed(2)} L${(G.cx - px).toFixed(2)} ${(G.cy - py).toFixed(2)} Z`;
+  });
+  return <motion.path d={blade} className="vx-dial-needle" />;
+}
+
 function Score({ v, p }: { v: Extract<V, { kind: "score" }>; p: number }) {
   const [after, setAfter] = useState(false);
   useEffect(() => {
@@ -316,10 +343,9 @@ function Score({ v, p }: { v: Extract<V, { kind: "score" }>; p: number }) {
               100
             </text>
             {/* the needle */}
-            <motion.g style={{ originX: `${G.cx}px`, originY: `${G.cy}px` }} initial={{ rotate: -90 }} animate={{ rotate: -90 + (value / 100) * 180 }} transition={{ type: "spring", stiffness: 70, damping: 12 }}>
-              <line x1={G.cx} y1={G.cy} x2={G.cx} y2={G.cy - G.r + 30} className="vx-dial-needle" />
-            </motion.g>
-            <circle cx={G.cx} cy={G.cy} r="8" className="vx-dial-hub" />
+            <Needle value={value} />
+            <circle cx={G.cx} cy={G.cy} r="9" className="vx-dial-hub" />
+            <circle cx={G.cx} cy={G.cy} r="3.5" className="vx-dial-pin" />
           </svg>
           <div className="vx-dial-read">
             <span className={`vx-dial-n ${after && up > 0 ? "t-good" : ""}`}>

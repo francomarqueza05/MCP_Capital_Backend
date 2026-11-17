@@ -80,7 +80,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
   lastUser = "";
   shownAny = false;
   newReply();
-  call.set({ state: "connecting", t0: Date.now(), muted: false, error: "" });
+  call.set({ state: "connecting", t0: Date.now(), error: "" });
   holdBubble(true);
   orb.setEmo("curious");
 
@@ -213,6 +213,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
     console.error("agent start", e);
     return fail();
   }
+  if (call.get().quiet) conv?.setVolume({ volume: 0 });
   tones.soft();
   // the orb breathes with the voices: Cordi's when it speaks, yours when it listens
   const loop = () => {
@@ -271,3 +272,5 @@ export const agentSay = (text: string) => {
 /** Tells the agent something without a turn (what they're doing on screen). */
 export const agentNote = (text: string) => conv?.sendContextualUpdate(text);
 export const agentMute = (muted: boolean) => conv?.setMicMuted(muted);
+/** Silences Cordi's own voice on the live agent (the conversation goes on). */
+export const agentQuiet = (quiet: boolean) => conv?.setVolume({ volume: quiet ? 0 : 1 });

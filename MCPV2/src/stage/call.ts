@@ -6,13 +6,13 @@
 // there's no speech-to-text and Cordi answers with a placeholder line. The live agent
 // (POST /v1/voice/agent-session, ElevenLabs over WebSocket, with per-character timing for
 // exact captions) plugs in where `reply()` is.
-import { audioContext, line as voiceLine, stopVoice, tones } from "@/lib/audio";
+import { audioContext, line as voiceLine, setVoiceQuiet, stopVoice, tones } from "@/lib/audio";
 import { createStore, lerp, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { logMsg } from "./chat";
 import { askCordi, checkAI, remember, session } from "@/ai/client";
-import { agentActive, agentMute, endAgent, startAgent } from "./agent";
-import { explain, proceed } from "@/explain/player";
+import { agentActive, agentMute, agentQuiet, agentSay, endAgent, startAgent } from "./agent";
+import { explain, proceed, takeWheel } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
 import { captionInBubble, hideBubble, holdBubble } from "./stage";
 
@@ -21,6 +21,10 @@ export type CallState = "idle" | "connecting" | "speaking" | "listening" | "thin
 export const call = createStore({
   state: "idle" as CallState,
   muted: false,
+  /** Cordi's voice silenced: it keeps talking in captions only. */
+  quiet: false,
+  /** The call goes on without a microphone (no permission): the person writes instead. */
+  noMic: false,
   t0: 0,
   /** Shown when the call could not start (no microphone). */
   error: "",
@@ -114,15 +118,41 @@ function closeMic() {
   orb.level = 0;
 }
 
+// Cordi must never answer itself: the microphone also picks up its voice (from the speakers),
+// and the recognizer hands those words back a moment later. So what's heard right after Cordi
+// speaks is ignored, and anything that mostly repeats what Cordi just said is dropped as echo.
+let quietAt = 0; // when Cordi last stopped talking
+const ECHO_WINDOW = 900;
+const recentSaid: string[] = [];
+const norm = (t: string) =>
+  t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9ñ ]+/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+function isEcho(heard: string) {
+  const words = norm(heard);
+  if (!words.length) return true;
+  const said = new Set(recentSaid.flatMap(norm));
+  const same = words.filter((w) => said.has(w)).length;
+  return same / words.length >= 0.5;
+}
+
 /** Cordi says one line, captioned in the bubble. Resolves false if it was cut off. */
 async function say(id: string) {
   const my = turn;
   call.set({ state: "speaking" });
   loudSince = 0;
   remember(voiceLine(id));
+  recentSaid.push(voiceLine(id));
+  if (recentSaid.length > 4) recentSaid.shift();
   line = captionInBubble(id);
   await line.done;
   const whole = line !== null;
+  // cut off by the person talking: their words count from now, no echo window
+  if (whole) quietAt = performance.now();
   line = null;
   return my === turn && whole;
 }
@@ -141,8 +171,19 @@ async function endTurn() {
   call.set({ state: "thinking" });
   orb.listening = false;
   orb.setEmo("thinking");
-  const heard = await transcript();
+  const raw = await transcript();
   if (my !== turn) return;
+  // its own voice coming back through the mic: not a turn, keep listening
+  if (raw && isEcho(raw)) {
+    if (inCall()) listen();
+    return;
+  }
+  const heard = raw;
+  if (!heard && rec) {
+    // a noise, nothing said: keep listening without interrupting anyone
+    if (inCall()) listen();
+    return;
+  }
   if (!heard) {
     // nothing understood: say so, and listen again
     const again = "Perdona, no te he entendido bien. ¿Me lo repites, o me lo escribes en la conversación?";
@@ -155,6 +196,8 @@ async function endTurn() {
     proceed();
     return;
   } else {
+    // a question out loud: no more countdown, the person moves on when they want
+    takeWheel();
     logMsg("you", heard, TOPIC);
     await reply(heard);
   }
@@ -187,6 +230,12 @@ function startRecognition() {
   r.continuous = true;
   r.interimResults = true;
   r.onresult = (e) => {
+    // only what's said while Cordi listens, and not the tail of its own voice
+    if (call.get().state !== "listening" || performance.now() - quietAt < ECHO_WINDOW) {
+      heardFinal = "";
+      heardInterim = "";
+      return;
+    }
     let interim = "";
     for (let k = e.resultIndex; k < e.results.length; k++) {
       const res = e.results[k];
@@ -243,6 +292,8 @@ function interrupt() {
   heardAt = performance.now(); // they're already talking
 }
 
+/** The person is talking right now (their turn has started and not ended). */
+export const userTalking = () => heardAt > 0;
 /** Ends the line Cordi is saying, as if it had finished (for skipping ahead). */
 export const stopLine = () => line?.stop();
 /** Cordi says a line on the call (an explanation's step). False if it was cut off. */
@@ -260,9 +311,17 @@ export async function startCall({ greet = true } = {}) {
   const my = ++turn;
   tones.tap();
   holdBubble(true);
-  call.set({ state: "connecting", t0: Date.now(), muted: false, error: "" });
+  call.set({ state: "connecting", t0: Date.now(), error: "", noMic: false });
   orb.setEmo("curious");
   if (!(await openMic())) {
+    if (!greet) {
+      // an explanation: Cordi still talks; without a microphone the person writes in the card
+      call.set({ noMic: true, muted: true });
+      await wait(400);
+      if (my !== turn) return false;
+      call.set({ state: "speaking" });
+      return true;
+    }
     holdBubble(false);
     call.set({ state: "idle", error: "No pude acceder al micrófono. Revisa el permiso del navegador, o escríbeme en la conversación." });
     orb.setEmo("concerned");
@@ -298,6 +357,56 @@ export function hangUp() {
   tones.tap();
   orb.setEmo("neutral");
   orb.flashEmo("happy", 900);
+}
+
+/** Silences Cordi's voice (or brings it back); the call and its captions go on. */
+export const toggleQuiet = () => {
+  const q = !call.get().quiet;
+  call.set({ quiet: q });
+  setVoiceQuiet(q);
+  agentQuiet(q);
+};
+
+/**
+ * A question written during the call: Cordi stops what it's saying, answers it out loud (the
+ * captions show it), and the explanation picks up again where it was.
+ */
+export async function typeInCall(text: string) {
+  const q = text.trim();
+  if (!q || !inCall()) return;
+  if (agentActive()) {
+    agentSay(q);
+    return;
+  }
+  const ex = explain.get();
+  const explaining = ex.how === "call" && ex.phase === "playing";
+  if (explaining && ex.waiting && isGo(q)) {
+    logMsg("you", q, ex.title);
+    call.set({ state: "speaking" });
+    proceed();
+    return;
+  }
+  takeWheel();
+  const my = turn;
+  // talking: stop the line (the explanation pauses on its own and repeats the step after)
+  if (call.get().state === "speaking") {
+    const cut = line;
+    line = null;
+    cut?.stop();
+  }
+  const wasWaiting = explain.get().waiting;
+  heardAt = 0;
+  call.set({ state: "thinking" });
+  orb.setEmo("thinking");
+  logMsg("you", q, explaining ? ex.title : TOPIC);
+  await reply(q);
+  if (my !== turn || !inCall()) return;
+  const now = explain.get();
+  if (now.how === "call" && now.phase === "playing" && !wasWaiting && now.paused) {
+    // back to the explanation, from the step it was on
+    call.set({ state: "speaking" });
+    explain.set({ paused: false });
+  } else listen();
 }
 
 export const toggleMute = () => {

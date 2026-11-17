@@ -3,6 +3,7 @@
 // is the one move that lifts them most. Each step carries what Cordi says when it gets there.
 import { climbed, pillarPoints, type Case, type Status, type Topic } from "@/data/cases";
 import { BAND, byImpact, CAPS, fixFor, moveName, num, short } from "@/lib/copy";
+import { fixRank, money, months, ofHundred, pickBy } from "@/lib/talk";
 
 export type Step = {
   id: string;
@@ -39,16 +40,22 @@ export function buildSteps(c: Case): Step[] {
     label: `${c.score.value} de 100, ${band.label.toLowerCase()}`,
     status: band.status,
     say: capped
-      ? `${v("Tu", "Vuestra")} nota es ${c.score.value} de 100. ${v("Has", "Habéis")} sumado ${total} puntos, pero ${c.score.caps.map((k) => (CAPS[k] ?? k).toLowerCase()).join(" y ")} ${c.score.caps.length > 1 ? "frenan" : "frena"} la subida. Vamos tramo a tramo.`
-      : `${v("Tu", "Vuestra")} nota es ${c.score.value} de 100. Donde más ${v("puedes", "podéis")} subir es en ${room.name.toLowerCase()}. Vamos tramo a tramo.`,
+      ? `Aquí empieza todo. ${v("Tu", "Vuestra")} nota hoy es un ${c.score.value} sobre 100. Por lo que ${v("tienes", "tenéis")}, podría ser más alta, pero ${c.score.caps.map((k) => (CAPS[k] ?? k).toLowerCase()).join(" y ")} ${c.score.caps.length > 1 ? "le ponen" : "le pone"} un techo.`
+      : `Aquí empieza todo. ${v("Tu", "Vuestra")} nota hoy es un ${c.score.value} sobre 100, y donde más margen ${v("tienes", "tenéis")} para subir es en ${room.name.toLowerCase()}.`,
   };
 
   // solid ground first, the hard stretches higher up, as on a real climb
   const topics = [...c.topics].sort((a, b) => ORDER[a.status] - ORDER[b.status]).map<Step>((t) => {
     const fix = fixFor(c, t);
-    const lead = t.status === "good" ? "Aquí el terreno es firme." : t.status === "warn" ? "Este tramo pide atención." : "Este es un tramo difícil.";
-    const after = fix && fix.after > fix.before ? ` Si lo ${v("resuelves", "resolvéis")}, la nota sube de ${fix.before} a ${fix.after}.` : "";
-    return { id: t.id, kind: "topic", title: t.title, label: t.label, status: t.status, say: `${lead} ${t.headline}${after}`, topic: t, sign: sign(t) };
+    const gain = fix && fix.after > fix.before ? fix.after - fix.before : 0;
+    const after = gain
+      ? ` ${pickBy(fixRank(c, t), [
+          `Arreglando esto, ${v("tu", "vuestra")} nota pasaría de ${fix!.before} a ${fix!.after}.`,
+          `Solo con esto ${v("ganarías", "ganaríais")} ${gain} puntos.`,
+          `Aquí hay ${gain} puntos esperando.`,
+        ])}`
+      : "";
+    return { id: t.id, kind: "topic", title: t.title, label: t.label, status: t.status, say: `${arrival(t, c, v)}${after}`, topic: t, sign: sign(t) };
   });
 
   const best = byImpact(c.moves)[0];
@@ -60,11 +67,72 @@ export function buildSteps(c: Case): Step[] {
     label: best ? moveName(best) : "Seguir así",
     status: "goal",
     say: best
-      ? `La cima empieza por un paso: ${moveName(best).toLowerCase()}. Con eso, ${v("tu", "vuestra")} nota pasaría de ${best.before} a ${best.after}.`
-      : `${v("Vas", "Vais")} por buen camino. El siguiente paso es mantenerlo.`,
+      ? `Y llegamos arriba. De todo lo que hemos visto, lo que más ${v("te", "os")} acerca es ${moveName(best).toLowerCase()}: con eso, la nota pasaría de ${best.before} a ${best.after}.`
+      : `Y llegamos arriba. ${v("Vas", "Vais")} por buen camino; ahora se trata de mantenerlo.`,
   };
 
   return [base, ...topics, summit];
+}
+
+/**
+ * What Cordi says on arriving at a camp: one or two plain sentences, different for each topic
+ * and for how it's going, with the figures rounded the way a person would say them.
+ */
+function arrival(t: Topic, c: Case, v: (one: string, two: string) => string): string {
+  const n = t.numbers as Record<string, number & string>;
+  switch (t.id) {
+    case "cashflow": {
+      const flow = +n.flow;
+      if (flow < 0) return `Aquí hay una pequeña fuga: cada año sale ${money(-flow)} más de lo que entra, y la diferencia se paga tirando de ahorros.`;
+      const tight = flow < +n.income * 0.08;
+      return tight
+        ? `Cada año ${v("te", "os")} quedan ${money(flow)} libres. Parece mucho, pero para todo lo que ${v("quieres", "queréis")} hacer es un margen justo.`
+        : `Buena noticia: cada año ${v("te", "os")} sobran ${money(flow)}. Es la gasolina para el resto de metas.`;
+    }
+    case "emergency": {
+      const m = +n.months;
+      if (m < +n.min) return `Si mañana ${v("dejaras", "dejarais")} de cobrar, ${v("tendrías", "tendríais")} para aguantar ${months(m)}. Lo sensato sería tener entre ${n.min} y ${n.max}.`;
+      if (m > +n.max) return `Aquí ${v("vas", "vais")} sobrado: ${months(m)} de gastos guardados, más de lo que hace falta. Parte de ese dinero podría estar trabajando en otras cosas.`;
+      return `${v("Tienes", "Tenéis")} un buen colchón: ${months(m)} de gastos guardados para imprevistos.`;
+    }
+    case "near-goal":
+      return `${String(n.goal)} en ${n.when} es una gran meta. Pero ojo: tal como está, ${v("te", "os")} dejaría sin colchón justo después.`;
+    case "debt":
+      if (n.balance) return `Las tarjetas pesan: ${v("debes", "debéis")} ${money(+n.balance)}, y casi todo lo que ${v("pagas", "pagáis")} cada mes se va en intereses.`;
+      return +n.dti <= 0.36
+        ? `Las deudas, bajo control. De cada 100 dólares que ${v("ganas", "ganáis")}, ${Math.round(+n.dti * 100)} van a pagarlas, por debajo del límite sano.`
+        : `Las deudas se llevan mucho: ${ofHundred(+n.dti)} dólares que ${v("ganas", "ganáis")}.`;
+    case "retirement":
+      if (n.runOut !== "Not applicable") return `Este es el tramo más empinado. Al ritmo de ahora, los ahorros se acabarían a los ${n.runOut} años.`;
+      if (+n.gap > 0) return `La jubilación es el tramo más largo de la ruta. Para retirar${v("te", "os")} a los ${n.retireAge}, como ${v("quieres", "queréis")}, faltan ${money(+n.gap)}.`;
+      return `La jubilación va bien encaminada: ${v("tendrías", "tendríais")} cubierto un ${n.incomeShare} por ciento de lo que ${v("gastarás", "gastaréis")}.`;
+    case "education": {
+      const kids = c.household.kids;
+      const who = kids.length > 1 ? `de ${kids.slice(0, -1).join(", ")} y ${kids.at(-1)}` : kids.length ? `de ${kids[0]}` : "";
+      return +n.extraSave > 0
+        ? `Para la universidad ${who} faltan ${money(+n.gap)}. Con tiempo por delante, se cierra apartando ${money(+n.extraSave)} más al año.`
+        : `Para la universidad ${who} faltan ${money(+n.gap)}, y ahora mismo no hay nada apartado para ello.`;
+    }
+    case "life": {
+      const s = (+n.shortfall || 0) + (+n.coShortfall || 0);
+      if (!s) return `Aquí no hay de qué preocuparse: si ${v("te", "os")} pasara algo, el seguro de vida cubriría lo que la familia necesita.`;
+      return c.household.couple
+        ? `Un tema delicado pero importante: si a alguno de los dos le pasara algo, el seguro de vida se quedaría muy corto. Faltan ${money(s)} de cobertura.`
+        : `Un tema delicado pero importante: si te pasara algo, el seguro de vida se quedaría corto. Faltan ${money(s)} de cobertura.`;
+    }
+    case "umbrella":
+      return n.recommended
+        ? `Un seguro que casi nadie mira: el que ${v("te", "os")} cubre si alguien ${v("te", "os")} demanda. Lo recomendado es ${money(+n.recommended)}, y ahora mismo no ${v("tienes", "tenéis")} ninguno.`
+        : `Bien: ${v("tienes", "tenéis")} un seguro que ${v("te", "os")} cubre si alguien ${v("te", "os")} demanda.`;
+    case "investments": {
+      const d = +n.equity - +n.target;
+      if (Math.abs(d) <= 3) return `Las inversiones están bien repartidas para ${v("tu", "vuestra")} edad y ${v("tus", "vuestras")} metas.`;
+      return d < 0
+        ? `En inversiones ${v("vas", "vais")} con el freno puesto: un ${n.equity} por ciento en acciones, cuando a ${v("tu", "vuestra")} edad encaja más un ${n.target}.`
+        : `En inversiones ${v("vas", "vais")} con algo más de riesgo del que toca: un ${n.equity} por ciento en acciones, y lo que encaja es un ${n.target}.`;
+    }
+  }
+  return t.label;
 }
 
 /** One figure and a few words for each topic, for its sign on the overview. */

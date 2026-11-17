@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { call, cutIn, hangUp, startCall, toggleMute, type CallState } from "./call";
 import { agent } from "./agent";
+import { explain, inTheater } from "@/explain/player";
 
 const STATUS: Record<CallState, string> = {
   idle: "",
@@ -28,7 +29,9 @@ function Clock({ t0 }: { t0: number }) {
 export function CallBar() {
   const { state, muted, t0, error } = useStore(call, (s) => s);
   const live = useStore(agent, (s) => s.mode !== null);
-  const on = state !== "idle";
+  // during an explanation the call's controls live in its card, not down here
+  const theater = useStore(explain, () => inTheater());
+  const on = state !== "idle" && !theater;
 
   useEffect(() => {
     if (!on) return;

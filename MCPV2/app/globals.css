@@ -2552,9 +2552,14 @@ select {
   color: var(--good);
 }
 .vx-dial-needle {
+  fill: var(--ink);
   stroke: var(--ink);
-  stroke-width: 3;
-  stroke-linecap: round;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 4px rgba(3, 5, 20, 0.45));
+}
+.vx-dial-pin {
+  fill: var(--sky);
 }
 .vx-dial-hub {
   fill: var(--ink);
@@ -3199,4 +3204,198 @@ select {
 /* the start screen holds the profile cards: let it be wider than the old tagline */
 .start-inner {
   max-width: none;
+}
+
+/* the camp panel without tabs: just the close button, over the content */
+.detail-close.solo {
+  z-index: 2;
+}
+
+/* the call, in the explanation's own card: one quiet bar at the bottom with your mic,
+   Cordi's voice and a box to ask in writing; the latest exchange sits just above it */
+.theater {
+  grid-template-rows: minmax(0, 1fr);
+}
+@media (max-width: 759px) {
+  .theater {
+    grid-template-rows: 120px minmax(0, 1fr);
+  }
+}
+.theater-stage {
+  overflow: hidden;
+}
+.theater-body {
+  min-height: 120px;
+}
+.dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+}
+.dock-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(7, 10, 36, 0.45);
+  transition: border-color 0.2s;
+}
+.dock-bar:focus-within {
+  border-color: rgba(154, 166, 240, 0.45);
+}
+.dock-btn {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--lichen);
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.dock-btn:hover:not(:disabled) {
+  background: rgba(238, 240, 255, 0.08);
+  color: var(--ink);
+}
+.dock-btn.off {
+  color: var(--bad);
+  background: rgba(245, 154, 170, 0.1);
+}
+.dock-btn:disabled {
+  opacity: 0.4;
+}
+/* listening: a small live dot on the mic */
+.dock-live {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--good);
+  animation: chat-dot 1.4s infinite ease-in-out;
+}
+.dock-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  margin-left: 0.2rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--line);
+}
+.dock-input textarea {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  max-height: 96px;
+  padding: 0.5rem 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  line-height: 1.35;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+.dock-input textarea::placeholder {
+  color: var(--lichen);
+  opacity: 0.7;
+}
+.dock-send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--sky);
+  transition: opacity 0.2s;
+}
+.dock-send:disabled {
+  background: rgba(238, 240, 255, 0.08);
+  color: var(--lichen);
+  opacity: 0.6;
+}
+.dock-last {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0.9rem;
+  font-size: var(--t-xs);
+  line-height: 1.45;
+}
+.dock-last p {
+  margin: 0;
+  /* the latest exchange only, kept short so the card never scrolls */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.dock-you {
+  align-self: flex-end;
+  max-width: 85%;
+  color: var(--lichen);
+  text-align: right;
+}
+.dock-cordi {
+  color: var(--ink-2);
+}
+.dock-last .chat-typing {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.3rem 0;
+}
+
+/* buttons that go on by themselves: a slow fill shows when */
+.act.auto {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.auto-fill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(154, 166, 240, 0.28);
+  transform-origin: left;
+  animation: auto-fill var(--auto-ms, 4000ms) linear forwards;
+}
+.act-main .auto-fill {
+  background: rgba(11, 16, 51, 0.16);
+}
+.auto-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+@keyframes auto-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auto-fill {
+    animation: none;
+    opacity: 0;
+  }
 }

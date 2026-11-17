@@ -21,8 +21,8 @@ export function Orb({ onTap }: { onTap?: () => void }) {
       shadow: shadow.current!,
       face: q("#orb-face"),
       eyes: [
-        { cx: -11, el: q("#eyeL"), arc: q("#arcL"), shine: q("#shineL"), key: "hL" },
-        { cx: 11, el: q("#eyeR"), arc: q("#arcR"), shine: q("#shineR"), key: "hR" },
+        { cx: -9.5, el: q("#eyeL"), arc: q("#arcL"), shine: q("#shineL"), key: "hL" },
+        { cx: 9.5, el: q("#eyeR"), arc: q("#arcR"), shine: q("#shineR"), key: "hR" },
       ],
       mouth: q("#mouth"),
       blush: [q("#blushL"), q("#blushR")],
@@ -88,8 +88,8 @@ export function Orb({ onTap }: { onTap?: () => void }) {
           <div className="orb-body">
             <svg viewBox="-50 -50 100 100" aria-hidden>
               <g id="orb-face">
-                <ellipse className="orb-blush" id="blushL" cx="-21" cy="11" rx="5.5" ry="3" />
-                <ellipse className="orb-blush" id="blushR" cx="21" cy="11" rx="5.5" ry="3" />
+                <ellipse className="orb-blush" id="blushL" cx="-18" cy="9" rx="5.5" ry="3" />
+                <ellipse className="orb-blush" id="blushR" cx="18" cy="9" rx="5.5" ry="3" />
                 <rect className="orb-eye" id="eyeL" />
                 <path className="orb-arc" id="arcL" />
                 <circle className="orb-shine" id="shineL" r="0" />

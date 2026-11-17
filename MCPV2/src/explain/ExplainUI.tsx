@@ -1,53 +1,31 @@
 "use client";
-// The faces of "Explícame esto": the button and its "by chat or by call?" choice, the player
-// bar in the chat, and the stage over the mountain where a call's visuals play large.
+// The faces of "Explícame esto": the button (it starts a call right away, never asks how), the
+// player bar, and the stage over the mountain where the call's visuals play large, with the
+// call's controls and a box to write to Cordi in the same card.
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { goExplain } from "@/ai/client";
-import { openChat } from "@/stage/chat";
+import { chat } from "@/stage/chat";
+import { call, toggleMute, toggleQuiet, typeInCall } from "@/stage/call";
 import { understanding } from "@/expedition/understanding";
 import { buildSteps } from "@/expedition/steps";
-import { Conversation } from "@/expedition/Conversation";
 import { orbSpot } from "@/stage/stage";
-import { dismiss, notify, remark, setRemarkContext } from "./remarks";
+import { remark, setRemarkContext } from "./remarks";
 import type { Case } from "@/data/cases";
 import type { Step } from "@/expedition/steps";
 import { mark } from "@/expedition/understanding";
 import { useStore } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { tones } from "@/lib/audio";
-import { cancelExplain, endExplain, explain, known, progress, switchHow, goTo, hold, inTheater, next, proceed, notClear, offerExplain, prev, repeat, replay, startExplain, togglePause } from "./player";
+import { AUTO, endExplain, explain, leaveExplain, known, progress, goTo, hold, inTheater, next, proceed, notClear, offerExplain, prev, repeat, togglePause } from "./player";
 import { Visual } from "./Visual";
 import { beatsFor } from "./beats";
 
-/** "Explícame esto", and once tapped, how: chat or call. Picks up where it was left. */
+/** "Explícame esto": Cordi starts explaining on a call, right away. Picks up where it was left. */
 export function ExplainButton({ step, c, className = "act act-main" }: { step: Step; c: Case; className?: string }) {
-  const { phase, stepId, from, beats } = useStore(explain, (s) => s);
+  const phase = useStore(explain, (s) => s.phase);
   const saved = useStore(progress, (p) => p.at[step.id] ?? 0);
-  const choosing = phase === "choose" && stepId === step.id;
-  const busy = phase === "playing";
-  if (choosing)
-    return (
-      <div className="explain-choose" role="group" aria-label="¿Cómo te lo explico?">
-        <span className="explain-ask">
-          {from ? `Seguimos en el paso ${from + 1} de ${beats.length}. ¿Cómo te lo explico?` : "¿Cómo te lo explico?"}
-        </span>
-        <button className="act act-main" onClick={() => startExplain("chat")}>
-          <IconChat /> Por chat
-        </button>
-        <button className="act act-main" onClick={() => startExplain("call")}>
-          <IconPhone /> Por llamada
-        </button>
-        {from > 0 && (
-          <button className="act act-quiet" onClick={() => explain.set({ from: 0 })}>
-            Empezar desde el principio
-          </button>
-        )}
-        <button className="act act-quiet" onClick={cancelExplain}>
-          Cancelar
-        </button>
-      </div>
-    );
+  const busy = phase === "playing" || phase === "choose";
   return (
     <button className={className} onClick={() => offerExplain(step, c)} disabled={busy}>
       <IconPlay /> {saved > 0 ? `Continuar explicación (${saved + 1}/${beatsFor(step, c).length})` : "Explícame esto"}
@@ -56,8 +34,10 @@ export function ExplainButton({ step, c, className = "act act-main" }: { step: S
 }
 
 function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?: boolean }) {
-  const { phase, i, beats, paused, waiting } = useStore(explain, (s) => s);
+  const { phase, i, beats, paused, waiting, until, waitFrom, manual } = useStore(explain, (s) => s);
   const done = phase === "done";
+  // the countdown to the next step, as a slow fill on "Seguimos" (frozen while paused)
+  const counting = waiting && !manual && (until !== null || paused);
   const last = i >= beats.length - 1;
   return (
     <div className={compact ? "xp-controls compact" : "xp-controls"}>
@@ -89,12 +69,15 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
           gently pulsing when it waits for the person to move on */}
       {goOn && !done && (
         <button
-          className={waiting ? "act act-main xp-go ready" : "act act-main xp-go"}
+          className={`act act-main xp-go auto${waiting ? " ready" : ""}`}
           onClick={proceed}
           disabled={!waiting}
           title={waiting ? "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)" : "Cordi está explicando"}
         >
-          {last ? "Listo" : "Seguimos"} <IconPlay />
+          {counting && <span key={waitFrom} className="auto-fill" aria-hidden style={{ animationDuration: `${AUTO}ms`, animationPlayState: paused ? "paused" : "running" }} />}
+          <span className="auto-label">
+            {last ? "Listo" : "Seguimos"} <IconPlay />
+          </span>
         </button>
       )}
     </div>
@@ -105,7 +88,9 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
  * The flag is planted: what that means for the climb, and the next camp one tap away (its
  * explanation starts on arrival, in the same mode). Or back to the map, or a question.
  */
-function NextUp({ c, stepId, how }: { c: Case; stepId: string; how: "chat" | "call" }) {
+const NEXT_IN = 10000; // ms before the next camp starts on its own
+
+function NextUp({ c, stepId }: { c: Case; stepId: string }) {
   const steps = useMemo(() => buildSteps(c), [c]);
   const marks = useStore(understanding, (s) => s.marks);
   const done = useStore(known, (k) => k.done);
@@ -116,6 +101,20 @@ function NextUp({ c, stepId, how }: { c: Case; stepId: string; how: "chat" | "ca
   const ahead = [...steps.slice(here + 1), ...steps.slice(0, here)].find((s) => !clear(s.id) && s.id !== stepId);
   const title = steps[here]?.title ?? "";
   const we = c.household.couple;
+  const goNext = () => {
+    if (!ahead) return;
+    tones.tap();
+    // the call stays open on the way: Cordi keeps listening between camps
+    leaveExplain();
+    goExplain(ahead.id, "call");
+  };
+  // on to the next camp by itself after a moment (the button fills up meanwhile)
+  const nextId = ahead?.id;
+  useEffect(() => {
+    if (!nextId) return;
+    const t = setTimeout(goNext, NEXT_IN);
+    return () => clearTimeout(t);
+  }, [nextId]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <motion.div className="nextup" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 140, damping: 20 }}>
       <motion.span className="nextup-flag" initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.1 }} aria-hidden>
@@ -133,16 +132,11 @@ function NextUp({ c, stepId, how }: { c: Case; stepId: string; how: "chat" | "ca
         </small>
       </div>
       {ahead ? (
-        <button
-          className="act act-main act-large nextup-go"
-          onClick={() => {
-            tones.tap();
-            endExplain();
-            goExplain(ahead.id, how);
-          }}
-          autoFocus
-        >
-          Siguiente: {ahead.title} <IconPlay />
+        <button className="act act-main act-large nextup-go auto" style={{ ["--auto-ms" as string]: `${NEXT_IN}ms` }} onClick={goNext} autoFocus>
+          <span className="auto-fill" aria-hidden />
+          <span className="auto-label">
+            Siguiente: {ahead.title} <IconPlay />
+          </span>
         </button>
       ) : (
         <p className="nextup-all">{we ? "¡Habéis" : "¡Has"} plantado todas las banderas! La cima os espera con el resumen y el primer paso.</p>
@@ -150,15 +144,6 @@ function NextUp({ c, stepId, how }: { c: Case; stepId: string; how: "chat" | "ca
       <div className="nextup-more">
         <button className="act act-quiet" onClick={() => endExplain()}>
           Volver al mapa
-        </button>
-        <button
-          className="act act-quiet"
-          onClick={() => {
-            endExplain();
-            openChat();
-          }}
-        >
-          Tengo una pregunta
         </button>
       </div>
     </motion.div>
@@ -187,7 +172,7 @@ function Fit({ children }: { children: React.ReactNode }) {
       const needH = n.scrollHeight;
       const needW = n.scrollWidth;
       if (!availH || !needH) return;
-      const k = Math.max(0.55, Math.min(1, availH / needH, availW / Math.max(needW, 1)));
+      const k = Math.max(0.35, Math.min(1, (availH - 4) / needH, availW / Math.max(needW, 1)));
       setFit((prev) => (Math.abs(prev.k - k) > 0.01 || Math.abs(prev.h - needH) > 2 ? { k, h: needH } : prev));
     };
     measure();
@@ -250,15 +235,18 @@ export function ChatPlayer() {
  * speaks and answering touch. The side panel steps aside while it's on, and comes back after.
  */
 export function ExplainStage({ c }: { c: Case }) {
-  const { phase, how, title, i, beats, stepId, saying, paused, waiting, until } = useStore(explain, (s) => s);
+  const { phase, how, title, i, beats, stepId, saying, paused, waiting } = useStore(explain, (s) => s);
   const on = how !== null && (phase === "playing" || phase === "done");
-  const step = useMemo(() => buildSteps(c).find((s) => s.id === stepId) ?? null, [c, stepId]);
   const b = beats[Math.min(i, beats.length - 1)];
   const seat = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLElement>(null);
-  const [planted, setPlanted] = useState(false);
+  // finished: the flag is planted on its own (nobody is asked "¿te ha quedado claro?")
   useEffect(() => {
-    if (phase !== "done") setPlanted(false);
+    if (phase !== "done" || !stepId) return;
+    mark(stepId, "yes");
+    orb.flashEmo("happy", 1600);
+    orb.hop(0.6);
+    tones.form();
   }, [phase, stepId]);
   const last = useRef(i);
   const dir = i >= last.current ? 1 : -1;
@@ -379,27 +367,6 @@ export function ExplainStage({ c }: { c: Case }) {
     setRemarkContext({ camp: title, beat, quiet: () => !inTheater() || explain.get().saying });
   }, [title, beat]);
 
-  // left a while on "¿Seguimos?" without doing anything: Cordi asks if an example would help
-  useEffect(() => {
-    if (!waiting) return;
-    let moved = performance.now();
-    const onAny = () => (moved = performance.now());
-    addEventListener("pointermove", onAny);
-    const id = setInterval(async () => {
-      if (performance.now() - moved < 6000) return;
-      clearInterval(id);
-      const pickd = await notify({ type: "idle", seconds: 6 });
-      if (pickd === "simpler") notClear();
-      else if (pickd === "on") proceed();
-      else if (pickd === "stay") hold();
-    }, 500);
-    return () => {
-      clearInterval(id);
-      removeEventListener("pointermove", onAny);
-      dismiss();
-    };
-  }, [waiting, i]);
-
   // keys while it plays: arrows move between steps, Space pauses
   useEffect(() => {
     if (!on) return;
@@ -421,7 +388,6 @@ export function ExplainStage({ c }: { c: Case }) {
         <motion.div key="theater" className={`theater how-${how}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.35 } }} transition={{ duration: 0.45 }}>
           <div className="theater-seat" ref={seat} aria-hidden>
             <motion.span className="theater-halo" animate={{ scale: saying ? [1, 1.08, 1] : 1, opacity: saying ? 0.9 : 0.5 }} transition={{ duration: 1.6, repeat: saying ? Infinity : 0 }} />
-            <span className="theater-state">{phase === "done" ? "¿Todo claro?" : paused ? "En pausa" : saying ? "Cordi explica" : "…"}</span>
           </div>
 
           <motion.section
@@ -438,14 +404,6 @@ export function ExplainStage({ c }: { c: Case }) {
                 <span className="xp-stage-kicker">Cordi te explica</span>
                 <h2>{title}</h2>
               </div>
-              <div className="theater-how" role="group" aria-label="Cómo te lo explica Cordi">
-                <button type="button" className={how === "chat" ? "on" : ""} onClick={() => switchHow("chat")} aria-pressed={how === "chat"}>
-                  <IconChat /> Chat
-                </button>
-                <button type="button" className={how === "call" ? "on" : ""} onClick={() => switchHow("call")} aria-pressed={how === "call"}>
-                  <IconPhone /> Llamada
-                </button>
-              </div>
               <span className="theater-n">
                 {phase === "done" ? beats.length : Math.min(i + 1, beats.length)} / {beats.length}
               </span>
@@ -454,39 +412,8 @@ export function ExplainStage({ c }: { c: Case }) {
 
             <div className="theater-body" onPointerDown={hold} onKeyDown={hold}>
               <AnimatePresence mode="popLayout" custom={dir} initial={false}>
-                {phase === "done" && planted ? (
-                  <NextUp key="next" c={c} stepId={stepId} how={how ?? "chat"} />
-                ) : phase === "done" ? (
-                  <motion.div key="check" className="xp-check" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 140, damping: 20 }}>
-                    <p>¿Te ha quedado claro este tramo?</p>
-                    <div className="gauge-row">
-                      {(
-                        [
-                          ["yes", "🙂 Lo entendí"],
-                          ["meh", "🤔 Más o menos"],
-                          ["no", "😕 No del todo"],
-                        ] as const
-                      ).map(([m, label]) => (
-                        <button
-                          key={m}
-                          className={`gauge-btn g-${m}`}
-                          onClick={() => {
-                            mark(stepId, m);
-                            tones.tap();
-                            if (m === "yes") {
-                              orb.flashEmo("happy", 1600);
-                              orb.spinOnce();
-                              tones.form();
-                              setPlanted(true);
-                            } else replay();
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                ) : (
+                {phase === "done" ? (
+                  <NextUp key="next" c={c} stepId={stepId} />                ) : (
                   <motion.div
                     key={b.id + i}
                     className="theater-visual"
@@ -511,24 +438,97 @@ export function ExplainStage({ c }: { c: Case }) {
 
             <footer className="theater-foot">
               <Controls goOn />
+              <CallDock />
             </footer>
           </motion.section>
 
-          {how === "chat" && step && (
-            <motion.aside className="theater-chat" aria-label="Conversación con Cordi" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }} transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.1 }}>
-              <header className="chat-head">
-                <span className="chat-avatar" aria-hidden />
-                <div>
-                  <p className="chat-name">Cordi</p>
-                  <p className="chat-where">{waiting ? "Te espero: pregúntame lo que quieras" : saying ? "Escribiendo…" : title}</p>
-                </div>
-              </header>
-              <Conversation step={step} c={c} compact />
-            </motion.aside>
-          )}
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Under the explanation, in the same card: the call's two switches (your microphone, Cordi's
+ * voice) and a box to write to Cordi. No transcript: Cordi answers out loud, in its bubble.
+ */
+function CallDock() {
+  const { state, muted, quiet, noMic } = useStore(call, (s) => s);
+  const [text, setText] = useState("");
+  const box = useRef<HTMLTextAreaElement>(null);
+  const on = state !== "idle";
+  const grow = () => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  };
+  const send = () => {
+    const q = text.trim();
+    if (!q) return;
+    setText("");
+    requestAnimationFrame(grow);
+    tones.tap();
+    void typeInCall(q);
+  };
+  return (
+    <div className="dock">
+      <div className="dock-bar">
+        <button
+          type="button"
+          className={muted ? "dock-btn off" : "dock-btn"}
+          onClick={toggleMute}
+          disabled={!on || noMic}
+          aria-pressed={muted}
+          aria-label={noMic ? "Sin micrófono" : muted ? "Activar tu micrófono" : "Silenciar tu micrófono"}
+          title={noMic ? "Sin acceso al micrófono: escríbeme" : muted ? "Activar tu micrófono" : "Silenciar tu micrófono"}
+        >
+          {muted ? <IconMicOff /> : <IconMic />}
+          {state === "listening" && !muted && <span className="dock-live" aria-hidden />}
+        </button>
+        <button
+          type="button"
+          className={quiet ? "dock-btn off" : "dock-btn"}
+          onClick={toggleQuiet}
+          aria-pressed={quiet}
+          aria-label={quiet ? "Volver a oír a Cordi" : "Silenciar a Cordi"}
+          title={quiet ? "Volver a oír a Cordi" : "Silenciar a Cordi (sigue con subtítulos)"}
+        >
+          {quiet ? <IconVoiceOff /> : <IconVoice />}
+        </button>
+        <form
+          className="dock-input"
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+        >
+          <textarea
+            ref={box}
+            rows={1}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              chat.set({ typedAt: Date.now() });
+              grow();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            placeholder={state === "thinking" ? "Cordi está pensando…" : "Pregúntale por escrito"}
+            aria-label="Pregunta a Cordi por escrito"
+          />
+          <button type="submit" className="dock-send" title="Enviar" aria-label="Enviar" disabled={!text.trim() || !on}>
+            <svg {...svg}>
+              <path d="M5 12h13M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -558,13 +558,26 @@ const IconRepeat = () => (
     <path d="M4 12a8 8 0 0 1 14-5.3M20 4v4h-4M20 12a8 8 0 0 1-14 5.3M4 20v-4h4" />
   </svg>
 );
-const IconChat = () => (
+const IconMic = () => (
   <svg {...svg}>
-    <path d="M4 5h16v11H9l-5 4z" />
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
   </svg>
 );
-const IconPhone = () => (
+const IconMicOff = () => (
   <svg {...svg}>
-    <path d="M5 4h3l1.5 4-2 1.3a11 11 0 0 0 5.2 5.2l1.3-2L18 14v3a2 2 0 0 1-2 2A13 13 0 0 1 3 6a2 2 0 0 1 2-2z" />
+    <path d="M9 9v2a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M5.5 11a6.5 6.5 0 0 0 10.6 5M18.5 11c0 .8-.1 1.5-.4 2.2M12 17.5V21M3 3l18 18" />
+  </svg>
+);
+const IconVoice = () => (
+  <svg {...svg}>
+    <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+    <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+  </svg>
+);
+const IconVoiceOff = () => (
+  <svg {...svg}>
+    <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+    <path d="M16 9.5l5 5M21 9.5l-5 5" />
   </svg>
 );

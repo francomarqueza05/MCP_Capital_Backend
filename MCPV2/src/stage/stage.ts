@@ -1,7 +1,7 @@
 // The conversation layer: captions that reveal word by word on the voice's own timing,
 // choices, and the speech bubble that follows the orb. Imperative on purpose: the intro is a
 // script (`await say(...)`), and React only draws what these stores say.
-import { hasVoice, line, speak, stopVoice, tones } from "@/lib/audio";
+import { hasVoice, isVoiceHeld, line, speak, stopVoice, tones } from "@/lib/audio";
 import { createStore } from "@/lib/store";
 import { orb, type Emotion } from "@/orb/engine";
 
@@ -170,7 +170,27 @@ export function noteInBubble(text: string) {
   clearTimeout(bubbleTimer);
   bubble.set({ text, visible: true });
 }
+/**
+ * A narrated line in the bubble (the intro, each camp on the tour): its words appear on the
+ * voice's timing (seconds per word) and the bubble goes after `ms`. There are no subtitles
+ * anywhere else: what Cordi says lives in its bubble.
+ */
+let lineTimers: ReturnType<typeof setTimeout>[] = [];
+export function lineInBubble(text: string, times: number[], ms: number) {
+  if (bubbleHeld) return;
+  lineTimers.forEach(clearTimeout);
+  lineTimers = [];
+  clearTimeout(bubbleTimer);
+  const words = text.split(" ");
+  bubble.set({ text: words[0] ?? "", visible: true });
+  words.forEach((_, i) => {
+    if (i) lineTimers.push(setTimeout(() => bubble.set({ text: words.slice(0, i + 1).join(" ") }), (times[i] ?? i * 0.3) * 1000));
+  });
+  bubbleTimer = setTimeout(() => bubble.set({ visible: false }), ms);
+}
 export function hideBubble() {
+  lineTimers.forEach(clearTimeout);
+  lineTimers = [];
   clearTimeout(bubbleTimer);
   bubble.set({ visible: false });
 }
@@ -213,7 +233,7 @@ export function captionInBubble(id: string) {
           orb.pulse(0.4, 1.1);
         }
         if (moved) show(i);
-        if (voice.audio.ended || voice.audio.error || voice.audio.paused) {
+        if (voice.audio.ended || voice.audio.error || (voice.audio.paused && !isVoiceHeld())) {
           show(words.length);
           end();
           return;
@@ -222,15 +242,29 @@ export function captionInBubble(id: string) {
       };
       tick();
     } else {
-      orb.speakFor(words.length * 260);
-      words.forEach((_, i) =>
-        setTimeout(() => {
-          if (stopped) return;
-          show(i + 1);
+      // no audio: a reading pace on its own clock, which also stops while paused
+      let t = 0;
+      let last = performance.now();
+      let i = 0;
+      const tick = () => {
+        if (stopped) return;
+        const now = performance.now();
+        if (!isVoiceHeld()) t += now - last;
+        last = now;
+        const n = Math.min(words.length, Math.floor(t / 260) + 1);
+        if (n > i) {
+          i = n;
+          show(i);
           orb.pulse(0.5, 0.8);
-          if (i === words.length - 1) setTimeout(end, 500);
-        }, i * 260),
-      );
+          orb.speakFor(300);
+        }
+        if (t > words.length * 260 + 500) {
+          end();
+          return;
+        }
+        requestAnimationFrame(tick);
+      };
+      tick();
     }
   });
   return {

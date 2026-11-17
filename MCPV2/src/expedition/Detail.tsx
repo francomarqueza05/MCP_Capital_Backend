@@ -3,20 +3,16 @@
 // the mountain until it becomes the panel, while a hairline keeps the two joined. Inside, one
 // choreographed reveal, in reading order: the title rises word by word, the camp's key figure
 // counts up, the scene comes into focus, and last, what Sherpas proposes.
-// The panel has two tabs: this camp's detail, and the conversation with Cordi, which stays
-// open (and keeps its history) while you move from camp to camp.
+// Just the camp: no tabs and no suggested questions. Talking to Cordi happens on the call that
+// "Explícame esto" starts, in its own card.
 import { animate, AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
 import { useEffect, useState } from "react";
 import type { Case, Topic } from "@/data/cases";
 import { pillarPoints } from "@/data/cases";
 import { byImpact, EFFORT, fixFor, money, moveName, num, short } from "@/lib/copy";
-import { chat, openChat, setTab } from "@/stage/chat";
 import { Scene } from "@/dashboard/scenes";
 import { useStore } from "@/lib/store";
-import { Conversation } from "./Conversation";
-import { CallButton } from "@/stage/CallBar";
 import { ExplainButton } from "@/explain/ExplainUI";
-import { Questions } from "./Questions";
 import { understanding } from "./understanding";
 import type { Step } from "./steps";
 
@@ -160,8 +156,6 @@ export function Detail({
   void origin;
   const where = index === 0 ? "Campamento base" : index === total - 1 ? "La cima" : `Campamento ${index} de ${total - 2}`;
   const kind = step.status;
-  const tab = useStore(chat, (s) => s.tab);
-  const asked = useStore(chat, (s) => s.msgs.filter((m) => m.who === "you").length);
 
   return (
     <AnimatePresence>
@@ -176,36 +170,12 @@ export function Detail({
           aria-label={step.title}
         >
           <span className="detail-glow" aria-hidden />
-          <nav className="tabs" role="tablist" aria-label="Panel">
-            <button role="tab" aria-selected={tab === "detail"} className={tab === "detail" ? "tab on" : "tab"} onClick={() => setTab("detail")}>
-              Detalle
-            </button>
-            <button role="tab" aria-selected={tab === "chat"} className={tab === "chat" ? "tab on" : "tab"} onClick={() => setTab("chat")}>
-              Conversación{asked > 0 && <span className="tab-count">{asked}</span>}
-            </button>
-            <button className="detail-close" onClick={onClose} aria-label="Cerrar el panel">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
-          </nav>
-
-          {tab === "chat" ? (
-            <div className="pane pane-chat" role="tabpanel">
-              <header className="chat-head">
-                <span className="chat-avatar" aria-hidden />
-                <div>
-                  <p className="chat-name">Cordi</p>
-                  <p className="chat-where">
-                    Ahora en {where.toLowerCase()} · {step.title}
-                  </p>
-                </div>
-                <CallButton className="act chat-call" label="Llamar" />
-              </header>
-              <Conversation step={step} c={c} />
-            </div>
-          ) : (
-          <div className="pane" key={step.id} role="tabpanel">
+          <button className="detail-close solo" onClick={onClose} aria-label="Cerrar el panel">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+          <div className="pane" key={step.id}>
           <header className="detail-head">
             <motion.p className="narr-where" {...reveal(0.3)}>
               {where}
@@ -284,13 +254,9 @@ export function Detail({
             )}
 
             {step.kind === "summit" && steps && onGo && <Review steps={steps} onGo={onGo} couple={c.household.couple} />}
-            <Questions step={step} c={c} delay={1.5} />
           </div>
 
           <motion.footer className="detail-foot" {...reveal(1.2)}>
-            <button className="act act-quiet" onClick={openChat}>
-              Preguntar a Cordi
-            </button>
             {onNext && (
               <button className="act act-main" onClick={onNext}>
                 Siguiente campamento
@@ -298,7 +264,6 @@ export function Detail({
             )}
           </motion.footer>
           </div>
-          )}
         </motion.aside>
       )}
     </AnimatePresence>

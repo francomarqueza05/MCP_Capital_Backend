@@ -4,12 +4,11 @@
 // it said another way. Talking over Cordi on a call pauses it. At the end: "is it clear?".
 import type { Case } from "@/data/cases";
 import type { Step } from "@/expedition/steps";
-import { prefetchSpeech, tones } from "@/lib/audio";
+import { holdVoice, prefetchSpeech, releaseVoice, stopVoice, tones } from "@/lib/audio";
 import { createStore, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { call, hangUp, inCall, listenInCall, sayInCall, startCall, stopLine } from "@/stage/call";
 import { chat, closePanel, cordiWrites, logMsg, openChat } from "@/stage/chat";
-import { showBubble } from "@/stage/stage";
 import { agentActive, agentSay, allowAdvance, startAgent } from "@/stage/agent";
 import { checkAI } from "@/ai/client";
 import { beatsFor, type Beat } from "./beats";
@@ -36,6 +35,15 @@ export const explain = createStore({
   until: null as number | null,
   /** Where to start: 0, or the step saved from last time ("seguir donde lo dejé"). */
   from: 0,
+  /** When the current countdown to the next step started (it drives the button's fill). */
+  waitFrom: 0,
+  /** What was left of the countdown when paused. */
+  left: null as number | null,
+  /**
+   * The person took the wheel (said "no lo entiendo", wrote or asked something): no more
+   * countdowns in this camp, they move on with "Seguimos" when they want.
+   */
+  manual: false,
 });
 
 /**
@@ -68,6 +76,14 @@ let run = 0; // bumps on every start/stop, so an old loop knows to quit
 let jumped = false; // a control moved the position: the loop shouldn't advance on its own
 
 const DWELL = 1300; // pause after each beat in the chat, so the visual can be read
+// After each step the visual stays a good while to be looked at, with a slow countdown on the
+// "Seguimos" button; then it moves on by itself. Touching the visual starts the countdown again.
+export const AUTO = 12000;
+
+/** The person asked, wrote, or didn't understand: they'll move on themselves from now on. */
+export function takeWheel() {
+  explain.set({ manual: true, until: null, left: null });
+}
 
 /** "Explícame esto": Cordi asks how the person wants it. */
 /** The agent showed step i: it counts as reached, for picking up later. */
@@ -87,11 +103,10 @@ export function offerExplain(step: Step, c: Case, quiet = false) {
   tones.tap();
   const beats = beatsFor(step, c);
   const saved = progress.get().at[step.id] ?? 0;
-  explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false });
+  explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false, manual: false, left: null });
   if (quiet) return;
-  orb.setEmo("curious");
-  orb.hop(0.5);
-  showBubble(`¿Te lo explico por chat o por llamada?`, 5000);
+  // never asked how: Cordi starts talking right away, as a call
+  void startExplain("call");
 }
 
 /**
@@ -132,6 +147,8 @@ export async function switchHow(how: How) {
 
 export function cancelExplain() {
   run++;
+  // leaving while paused: nothing stays frozen (the next time starts playing normally)
+  if (explain.get().paused) stopVoice();
   explain.set({ phase: "off", paused: false, saying: false, waiting: false, until: null });
   chat.set({ busy: false, live: null });
   orb.setEmo("neutral");
@@ -142,7 +159,7 @@ export async function startExplain(how: How) {
   if (s.phase !== "choose" || !s.beats.length) return;
   const my = ++run;
   tones.tap();
-  orb.spinOnce();
+  orb.hop(0.4);
   const from = s.from;
   explain.set({ phase: "playing", how, i: from, paused: false });
   if (how === "call" && (await checkAI()).agent) {
@@ -203,14 +220,21 @@ async function loop(my: number) {
       // "¿Seguimos?": the visual stays to be explored; on by itself only if left untouched
       // the on-screen bar asks "¿Seguimos?": Cordi doesn't say it after every step
       // it waits for "Seguimos" (or a chapter, an arrow, "No lo entiendo"): never on its own
-      explain.set({ waiting: true, until: null });
+      explain.set({ waiting: true, until: explain.get().manual ? null : performance.now() + AUTO, waitFrom: performance.now(), left: null });
       // in the chat, the person can write to Cordi while it waits; on a call, Cordi listens
       // (a spoken "sí, seguimos" moves on; anything else is a question it answers)
       if (s.how === "chat") chat.set({ busy: false });
       else listenInCall();
       while (my === run && explain.get().waiting && !jumped) {
+        // Cordi still answering something: the step waits for that to finish
+        const busyNow = (s.how === "call" && call.get().state !== "listening") || (s.how === "chat" && chat.get().busy);
+        if (busyNow && explain.get().until !== null) explain.set({ until: Math.max(explain.get().until ?? 0, performance.now() + 1500) });
         const u = explain.get().until;
-        if (u !== null && !explain.get().paused && performance.now() > u) break;
+        if (u !== null && !explain.get().paused && performance.now() > u) {
+          // on by itself: on a call, Cordi takes the turn back to say the next step
+          if (s.how === "call" && inCall()) call.set({ state: "speaking" });
+          break;
+        }
         await wait(80);
       }
       explain.set({ waiting: false, until: null });
@@ -254,7 +278,7 @@ async function finish(my: number) {
   const s = explain.get();
   clear(s.stepId);
   explain.set({ phase: "done", saying: false });
-  const close = "¿Te ha quedado claro? Si algo no, pregúntame lo que quieras.";
+  const close = "Si te queda alguna duda, escríbeme o pregúntame lo que quieras.";
   if (s.how === "call" && inCall()) {
     logMsg("cordi", close, s.title);
     await sayInCall(close);
@@ -267,17 +291,30 @@ async function finish(my: number) {
 }
 
 // ---------------------------------------------------------------- controls
+/**
+ * Pause freezes everything where it is: the voice mid-word, the caption, the visual, the
+ * countdown. Play picks up from that same instant.
+ */
 export const togglePause = () => {
-  const p = !explain.get().paused;
+  const s = explain.get();
+  const p = !s.paused;
   if (live()) {
     explain.set({ paused: p });
     agentSay(p ? "Espera un momento, por favor." : "Ya está, sigue.");
     return;
   }
-  // resuming on a call takes the turn back from listening
-  if (!p && explain.get().how === "call" && inCall()) call.set({ state: "speaking" });
-  explain.set({ paused: p });
-  if (p) orb.setEmo("neutral");
+  const now = performance.now();
+  if (p) {
+    holdVoice();
+    explain.set({ paused: true, left: s.until !== null ? Math.max(0, s.until - now) : null });
+    orb.setEmo("neutral");
+    return;
+  }
+  releaseVoice();
+  // cut off earlier by the person talking: Cordi takes the turn back to go on
+  if (!s.waiting && !s.saying && s.how === "call" && inCall() && call.get().state === "listening") call.set({ state: "speaking" });
+  explain.set({ paused: false, until: s.left !== null ? now + s.left : s.until, left: null });
+  if (s.saying) orb.setEmo("speaking");
 };
 
 function jump(to: number) {
@@ -306,7 +343,7 @@ export const proceed = () => {
 /** The person is exploring the visual: Cordi waits for them instead of moving on. */
 export const hold = () => {
   const s = explain.get();
-  if (s.waiting && s.until !== null) explain.set({ until: null });
+  if (s.waiting && s.until !== null && !s.paused) explain.set({ until: performance.now() + AUTO, waitFrom: performance.now() });
 };
 /** A chapter tapped: that step, from the top (also from the end, to look again). */
 export function goTo(k: number) {
@@ -339,11 +376,13 @@ export async function notClear() {
   const s = explain.get();
   const b = s.beats[s.i];
   if (!b) return;
+  takeWheel();
   if (live()) {
     explain.set({ paused: false, waiting: false });
     agentSay("No lo he entendido, ¿me lo explicas más fácil?");
     return;
   }
+  takeWheel();
   const my = ++run; // the old loop stops; this one picks up from here
   cut();
   explain.set({ paused: false, phase: "playing" });
@@ -382,6 +421,12 @@ export async function replay() {
     await cordiWrites("Vamos otra vez, más despacio.", s.title, undefined, () => my === run);
   }
   if (my === run) await loop(my);
+}
+
+/** Ends this explanation but keeps the call on (on the way to the next camp's). */
+export function leaveExplain() {
+  cancelExplain();
+  closePanel();
 }
 
 export function endExplain() {

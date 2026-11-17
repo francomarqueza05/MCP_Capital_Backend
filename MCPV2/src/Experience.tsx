@@ -9,13 +9,11 @@ import { isMuted, setMuted, tones, unlock } from "@/lib/audio";
 import { Orb } from "@/orb/Orb";
 import { Ask } from "@/stage/Ask";
 import { Bubble } from "@/stage/Caption";
-import { chat, openChat } from "@/stage/chat";
 import { CallBar } from "@/stage/CallBar";
 import { checkAI, session } from "@/ai/client";
 import { ExplainStage } from "@/explain/ExplainUI";
 import { RemarkCard } from "@/explain/RemarkCard";
 import { inCall } from "@/stage/call";
-import { useStore } from "@/lib/store";
 import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
 import { Login, ProfileChip } from "@/intro/Login";
@@ -26,7 +24,6 @@ export function Experience() {
   const [sound, setSound] = useState(true);
   const [phase, setPhase] = useState<Phase>("wait");
   const exp = useRef<ExpeditionHandle>(null);
-  const talked = useStore(chat, (s) => s.msgs.filter((m) => m.who === "you").length);
 
   // who's climbing: picked on the start screen (or already in the link, ?case=...)
   const [picked, setPicked] = useState<string | null>(null);
@@ -73,7 +70,6 @@ export function Experience() {
       <Orb
         onTap={() => {
           if (inCall()) return;
-          openChat();
           showBubble("howCanIHelp", 2200);
         }}
       />
@@ -88,21 +84,6 @@ export function Experience() {
           <span className="wordmark">cordada</span>
           <div className="topbar-right">
             <ProfileChip c={getCase(caseId)} onSwitch={switchProfile} />
-            {talked > 0 && (
-              <button className="act act-quiet" onClick={openChat}>
-                Conversación ({talked})
-              </button>
-            )}
-            <button
-              className="act act-quiet"
-              onClick={() => {
-                unlock();
-                setMuted(!isMuted());
-                setSound(!isMuted());
-              }}
-            >
-              {sound ? "Silenciar" : "Activar sonido"}
-            </button>
           </div>
         </header>
       )}

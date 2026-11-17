@@ -8,12 +8,11 @@
 // camera, the route, the flags and where Cordi should be; the orb engine gives Cordi its weight.
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Case } from "@/data/cases";
-import { hasVoice, line, playSfx, prefetchSpeech, speak, stopSfx, stopVoice, tones } from "@/lib/audio";
+import { line, playSfx, prefetchSpeech, speak, stopSfx, stopVoice, tones } from "@/lib/audio";
 import { clamp, easeInOut, lerp, useStore, wait } from "@/lib/store";
 import { orb, type Emotion } from "@/orb/engine";
 import { emit, ring, setStars } from "@/orb/fx";
-import { openAsk } from "@/stage/Ask";
-import { orbSpot, showBubble } from "@/stage/stage";
+import { hideBubble, lineInBubble, orbSpot } from "@/stage/stage";
 import { buildSteps, type Step } from "./steps";
 import { campU, ROUTE, SUMMIT, WH, WW } from "./world";
 import { COLOR, drawOccluder, drawWorld, type Frame } from "./render";
@@ -39,6 +38,7 @@ type Cordi =
 
 export type ExpeditionHandle = { start: () => void; skip: () => void };
 export type Phase = "wait" | "intro" | "overview" | "tour";
+const GUIDE_IN = 4000; // ms on the whole mountain before the guided tour starts by itself
 
 export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: Phase) => void }>(function Expedition({ c, onPhase }, ref) {
   const steps = useMemo(() => buildSteps(c), [c]);
@@ -118,6 +118,10 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   const touring = useRef(false);
   const cw = useRef({ x: 0, y: 0, vx: 0, vy: 0, ready: false });
   const cs = useRef({ x: 0, y: 0, vx: 0, vy: 0, ready: false }); // Cordi held at a screen spot
+  // the guided tour walks on by itself, camp after camp, until the person takes the wheel
+  const [auto, setAuto] = useState(false);
+  const [autoAt, setAutoAt] = useState<{ ms: number; key: number } | null>(null);
+  const narrEnd = useRef(0);
   const live = useRef({ idx: -1, detail: false, phase: "wait" as Phase, hover: null as number | null, visited: 0 });
   live.current = { idx, detail: sheet && !theater, phase, hover, visited };
   const introT0 = useRef(-1);
@@ -360,12 +364,17 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         cw.current.ready = false;
         if (Math.hypot(s.vx, s.vy) > 220 && Math.random() < 0.3) emit(s.x, s.y + 20, 1, { vy: 8, life: 0.9, size: 0.9 });
       } else if (cd.mode === "rise") {
+        // it floats up like something light, not on a rail: a soft overshoot at the top, a
+        // lazy side-to-side sway that dies down, and a breathing bob once it's up
         const k = clamp((now - cd.t0) / cd.dur, 0, 1);
-        const e = 1 - Math.pow(1 - k, 3);
-        const [sx, sy] = toScreen(SUMMIT.x, SUMMIT.y + lerp(70, -130, e));
+        const back = 1.25;
+        const e = 1 + (back + 1) * Math.pow(k - 1, 3) + back * Math.pow(k - 1, 2);
+        const sway = Math.sin(k * Math.PI * 2.4) * 26 * (1 - k * 0.75);
+        const bob = Math.sin(now / 520) * 4 * k;
+        const [sx, sy] = toScreen(SUMMIT.x + sway, SUMMIT.y + lerp(70, -130, e) + bob);
         orb.x = sx;
         orb.y = sy;
-        orb.scale = scale * lerp(0.7, 1, e);
+        orb.scale = scale * lerp(0.7, 1, Math.min(1, e));
         if (Math.random() < 0.25) emit(sx + (Math.random() - 0.5) * 30, sy + 30, 1, { vy: -14, life: 1.4, size: 1.1 });
       } else if (cd.mode !== "hidden") {
         const b = cw.current;
@@ -408,7 +417,8 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
   // ---------------------------------------------------------------- narration
   const narrate = useCallback(async (l: Line) => {
     if (skipped.current && l.title === undefined) return;
-    stopVoice();
+    // on a call the voice belongs to the call: never cut Cordi off mid-sentence there
+    if (!inCall()) stopVoice();
     // on a call, Cordi's voice belongs to the call: narration shows as text only
     const voice = l.voice && !inCall() ? await speak(l.voice) : null;
     const words = l.text.split(" ");
@@ -416,7 +426,11 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     const key = Math.random();
     remember(l.text);
     setNarr({ ...l, times, key });
+    // the words go in Cordi's bubble; on the tour it stays a while so it can be read again
+    lineInBubble(l.text, times, (times.at(-1) ?? 0) * 1000 + (l.title !== undefined ? 6000 : 900));
     const ms = (times.at(-1) ?? 0) * 1000 + 450;
+    // when this line will be over (voice, or a reading pace without it): the tour moves on after
+    narrEnd.current = performance.now() + Math.max(ms, voice ? 0 : words.length * 300);
     const pulses = times.map((t) => setTimeout(() => orb.pulse(0.35, 0.9), t * 1000));
     if (!voice) orb.speakFor(ms - 300);
     if (l.title !== undefined) return;
@@ -456,7 +470,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
             voice.audio.addEventListener("error", () => r(), { once: true });
           })
         : wait(ms);
-      spoken.then(() => pause(1100)).then(end);
+      spoken.then(() => pause(450)).then(end);
       if (skipped.current) end();
     });
   }, []);
@@ -498,10 +512,11 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       if (st.status === "goal") {
         orb.hop(1);
         setTimeout(() => (cw.current.vy -= 520), 120);
-        orb.spinOnce();
       }
       if (open) setDetail(true);
-      if (!pending.current) narrate({ title: st.title, label: st.label, status: st.status, text: st.say, step: i });
+      if (!pending.current) narrate({ title: st.title, label: st.label, status: st.status, text: st.say, voice: st.say, step: i });
+      // the next camp's line, ready before Cordi gets there
+      if (steps[i + 1]) prefetchSpeech(steps[i + 1].say);
     },
     [steps, campPos, narrate],
   );
@@ -514,7 +529,10 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         if (open) setDetail(true);
         return;
       }
-      stopVoice();
+      if (!inCall()) {
+        stopVoice();
+        hideBubble();
+      }
       tones.tap();
       const from = u.current;
       const to = campU(i, n);
@@ -572,6 +590,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
 
   const guide = useCallback(() => {
     tones.tap();
+    setAuto(true);
     const cc = cam.current;
     cc.k = 3.4;
     cc.kz = 1.6;
@@ -584,6 +603,27 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     setPhase("tour");
     arrive(i, false);
   }, [idx, n, arrive, setPhase]);
+
+  // the whole mountain after the intro: the guided tour starts by itself after a moment
+  useEffect(() => {
+    if (phase !== "overview" || idx >= 0 || auto) return;
+    const t = setTimeout(guide, GUIDE_IN);
+    return () => clearTimeout(t);
+  }, [phase, idx, auto, guide]);
+
+  // on the tour: once Cordi has said the camp, on to the next one (paused while the detail or
+  // an explanation is open, and stopped when the person picks a flag or the whole mountain)
+  useEffect(() => {
+    if (!auto || phase !== "tour" || walking || sheet || theater || transit || idx < 0 || idx >= n - 1 || !narr || narr.step !== idx) {
+      setAutoAt(null);
+      return;
+    }
+    // time to think whether to dig in ("Explícame esto") before walking on
+    const ms = Math.max(9000, narrEnd.current - performance.now() + 6000);
+    setAutoAt({ ms, key: Math.random() });
+    const t = setTimeout(() => go(idx + 1), ms);
+    return () => clearTimeout(t);
+  }, [auto, phase, walking, sheet, theater, transit, idx, narr?.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- the opening
   // The camera drifts in on the night; the ranges rise back to front; the yak arrives; the
@@ -605,7 +645,11 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     cc.k = 0.55;
     introT0.current = reduced ? -1e9 : performance.now();
     playSfx("ambient", { vol: 0.34, fadeAt: 11000 });
+    // the opening lines go through the live voice too, so all of the intro is one voice
+    prefetchSpeech(line("hello"));
+    prefetchSpeech(line("intro"));
     prefetchSpeech(mountainLine);
+    prefetchSpeech(steps[0].say);
 
     await pause(reduced ? 0 : 2300);
     draw.current = { t0: performance.now(), dur: reduced || skipped.current ? 1 : 2600, popped: 0 };
@@ -620,7 +664,10 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     if (!skipped.current) {
       occlude.current = true;
       orb.mode = "puppet";
-      orb.setEmo("calm");
+      // it peeks out curious, with a little stretch, rather than rising stiff and sleepy
+      orb.setEmo("curious");
+      orb.hop(0.4);
+      setTimeout(() => orb.flashEmo("happy", 900), 1700);
       playSfx("swell", { vol: 0.42 });
       cordi.current = { mode: "rise", t0: performance.now(), dur: 2800 };
       await pause(2900);
@@ -628,7 +675,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       const [sx, sy] = toScreen(SUMMIT.x, SUMMIT.y - 130);
       ring(sx, sy, 30, 120, 1.1);
       tones.form();
-      orb.spinOnce();
+      orb.hop(0.5);
       orb.flashEmo("happy", 1400);
     }
     occlude.current = false;
@@ -641,9 +688,9 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     cordi.current = { mode: "camp", at: 1 };
     u.current = 1;
     await pause(700);
-    await narrate({ text: line("hello"), voice: hasVoice("hello") ? "hello" : undefined });
+    await narrate({ text: line("hello"), voice: line("hello") });
     await pause(250);
-    await narrate({ text: line("intro"), voice: hasVoice("intro") ? "intro" : undefined });
+    await narrate({ text: line("intro"), voice: line("intro") });
     await pause(250);
     orb.setEmo("speaking");
     // no pre-rendered recording for this line: the live voice says it (fetched at the start)
@@ -655,6 +702,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     cc.k = 2;
     const dive = skipped.current ? 1600 : 3600;
     cordi.current = { mode: "walk", from: 1, to: 0, t0: performance.now(), dur: dive, wide: true };
+    tones.descend(dive);
     await wait(dive + 200);
     cordi.current = { mode: "camp", at: 0 };
     u.current = 0;
@@ -750,7 +798,14 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
         onClick={(e) => {
           if (!interactive) return;
           const i = flagAt(e.clientX, e.clientY);
-          if (i >= 0) go(i, true);
+          if (i >= 0) {
+            setAuto(false);
+            go(i, true);
+          } else if (phase === "tour" && !walking) {
+            // a click away from the flags: the whole mountain
+            setAuto(false);
+            overview();
+          }
         }}
       />
       <canvas ref={front} className="world world-front" aria-hidden />
@@ -765,7 +820,10 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
             className={`note t-${st.status} ${sides[i]}${marks[st.id] === "yes" ? " understood" : ""}${hover === i ? " on" : ""}${phase === "overview" && i === Math.max(0, idx) ? " here" : ""}`}
             style={{ ["--i" as string]: i }}
             tabIndex={phase === "overview" ? 0 : -1}
-            onClick={() => go(i, true)}
+            onClick={() => {
+              setAuto(false);
+              go(i, true);
+            }}
             onPointerEnter={() => setHover(i)}
             onPointerLeave={() => setHover(null)}
             aria-label={`${st.title}: ${st.sign.fig}, ${st.sign.note}`}
@@ -790,22 +848,17 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
                 Ver el detalle
               </button>
               {idx < n - 1 && (
-                <button className="act" onClick={() => go(idx + 1)} disabled={walking}>
-                  Siguiente campamento
+                <button
+                  key={autoAt?.key ?? "manual"}
+                  className={autoAt ? "act auto" : "act"}
+                  style={autoAt ? { ["--auto-ms" as string]: `${autoAt.ms}ms` } : undefined}
+                  onClick={() => go(idx + 1)}
+                  disabled={walking}
+                >
+                  {autoAt && <span className="auto-fill" aria-hidden />}
+                  <span className="auto-label">Siguiente campamento</span>
                 </button>
               )}
-              <button className="act act-quiet" onClick={overview}>
-                Ver toda la montaña
-              </button>
-              <button
-                className="act act-quiet"
-                onClick={() => {
-                  openAsk();
-                  showBubble("howCanIHelp", 2200);
-                }}
-              >
-                Preguntar a Cordi
-              </button>
             </>
           )
         }
@@ -818,8 +871,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
             {n - 2} campamentos entre la base y la cima. Toca una bandera para ir directo, o deja que Cordi {c.household.couple ? "os" : "te"} guíe desde abajo.
           </p>
           <div className="overview-actions">
-            <button className="act act-main act-large" onClick={guide}>
-              {idx < 0 ? "Empezar la visita guiada" : "Seguir la visita guiada"}
+            <button
+              className={idx < 0 && !auto ? "act act-main act-large auto" : "act act-main act-large"}
+              style={{ ["--auto-ms" as string]: `${GUIDE_IN}ms` }}
+              onClick={guide}
+            >
+              {idx < 0 && !auto && <span className="auto-fill" aria-hidden />}
+              <span className="auto-label">{idx < 0 ? "Empezar la visita guiada" : "Seguir la visita guiada"}</span>
             </button>
           </div>
         </section>

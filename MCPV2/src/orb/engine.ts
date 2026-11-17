@@ -57,13 +57,14 @@ const KICK: Partial<Record<Emotion, [number, number]>> = {
   listening: [-60, 1],
   concerned: [70, 1.3],
 };
-const ACTS: [string, number][] = [["wander", 45], ["look", 20], ["hop", 15], ["loop", 11], ["spin", 9]];
+// no spins on its own: a sudden full turn read as a glitch
+const ACTS: [string, number][] = [["wander", 50], ["look", 22], ["hop", 16], ["loop", 12]];
 
 /** puppet: something else sets x/y every frame (the expedition camera); the body still reacts. */
 export type Mode = "off" | "intro" | "talk" | "hold" | "idle" | "puppet";
 
 /** Eyes and mouth, a little bigger than the first proposal so the face reads from afar. */
-const FACE = 1.25;
+const FACE = 1.6;
 
 type Els = {
   root: HTMLElement;
@@ -523,7 +524,7 @@ export class OrbEngine {
       eye.el.setAttribute("height", String(h));
       eye.el.setAttribute("rx", String(Math.min(w, h) / 2));
       eye.el.style.opacity = String(1 - P.happy);
-      eye.arc.setAttribute("d", `M${eye.cx - 4.5},${cy + 1.5} Q${eye.cx},${cy - 5.5} ${eye.cx + 4.5},${cy + 1.5}`);
+      eye.arc.setAttribute("d", `M${eye.cx - 4},${cy + 1.5} Q${eye.cx},${cy - 5} ${eye.cx + 4},${cy + 1.5}`);
       eye.arc.style.opacity = String(P.happy);
       eye.shine.setAttribute("cx", String(eye.cx - w * 0.15));
       eye.shine.setAttribute("cy", String(cy - h * 0.26));
@@ -535,7 +536,7 @@ export class OrbEngine {
     const mo = P.mo + this.mouthOpen * 5.5 + this.level * 2.5;
     const mc = P.mc * (1 - this.mouthOpen * 0.5);
     const mw = P.mw + this.mouthOpen * 1.2;
-    const my = 14;
+    const my = 11.5;
     els.mouth.setAttribute("d", `M${-mw},${my} Q0,${my + mc - mo} ${mw},${my} Q0,${my + mc + mo} ${-mw},${my}Z`);
     for (const b of els.blush) b.style.opacity = String(P.blush);
 
