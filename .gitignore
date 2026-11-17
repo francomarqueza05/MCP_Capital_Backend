@@ -1,8 +1,16 @@
+# dependencies and builds
 node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# secrets (the template stays)
 .env
 .env.*
 !.env.example
-.data/
-.cache/
-*.log
+
+# local tooling
 graphify-out/
+*.log
+.DS_Store

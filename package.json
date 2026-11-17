@@ -1,36 +1,27 @@
 {
-  "name": "cordada-api",
+  "name": "cordada",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cordada backend: phase engine, households, goals and voice for the Sherpas hackathon",
-  "engines": {
-    "node": ">=22"
-  },
   "scripts": {
-    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
-    "start": "tsx --env-file-if-exists=.env src/index.ts",
-    "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit",
-    "agent": "tsx --env-file=.env scripts/agent.ts",
-    "openapi": "tsx scripts/openapi.ts",
-    "bench": "tsx --env-file-if-exists=.env bench/run.ts",
-    "voice:orb": "tsx --env-file-if-exists=.env scripts/voice-orb.ts",
-    "sfx:orb": "tsx --env-file-if-exists=.env scripts/sfx-orb.ts",
-    "cases:orb": "tsx --env-file=.env scripts/cases-orb.ts"
+    "dev": "next dev --port 3100",
+    "build": "next build",
+    "start": "next start --port 3100",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.16",
-    "@hono/node-server": "^2.1.8",
-    "@hono/swagger-ui": "^0.6.2",
-    "@hono/zod-openapi": "^1.6.3",
-    "hono": "^4.13.18",
-    "postgres": "^4.1.1",
-    "zod": "^4.6.7"
+    "@elevenlabs/client": "1.33.0",
+    "motion": "^14.14.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.6",
-    "tsx": "^4.23.15",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2"
   }
 }

@@ -1,6 +1,0 @@
-{
-  "ambient": { "prompt": "Soft cinematic mountain dawn ambience: gentle high-altitude wind and a warm, airy synth pad slowly swelling. Calm and hopeful. No melody, no drums, no voices.", "seconds": 7 },
-  "chime": { "prompt": "A single soft glass chime, gentle and airy, short clean decay. Elegant UI sound.", "seconds": 1 },
-  "flag": { "prompt": "A small cloth flag fluttering briefly in a light mountain breeze.", "seconds": 1.2 },
-  "swell": { "prompt": "Warm shimmering magical swell rising gently, soft sparkles, like light breaking over a mountain at sunrise, ending softly.", "seconds": 2.6 }
-}
