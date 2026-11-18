@@ -11,7 +11,7 @@ import { createStore, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { call, hangUp, inCall, listenInCall, sayInCall, startCall, stopLine } from "@/stage/call";
 import { chat, closePanel, converse, cordiWrites, logMsg, openChat } from "@/stage/chat";
-import { advanceLive, agentActive, agentSay, allowAdvance, moveLive, startAgent } from "@/stage/agent";
+import { advanceLive, agentActive, agentSay, allowAdvance, AUTO_MS, moveLive, restartAuto, startAgent } from "@/stage/agent";
 import { askCordi, checkAI, goExplain } from "@/ai/client";
 import { hideBubble, showBubble } from "@/stage/stage";
 import { beatsFor, type Beat } from "./beats";
@@ -302,7 +302,10 @@ async function loop(my: number) {
       // "¿Seguimos?": the visual stays to be explored; on by itself only if left untouched
       // the on-screen bar asks "¿Seguimos?": Cordi doesn't say it after every step
       // it waits for "Seguimos" (or a chapter, an arrow, "No lo entiendo"): never on its own
-      explain.set({ waiting: true, until: null, waitFrom: performance.now(), left: null });
+      // on a call Cordi keeps the pace: after a quiet moment it goes on by itself (the button
+      // fills meanwhile). Once the person has taken the wheel (asked, "I don't get it"), it waits.
+      const auto = s.how === "call" && !explain.get().manual;
+      explain.set({ waiting: true, until: auto ? performance.now() + AUTO_MS : null, waitFrom: performance.now(), left: null });
       // in the chat, the person can write to Cordi while it waits; on a call, Cordi listens
       // (a spoken "sí, seguimos" moves on; anything else is a question it answers)
       if (s.how === "chat") chat.set({ busy: false });
@@ -465,9 +468,13 @@ export async function continueWithoutAgent() {
   if (my !== run) return;
   await loop(my);
 }
-/** The person is exploring the visual. Steps never move on by themselves any more, so there's
- * nothing to hold off; kept as the stage's touch hook. */
-export const hold = () => {};
+/** The person is exploring the visual: on a call, the countdown to the next step starts over. */
+export const hold = () => {
+  const s = explain.get();
+  if (!s.waiting || s.until === null) return;
+  if (live()) restartAuto();
+  else explain.set({ until: performance.now() + AUTO_MS, waitFrom: performance.now() });
+};
 /** A chapter tapped: that step, from the top (also from the end, to look again). */
 export function goTo(k: number) {
   const s = explain.get();

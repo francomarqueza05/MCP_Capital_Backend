@@ -3863,3 +3863,31 @@ select {
   background: rgba(142, 227, 191, 0.08);
   line-height: 1.45;
 }
+
+/* Cordi goes on by itself after a quiet moment: "Continue" fills up until then */
+.xp-go {
+  position: relative;
+  overflow: hidden;
+}
+.xp-go-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+.xp-go-fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(142, 227, 191, 0.55);
+  transform-origin: left center;
+  animation: xp-go-fill linear forwards;
+}
+@keyframes xp-go-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

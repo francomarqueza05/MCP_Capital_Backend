@@ -115,6 +115,46 @@ function watchSilence(nudged = false) {
   }, SILENT_MS);
 }
 
+/**
+ * Cordi keeps the pace, like an advisor in the room. After a step is told and the person says
+ * nothing for AUTO_MS, it moves on by itself (the "Continue" button fills up meanwhile, so it's
+ * no surprise). Anyone talking, a question, or the pause stops it; after an answer the count
+ * starts again. Families shouldn't have to know there is a button to press.
+ */
+export const AUTO_MS = 6500;
+let autoTimer: ReturnType<typeof setTimeout> | null = null;
+let greeted = false; // the agent has spoken once on this call (its greeting)
+let voiceAt = 0; // last time the person's microphone heard someone
+function clearAuto() {
+  if (autoTimer) clearTimeout(autoTimer);
+  autoTimer = null;
+  if (explain.get().until !== null) explain.set({ until: null });
+}
+function armAuto(ms = AUTO_MS) {
+  clearAuto();
+  const ex = explain.get();
+  if (!conv || agent.get().mode !== "explain" || ex.phase !== "playing" || ex.paused) return;
+  explain.set({ until: performance.now() + ms, waitFrom: performance.now() });
+  autoTimer = setTimeout(() => {
+    autoTimer = null;
+    const now = explain.get();
+    if (!conv || now.phase !== "playing" || now.paused || call.get().state !== "listening") return clearAuto();
+    // someone is still talking: give them time
+    if (performance.now() - voiceAt < 1500) return armAuto(2500);
+    explain.set({ until: null, waiting: false });
+    // the next block goes on screen; after the last one, the agent wraps the camp up
+    if (!advanceLive()) {
+      allowAdvance();
+      conv.sendUserMessage(tr("OK, let's wrap this one up.", "Vale, cerremos este tramo."));
+    }
+  }, ms);
+}
+
+/** The person is exploring the chart: the countdown starts over, it never moves on under them. */
+export const restartAuto = () => {
+  if (autoTimer) armAuto();
+};
+
 /** Puts block `to` on screen: what follows is the step itself, so the visual builds with it. */
 function showBlock(to: number) {
   watchSilence();
@@ -188,6 +228,7 @@ function watchPause() {
 function agentPause(on: boolean, restore: { muted: boolean; quiet: boolean }) {
   if (!conv) return;
   if (on) {
+    clearAuto();
     conv.sendContextualUpdate(`The person paused the explanation. Stay completely silent: do not speak and do not ask whether they are still there, until they say \"${tr("OK, go on.", "Ya está, sigue.")}\"`);
     conv.setVolume({ volume: 0 });
     conv.setMicMuted(true);
@@ -261,6 +302,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
   allowNext = false;
   lastUser = "";
   shownAny = false;
+  greeted = false;
   newReply();
   call.set({ state: "connecting", t0: Date.now(), error: "" });
   holdBubble(true);
@@ -294,7 +336,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
     opts.mode === "explain"
       ? opts.from
         ? tr(`OK, let's pick up ${opts.title?.toLowerCase()} where we left off.`, `Vale, seguimos con ${opts.title?.toLowerCase()} donde lo dejamos.`)
-        : tr(`OK, let's do ${opts.title?.toLowerCase()}. Interrupt me whenever you like.`, `Vale, vamos con ${opts.title?.toLowerCase()}. ${we ? "Interrumpidme" : "Interrúmpeme"} cuando ${we ? "queráis" : "quieras"}.`)
+        : tr(`OK, let's do ${opts.title?.toLowerCase()}. You can stop me any time.`, `Vale, vamos con ${opts.title?.toLowerCase()}. ${we ? "Interrumpidme" : "Interrúmpeme"} cuando ${we ? "queráis" : "quieras"}.`)
       : tr("I'm here. What would you like to look at in your plan?", `Aquí estoy. ¿Qué ${we ? "queréis" : "quieres"} que veamos de ${we ? "vuestro" : "tu"} plan?`);
 
   agent.set({ mode: opts.mode });
@@ -349,7 +391,9 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
       onModeChange: ({ mode }) => {
         if (!conv && mode) return;
         if (mode === "speaking") {
+          greeted = true;
           clearSilence();
+          clearAuto();
           // no reply-start event seen (or a long pause): a new caption
           if (performance.now() - lastCharAt > 1500) newReply();
           call.set({ state: "speaking" });
@@ -361,6 +405,16 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           // the step has been told: anything said after it leaves the visual whole
           if (explain.get().phase === "playing") explain.set({ saying: false, fresh: false, waiting: true, until: null });
           speech.set({ p: 1 });
+          if (agent.get().mode === "explain" && explain.get().phase === "playing") {
+            // just said hello and nothing is on screen yet: straight into the first block,
+            // instead of waiting for the person to speak
+            if (!shownAny && greeted) {
+              const at = Math.min(explain.get().i, explain.get().beats.length - 1);
+              showBlock(at);
+              conv?.sendContextualUpdate(`The screen now shows block "${explain.get().beats[at].id}". Explain it now.`);
+              conv?.sendUserMessage(tr("Go ahead.", "Adelante."));
+            } else armAuto();
+          }
           if (ending) setTimeout(() => endAgent(), 600);
         }
       },
@@ -385,6 +439,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           remember(stripAudioTags(message));
         } else {
           lastUser = message;
+          clearAuto();
           logMsg("you", message, topic());
           // a clear "sí, seguimos" said out loud while the step waits: on to the next one
           if (explain.get().phase === "playing" && explain.get().waiting && isGo(message)) advanceLive();
@@ -426,7 +481,9 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
     tickCaption();
     const speaking = call.get().state === "speaking";
     orb.listening = !speaking;
-    orb.level = Math.min(1, (speaking ? conv.getOutputVolume() : call.get().muted ? 0 : conv.getInputVolume()) * 2.2);
+    const input = call.get().muted ? 0 : conv.getInputVolume();
+    if (!speaking && input > 0.06) voiceAt = performance.now();
+    orb.level = Math.min(1, (speaking ? conv.getOutputVolume() : input) * 2.2);
   };
   loop();
   return true;
@@ -454,6 +511,7 @@ export async function endAgent(dropped = false) {
   const c = conv;
   conv = null;
   clearSilence();
+  clearAuto();
   if (pauseBeat) clearInterval(pauseBeat);
   pauseBeat = null;
   cancelAnimationFrame(raf);

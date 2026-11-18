@@ -36,7 +36,7 @@ export function ExplainButton({ step, c, className = "act act-main" }: { step: S
 }
 
 function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?: boolean }) {
-  const { phase, i, beats, paused, waiting } = useStore(explain, (s) => s);
+  const { phase, i, beats, paused, waiting, until, waitFrom } = useStore(explain, (s) => s);
   const done = phase === "done";
   const last = i >= beats.length - 1;
   return (
@@ -73,7 +73,11 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
           onClick={proceed}
           title={waiting ? tr("Go to the next step (take your time: tap the chart to explore it)", "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)") : paused ? tr("Carry on from here", "Seguir desde aquí") : tr("Skip to the next step", "Saltar al siguiente paso")}
         >
-          {last ? tr("Done", "Listo") : tr("Continue", "Seguimos")} <IconPlay />
+          {/* Cordi goes on by itself after a quiet moment: the button fills up until then */}
+          {until !== null && waiting && !paused && <span key={waitFrom} className="xp-go-fill" style={{ animationDuration: `${Math.max(0, until - waitFrom)}ms` }} aria-hidden />}
+          <span className="xp-go-label">
+            {last ? tr("Done", "Listo") : tr("Continue", "Seguimos")} <IconPlay />
+          </span>
         </button>
       )}
     </div>
