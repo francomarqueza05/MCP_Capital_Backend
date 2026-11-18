@@ -4,7 +4,10 @@
 // greeting and the start buttons come in. The mountain stays behind, waiting.
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { useRef } from "react";
-import { CASE_IDS, CASES, type Case } from "@/data/cases";
+import { CASE_IDS, CASES, getCase, type Case } from "@/data/cases";
+import { useStore } from "@/lib/store";
+import { memory } from "@/commit/memory";
+import { WelcomeBack } from "@/commit/WelcomeBack";
 import { names } from "@/lib/copy";
 import { tones } from "@/lib/audio";
 import { lang, LANGS, switchLang, tr } from "@/lib/lang";
@@ -49,11 +52,12 @@ export function LangSwitch({ className = "" }: { className?: string }) {
 }
 
 export function Login({ selected, onSelect, onBegin }: { selected: string | null; onSelect: (id: string | null) => void; onBegin: (withSound: boolean) => void }) {
-  const c = selected ? CASES[selected] : null;
+  const c = selected ? getCase(selected) : null;
+  const back = useStore(memory, (m) => (m.caseId === selected ? m.back : null));
   // back from a profile ("Not me"): its card flies home to the row, already visible, and the
   // rest come back quickly instead of replaying the first entrance
   const last = useRef<string | null>(null);
-  const back = selected ? null : last.current;
+  const backTo = selected ? null : last.current;
   if (selected) last.current = selected;
   const out = { opacity: 0, y: 8, transition: { duration: 0.2 } };
   const we = c?.household.couple;
@@ -68,7 +72,7 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
         <AnimatePresence mode="popLayout">
           {!c ? (
             <motion.div key="pick" className="lg-pick" exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.25 } }}>
-              <motion.p className="lg-ask" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: back ? 0.15 : 0.35 }}>
+              <motion.p className="lg-ask" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: backTo ? 0.15 : 0.35 }}>
                 {tr("Who's climbing today?", "¿Quién sube hoy?")}
               </motion.p>
               <ul className="lg-cards">
@@ -77,9 +81,9 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
                   return (
                     <motion.li
                       key={id}
-                      initial={id === back ? false : { opacity: 0, y: back ? 16 : 30, scale: 0.94 }}
+                      initial={id === backTo ? false : { opacity: 0, y: backTo ? 16 : 30, scale: 0.94 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: back ? 0.5 : 0.7, delay: back ? 0.12 + i * 0.05 : 0.45 + i * 0.09, ease: EASE }}
+                      transition={{ duration: backTo ? 0.5 : 0.7, delay: backTo ? 0.12 + i * 0.05 : 0.45 + i * 0.09, ease: EASE }}
                     >
                       <motion.button
                         layoutId={`lg-${id}`}
@@ -102,7 +106,7 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
                   );
                 })}
               </ul>
-              <motion.p className="lg-note" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: back ? 0.4 : 1 }}>
+              <motion.p className="lg-note" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: backTo ? 0.4 : 1 }}>
                 {tr("Example families with their Sherpas Wealth analysis", "Familias de ejemplo con su análisis de Sherpas Wealth")}
               </motion.p>
             </motion.div>
@@ -113,12 +117,16 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
                 <span className="lg-name">{names(c)}</span>
                 <span className="lg-who">{who(c)}</span>
               </motion.div>
+              {back ? (
+                <WelcomeBack c={c} />
+              ) : (
               <motion.p className="start-tag" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={out} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
                 {tr(
                   `Hi, ${names(c)}. Your financial plan is a mountain. Cordi will climb it with you.`,
                   `Hola, ${names(c)}. ${we ? "Vuestro" : "Tu"} plan financiero es una montaña. Cordi ${we ? "os" : "te"} acompaña a subirla.`,
                 )}
               </motion.p>
+              )}
               <motion.div className="start-actions" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={out} transition={{ delay: 0.4, duration: 0.6, ease: EASE }}>
                 <button className="act act-main act-large" onClick={() => onBegin(true)} autoFocus>
                   {tr("Start the climb", "Empezar la ruta")}

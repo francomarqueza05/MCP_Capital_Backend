@@ -16,6 +16,7 @@ import { ExplainButton } from "@/explain/ExplainUI";
 import { understanding } from "./understanding";
 import type { Step } from "./steps";
 import { tr } from "@/lib/lang";
+import { Commit } from "@/commit/Commit";
 
 const tone = (score: number) => (score >= 70 ? "good" : score >= 40 ? "warn" : "bad");
 const EASE = [0.76, 0, 0.18, 1] as const;
@@ -200,6 +201,8 @@ export function Detail({
                 <motion.span className={`figure-rule t-${kind}`} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 1.2, delay: 0.85, ease: EASE }} />
               </motion.div>
             )}
+
+            {step.kind === "summit" && <Commit c={c} />}
 
             {step.kind === "base" && (
               <motion.div {...reveal(1.0)}>

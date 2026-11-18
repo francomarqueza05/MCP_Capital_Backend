@@ -18,6 +18,7 @@ import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
 import { LangSwitch, Login, ProfileChip } from "@/intro/Login";
 import { LANG_COOKIE, setLang, tr, type Lang } from "@/lib/lang";
+import { forget, memory, openMemory, shiftDays } from "@/commit/memory";
 
 const LEAVE_MS = 700; // the fade to the start screen's sky before switching profile
 
@@ -57,6 +58,24 @@ export function Experience({ lang }: { lang: Lang }) {
   useEffect(() => {
     session.set({ caseId });
   }, [caseId]);
+  // what Cordi remembers of this family (flags, the promised step), loaded once it is picked.
+  // ?reset=1 starts the family over (for the demo)
+  useEffect(() => {
+    if (!picked) return;
+    if (new URLSearchParams(location.search).get("reset")) forget(picked);
+    openMemory(picked);
+  }, [picked]);
+  // the demo clock: Shift+T moves time 3 days ahead, as if the family came back later
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.shiftKey || e.key.toLowerCase() !== "t" || (e.target as HTMLElement)?.closest?.("input, textarea")) return;
+      shiftDays(3);
+      if (picked) openMemory(picked);
+      showBubble(tr("⏩ +3 days", "⏩ +3 días"), 1600);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [picked]);
 
   // once only: the start screen fades out for almost a second and its buttons could be tapped
   // again meanwhile, starting a second intro on top of the first (the stutter of rapid clicks)
@@ -69,6 +88,8 @@ export function Experience({ lang }: { lang: Lang }) {
     setSound(withSound);
     setStarted(true);
     exp.current?.start();
+    // coming back: no need to watch the intro again
+    if (memory.get().back) setTimeout(() => exp.current?.skip(), 400);
   };
 
   /**

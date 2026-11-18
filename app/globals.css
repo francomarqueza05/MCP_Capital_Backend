@@ -3513,3 +3513,273 @@ select {
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------- the first step (commit) */
+.commit {
+  margin: 1.4rem 0 0.4rem;
+  padding: 1.1rem 1.1rem 1.2rem;
+  border: 1px solid rgba(142, 227, 191, 0.35);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(142, 227, 191, 0.1), rgba(11, 16, 51, 0.35));
+}
+.commit.is-set {
+  border-color: rgba(142, 227, 191, 0.6);
+}
+.commit-kicker {
+  margin: 0 0 0.3rem;
+  color: var(--good);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.commit-title {
+  margin: 0 0 0.6rem;
+  font-size: var(--t-lg);
+  font-weight: 800;
+  font-stretch: 112%;
+  line-height: 1.15;
+}
+.commit-when {
+  margin: -0.2rem 0 0.8rem;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+.commit-moves {
+  display: grid;
+  gap: 0.45rem;
+}
+.commit-move {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(11, 16, 51, 0.45);
+  color: var(--ink);
+  text-align: left;
+  font-size: var(--t-sm);
+  transition: border-color 0.2s, background 0.2s;
+}
+.commit-move.on {
+  border-color: var(--good);
+  background: rgba(142, 227, 191, 0.12);
+}
+.commit-gain {
+  min-width: 2.4rem;
+  color: var(--good);
+  font-weight: 800;
+  font-stretch: 120%;
+}
+.commit-name {
+  font-weight: 600;
+}
+.commit-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--good);
+  color: #0b1033;
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+.commit-effort {
+  color: var(--lichen);
+  font-size: var(--t-xs);
+}
+.commit-life {
+  margin: 0.9rem 0 0.2rem;
+  font-size: var(--t-md);
+  line-height: 1.45;
+}
+.commit-sub {
+  margin: 0.95rem 0 0.4rem;
+  color: var(--lichen);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.commit-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  counter-reset: st;
+}
+.commit-steps.preview li {
+  counter-increment: st;
+  position: relative;
+  padding-left: 1.6rem;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  line-height: 1.4;
+}
+.commit-steps.preview li::before {
+  content: counter(st);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: rgba(154, 166, 240, 0.2);
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.15rem;
+}
+.commit-tick {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(11, 16, 51, 0.4);
+  color: var(--ink-2);
+  text-align: left;
+  font-size: var(--t-sm);
+  line-height: 1.4;
+}
+.commit-tick.on {
+  color: var(--ink);
+  text-decoration: line-through;
+  text-decoration-color: rgba(142, 227, 191, 0.7);
+}
+.commit-box {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1.5px solid var(--lichen);
+  border-radius: 5px;
+  color: #0b1033;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1rem;
+}
+.commit-tick.on .commit-box {
+  border-color: var(--good);
+  background: var(--good);
+}
+.commit-dates,
+.commit-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+.qa-chip.on {
+  border-color: var(--good);
+  background: rgba(142, 227, 191, 0.16);
+  color: var(--ink);
+}
+.commit-date {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(11, 16, 51, 0.5);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  color-scheme: dark;
+}
+.commit-person {
+  padding: 0.5rem 0.9rem;
+  border: 1px dashed var(--lichen);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.commit-person.on {
+  border-style: solid;
+  border-color: var(--good);
+  background: rgba(142, 227, 191, 0.16);
+}
+.commit-wait {
+  margin: 0.5rem 0 0;
+  color: var(--warn);
+  font-size: var(--t-sm);
+}
+.commit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 1.1rem;
+}
+.commit-actions .act[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.commit-link {
+  padding: 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--lichen);
+  font-size: var(--t-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------- welcome back (day 3, day 30) */
+.wb {
+  max-width: 34rem;
+  margin: 1.2rem auto 1.4rem;
+  padding: 1rem 1.2rem 1.1rem;
+  border: 1px solid rgba(142, 227, 191, 0.35);
+  border-radius: 16px;
+  background: rgba(11, 16, 51, 0.55);
+  text-align: left;
+}
+.wb-hi {
+  margin: 0 0 0.35rem;
+  color: var(--good);
+  font-weight: 700;
+}
+.wb-text {
+  margin: 0 0 0.6rem;
+  font-size: var(--t-md);
+  line-height: 1.45;
+}
+.wb-q {
+  margin: 0.4rem 0 0.7rem;
+  font-size: var(--t-lg);
+  font-weight: 800;
+  font-stretch: 112%;
+}
+.wb-actions,
+.wb-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+.wb-answer {
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--good);
+  background: rgba(142, 227, 191, 0.08);
+  border-radius: 0 10px 10px 0;
+}
+.wb-score {
+  margin: 0.2rem 0 0.4rem;
+  font-size: var(--t-2xl);
+  font-weight: 800;
+  font-stretch: 120%;
+}
+.wb-score span {
+  color: var(--lichen);
+}
+.wb-score b {
+  color: var(--good);
+}
