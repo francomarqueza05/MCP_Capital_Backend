@@ -108,7 +108,7 @@ function watchSilence(nudged = false) {
     if (ex.phase !== "playing") return;
     if (!nudged) {
       conv.sendContextualUpdate(`The screen shows block "${ex.beats[ex.i]?.id}" and you have not said anything yet. Explain it now, in one to three short sentences.`);
-      conv.sendUserActivity();
+      conv.sendUserMessage(tr("Go ahead with this one.", "Adelante con este."));
       watchSilence(true);
       return;
     }
@@ -189,6 +189,11 @@ export function moveLive(to: number): boolean {
   userMovedAt = performance.now();
   showBlock(to);
   conv.sendContextualUpdate(`The person moved the screen to block "${ex.beats[to].id}". Stop what you were saying and explain that block now, in your own words. Do not call show_block for it.`);
+  // a context note alone never gives the agent the turn: it finished the old step and then
+  // stayed quiet. A message from the person cuts it off and makes it talk about this block now
+  holdBlock = true;
+  lastUser = "";
+  conv.sendUserMessage(to < ex.i ? tr("Let's look at this one again.", "Volvamos a este.") : tr("Let's look at this one.", "Vamos con este."));
   return true;
 }
 
