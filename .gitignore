@@ -19,3 +19,6 @@ graphify-out/
 .DS_Store
 .vercel
 .env*
+
+# internal team docs, not for the jury
+docs/cordada-*.pdf
