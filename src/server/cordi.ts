@@ -1,15 +1,13 @@
 // Who Cordi is, and what it knows, for the model: the family's whole analysis (the same data
 // every screen is built from), where in the climb the person is, and what's on screen now.
 // The model answers from this and nothing else: no invented figures, no advice beyond the plan.
-import raw from "@/data/cases.json";
-import { localize, type Case } from "@/data/cases";
+import { CASES, localize, type Case } from "@/data/cases";
 import { lang } from "@/lib/lang";
 import { BAND, byImpact, CAPS, EFFORT, moveName, names } from "@/lib/copy";
 import { buildSteps } from "@/expedition/steps";
 import { beatsFor } from "@/explain/beats";
 import { KNOWLEDGE } from "./knowledge";
 
-const CASES = raw as unknown as Record<string, Case>;
 /** The case in the request's language (set by useRequestLang before this is called). */
 /**
  * What people really do, and how Cordi answers it. Found by tests/ai-flow.test.ts: without
@@ -29,6 +27,7 @@ export const HARD_MOMENTS = [
   "- Si piden un producto, una acción o un ticker: no recomiendes ninguno; reconduce a su plan y a su asesor.",
 ].join("\n");
 
+/** A household (as read from the MCP; see src/server/mcp.ts, awaited first by every route). */
 export const caseById = (id: string) => (CASES[id] ? localize(CASES[id], lang()) : null);
 
 export type Where = {

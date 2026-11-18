@@ -4,6 +4,7 @@
 // (or orientation). The chips show them; tapping one asks Cordi.
 import { ask, type ChatMessage } from "@/server/llm";
 import { caseById, stayOnStep, systemPrompt, type Where } from "@/server/cordi";
+import { loadCases } from "@/server/mcp";
 import { mapPrompt } from "@/server/map";
 import { langNote, useRequestLang } from "@/server/lang";
 
@@ -12,6 +13,7 @@ type Body = { caseId: string; where?: Where; history?: { who: "you" | "cordi"; t
 export async function POST(req: Request) {
   const lang = useRequestLang(req);
   const b = (await req.json().catch(() => null)) as Body | null;
+  await loadCases(); // the households, from the Sherpas MCP
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });
   const w = b.where ?? {};

@@ -3,6 +3,7 @@
 // own rules as a fallback, so a slow or failed model just means the local remark.
 import { ask } from "@/server/llm";
 import { caseById, systemPrompt, type Where } from "@/server/cordi";
+import { loadCases } from "@/server/mcp";
 import { langNote, useRequestLang } from "@/server/lang";
 
 type Body = { caseId: string; where?: Where; act: unknown; fallback?: { text: string; choices?: { id: string; label: string }[] } | null };
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
+  await loadCases(); // the households, from the Sherpas MCP
   const c = caseById(String(b.caseId ?? ""));
   if (!c) return Response.json({ error: "bad_request" }, { status: 400 });
 

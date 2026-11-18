@@ -1,6 +1,8 @@
-// Typed access to the precomputed case data (src/data/cases.json: the four Sherpas example
-// households, generated once from their analysis; the generator lives in the `legacy-backend`
-// git tag). Every word and number on the summary comes from here: no AI, no guessing.
+// Typed access to the households. They come from the Sherpas MCP (src/server/mcp.ts reads it
+// on the server and the page hands them to the browser, both through setCases). Until then, and
+// whenever the MCP can't be reached, the copy bundled with the app (src/data/cases.json, made
+// from the same MCP) stands in. Every word and number on the summary comes from here: no AI,
+// no guessing.
 import raw from "./cases.json";
 import { EN } from "./cases.en";
 import { lang, type Lang } from "@/lib/lang";
@@ -30,9 +32,27 @@ export type Case = {
   moves: Move[];
 };
 
-export const CASES = raw as unknown as Record<string, Case>;
-export const CASE_IDS = Object.keys(CASES);
-export const DEFAULT_CASE = CASE_IDS[0];
+/** Filled in place (setCases), so every module holding these sees the households read last. */
+export const CASES: Record<string, Case> = { ...(raw as unknown as Record<string, Case>) };
+export const CASE_IDS: string[] = Object.keys(CASES);
+export let DEFAULT_CASE = CASE_IDS[0];
+let loadedKey = JSON.stringify(CASES);
+
+/**
+ * The households read from the MCP take the place of the bundled ones (same objects, filled in
+ * place). A no-op when nothing changed, so it can be called on every render and every request.
+ */
+export function setCases(next: Record<string, Case>) {
+  if (!next || !Object.keys(next).length) return;
+  const key = JSON.stringify(next);
+  if (key === loadedKey) return;
+  loadedKey = key;
+  for (const k of Object.keys(CASES)) delete CASES[k];
+  Object.assign(CASES, next);
+  CASE_IDS.splice(0, CASE_IDS.length, ...Object.keys(next));
+  DEFAULT_CASE = CASE_IDS[0];
+  cache.clear();
+}
 
 /** The case in a language: in English, every Spanish string of the data swapped for its translation. */
 export function localize(c: Case, l: Lang): Case {

@@ -21,9 +21,24 @@ export const setLang = (l: Lang) => {
 /** The same text in both languages; the current one is returned. */
 export const tr = <T,>(en: T, es: T): T => (current === "es" ? es : en);
 
+/**
+ * The next load stays on the open profile (switching language, starting over). Any other load,
+ * a reload or a saved link, opens on the four profiles: the profile in the link is only carried
+ * across these deliberate reloads.
+ */
+export const CARRY_KEY = "cordada.carryProfile";
+export function keepProfile() {
+  try {
+    sessionStorage.setItem(CARRY_KEY, "1");
+  } catch {
+    // no storage (private window): it opens on the four profiles
+  }
+}
+
 /** Switch language: remembered in a cookie (so the server renders it too), then a fresh load. */
 export function switchLang(l: Lang) {
   document.cookie = `${LANG_COOKIE}=${l}; path=/; max-age=31536000; samesite=lax`;
+  keepProfile();
   const u = new URL(location.href);
   u.searchParams.set("lang", l);
   location.replace(u.toString());

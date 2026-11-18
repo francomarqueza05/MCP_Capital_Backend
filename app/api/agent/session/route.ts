@@ -3,6 +3,7 @@
 // variables. The key never leaves the server.
 import { env } from "@/server/env";
 import { caseById } from "@/server/cordi";
+import { loadCases } from "@/server/mcp";
 import { explainBrief, persona } from "@/server/brief";
 import { mapBrief, type Known } from "@/server/map";
 import { useRequestLang } from "@/server/lang";
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
   const agentId = lang === "en" ? env.agentIdEn : env.agentId;
   if (Date.now() < downUntil) return Response.json({ error: "agent_unavailable" }, { status: 503 });
   const b = (await req.json().catch(() => null)) as Body | null;
+  await loadCases(); // the households, from the Sherpas MCP
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });
   if (!env.elevenlabsKey || !agentId) return Response.json({ error: "agent_unavailable" }, { status: 503 });

@@ -10,7 +10,7 @@ import { forget, memory } from "@/commit/memory";
 import { WelcomeBack } from "@/commit/WelcomeBack";
 import { names } from "@/lib/copy";
 import { tones } from "@/lib/audio";
-import { lang, LANGS, switchLang, tr } from "@/lib/lang";
+import { keepProfile, lang, LANGS, switchLang, tr } from "@/lib/lang";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -149,6 +149,7 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
                   onClick={() => {
                     if (!confirm(tr("Start over? Cordi will forget this family's progress in this browser.", "¿Empezar de cero? Cordi olvidará el progreso de esta familia en este navegador."))) return;
                     forget(selected!);
+                    keepProfile();
                     const u = new URL(location.href);
                     u.searchParams.set("case", selected!);
                     u.searchParams.delete("days");

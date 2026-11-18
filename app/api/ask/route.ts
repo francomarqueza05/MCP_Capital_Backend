@@ -3,6 +3,7 @@
 // falls back to its own line).
 import { ask, type ChatMessage } from "@/server/llm";
 import { caseById, momentHint, stayOnStep, systemPrompt, type Where } from "@/server/cordi";
+import { loadCases } from "@/server/mcp";
 import { mapPrompt, mapState } from "@/server/map";
 import { langNote, useRequestLang } from "@/server/lang";
 
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
+  await loadCases(); // the households, from the Sherpas MCP
   const c = caseById(String(b.caseId ?? ""));
   const question = String(b.question ?? "").trim().slice(0, 600);
   if (!c || !question) return Response.json({ error: "bad_request" }, { status: 400 });

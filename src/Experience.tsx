@@ -3,7 +3,7 @@
 // that unlocks sound); after that, the expedition takes over.
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { CASE_IDS, CASES, DEFAULT_CASE, getCase } from "@/data/cases";
+import { CASE_IDS, CASES, DEFAULT_CASE, getCase, setCases, type Case } from "@/data/cases";
 import { names } from "@/lib/copy";
 import { isMuted, setMuted, stopSfx, stopVoice, tones, unlock } from "@/lib/audio";
 import { Orb } from "@/orb/Orb";
@@ -17,14 +17,33 @@ import { hangUp, inCall } from "@/stage/call";
 import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
 import { LangSwitch, Login, ProfileChip } from "@/intro/Login";
-import { LANG_COOKIE, setLang, tr, type Lang } from "@/lib/lang";
+import { CARRY_KEY, LANG_COOKIE, setLang, tr, type Lang } from "@/lib/lang";
 import { forget, markBegun, memory, openMemory, shiftDays } from "@/commit/memory";
+
+/**
+ * Whether this load carries the profile over (a language switch or a start over just asked for
+ * it). Read once per page: the start-up effect can run twice (React's dev check), and the second
+ * run, finding the mark already used, dropped the profile from the link.
+ */
+let carriedOnce: boolean | null = null;
+function carried() {
+  if (carriedOnce === null) {
+    carriedOnce = false;
+    try {
+      carriedOnce = sessionStorage.getItem(CARRY_KEY) === "1";
+      sessionStorage.removeItem(CARRY_KEY);
+    } catch {}
+  }
+  return carriedOnce;
+}
 
 const LEAVE_MS = 700; // the fade to the start screen's sky before switching profile
 
-export function Experience({ lang }: { lang: Lang }) {
-  // before anything below renders: every text is built in this language
+export function Experience({ lang, cases }: { lang: Lang; cases?: Record<string, Case> }) {
+  // before anything below renders: every text is built in this language, and from the
+  // households the server read from the Sherpas MCP (the bundled copy until then)
   setLang(lang);
+  if (cases) setCases(cases);
   useEffect(() => {
     document.documentElement.lang = lang;
     // the server routes read the language from here (a ?lang= link sets it too)
@@ -36,13 +55,19 @@ export function Experience({ lang }: { lang: Lang }) {
   const [phase, setPhase] = useState<Phase>("wait");
   const exp = useRef<ExpeditionHandle>(null);
 
-  // who's climbing: picked on the start screen (or already in the link, ?case=...)
+  // who's climbing: always picked on the start screen, from the four. The profile in the link
+  // (?case=...) only carries over a deliberate reload (switching language, starting over); a
+  // plain reload or a saved link opens on the four profiles again
   const [picked, setPicked] = useState<string | null>(null);
   useEffect(() => {
-    const id = new URLSearchParams(location.search).get("case");
-    if (id && CASES[id]) {
+    const u = new URL(location.href);
+    const id = u.searchParams.get("case");
+    if (id && CASES[id] && carried()) {
       setCaseId(id);
       setPicked(id);
+    } else if (id) {
+      u.searchParams.delete("case");
+      history.replaceState(null, "", u.toString());
     }
     void checkAI();
   }, []);

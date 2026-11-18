@@ -33,6 +33,13 @@ function shared(): Record<string, string> {
 const get = (k: string) => process.env[k] || shared()[k] || "";
 
 export const env = {
+  /** The Sherpas MCP, where the households come from (src/server/mcp.ts). */
+  get mcpUrl() {
+    return get("MCP_URL") || "https://mcp-hackathon.sherpaswealth.com/mcp";
+  },
+  get mcpToken() {
+    return get("MCP_TOKEN");
+  },
   get llmProxyUrl() {
     return get("LLM_PROXY_URL") || "https://llm-hackathon.sherpaswealth.com";
   },
