@@ -7,7 +7,9 @@
     "dev": "next dev --port 3100",
     "build": "next build",
     "start": "next start --port 3100",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/content.test.ts",
+    "test:ai": "tsx --test --test-concurrency=4 tests/ai-flow.test.ts"
   },
   "dependencies": {
     "@elevenlabs/client": "1.33.0",
@@ -22,6 +24,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "tailwindcss": "^4.3.5",
+    "tsx": "^4.19.2",
     "typescript": "^7.0.2"
   }
 }

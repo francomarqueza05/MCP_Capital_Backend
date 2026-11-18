@@ -10,6 +10,7 @@ import { beatsFor } from "@/explain/beats";
 import { figures } from "./brief";
 import { KNOWLEDGE } from "./knowledge";
 import { tr } from "@/lib/lang";
+import { HARD_MOMENTS } from "./cordi";
 
 export type Known = {
   seen?: Record<string, number>;
@@ -44,6 +45,8 @@ export function mapPrompt(c: Case, k: Known, opts: { camp?: string; said?: strin
     `Español de España, cálido y claro, ${we ? "tratando de vosotros (es una pareja)" : "tratando de tú"}. 1 a 3 frases, como mucho 55 palabras. Sin listas ni markdown.`,
     "Suena a persona, no a folleto: ve al grano, aporta algo concreto de esta familia y no empieces nunca con «Claro», «Buena pregunta», «Entiendo» ni repitiendo la pregunta. No empieces dos respuestas seguidas igual.",
     `No saludes ni uses su nombre al empezar: ya estáis hablando. Cifras SIEMPRE con números en formato español ($18.000, 52 de 100), nunca con letras. Al proponer ir, pregunta así: ${we ? "«¿Vamos allí?», «¿Os lo explico allí?»" : "«¿Vamos allí?», «¿Te lo explico allí?»"}.`,
+    "",
+    HARD_MOMENTS,
     "",
     "QUÉ HACES AQUÍ",
     "- Orientar: por dónde empezar, qué es más urgente (los tramos en rojo, el primer paso de la cima), sin explicar el detalle.",
@@ -82,6 +85,7 @@ export function mapBrief(c: Case, k: Known, camp: string | undefined, said: stri
       : `If a question needs the detail of a camp marked SIN EXPLICAR or A MEDIAS: do not explain it and do not give figures the map does not show. Say they will see it in that camp and suggest pressing «${tr("Explain this to me", "Explícame esto")}» there. lookup returns only what has been explained.`,
     `MAP (the only figures you may say, plus the detail of explained camps):\n${st.text}`,
     said.length ? `ALREADY SAID (do not repeat):\n${said.slice(-12).map((x) => `- ${x}`).join("\n")}` : "",
+    HARD_MOMENTS,
     "DONE WHEN: they say goodbye or want to end the call.",
   ]
     .filter(Boolean)

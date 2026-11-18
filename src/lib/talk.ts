@@ -84,7 +84,8 @@ function monthsEn(x: number): string {
   }
   const half = Math.round(x * 2) / 2;
   const whole = Math.floor(half);
-  const w = (k: number) => EN_N[k] ?? String(k);
+  // "a month and a half", not "one month and a half"
+  const w = (k: number) => (k === 1 ? "a" : EN_N[k] ?? String(k));
   const pre = Math.abs(half - x) < 0.08 ? "" : half > x ? "almost " : "a little over ";
   if (half === 0) return "nothing";
   if (half % 1) return `${pre}${whole ? `${w(whole)} ${whole === 1 ? "month" : "months"} and a half` : "half a month"}`;

@@ -7,6 +7,7 @@ import { BAND, byImpact, EFFORT, fixFor, moveName, names } from "@/lib/copy";
 import { buildSteps } from "@/expedition/steps";
 import { beatsFor } from "@/explain/beats";
 import { KNOWLEDGE } from "./knowledge";
+import { HARD_MOMENTS } from "./cordi";
 import { isEs, tr } from "@/lib/lang";
 
 export const TOPIC_OF: Record<string, string[]> = {
@@ -54,6 +55,7 @@ export function explainBrief(c: Case, campId: string, from: number, said: string
     `FIGURES (the only ones you may say here): ${figures(c, campId)}`,
     KNOWLEDGE[campId] ? `BACKGROUND (general knowledge, no figures): ${KNOWLEDGE[campId]}` : "",
     saidBlock(said),
+    HARD_MOMENTS,
     "DONE WHEN: you have told the last block and they have no more questions about it, or they ask to stop.",
   ]
     .filter(Boolean)

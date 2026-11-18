@@ -20,7 +20,7 @@ Status: `[ ]` to do · `[~]` in progress · `[x]` done · `[!]` needs a person.
 ### 2. English ElevenLabs agent
 - [x] English voice: `VOICE_ID_EN=EXAVITQu4vr4xnSDxMaL` (Sarah, ElevenLabs premade, American; checked with a TTS call). Narrations and the local call use it.
 - [x] In English the live agent runs only if `ELEVENLABS_AGENT_ID_EN` exists; otherwise the local call with the native voice. After a failed session the agent is skipped for 2 minutes, so nothing waits on it.
-- [!] Create the agent: `node scripts/agent-en.mjs` (copies the Spanish agent, sets English, the voice and the first message, writes the id to `.env`). On 18 Nov the ElevenLabs agents API timed out (POST and GET; TTS worked), so it could not run yet.
+- [x] English agent `agent_7601m7qqnx3xekkverd5ym9x6xfr` (copy of the Spanish one, English, voice Sarah), created with `scripts/agent-en.mjs`; `.env` marks it ready (`ELEVENLABS_AGENT_EN_READY=1`). Until then the app does not use it, so Cordi never changes voice mid-way.
 
 ### 3. The conversation never gets stuck
 - [x] "Continue" is always active: while Cordi talks it skips to the next step; on the last step it closes the camp.
@@ -52,3 +52,9 @@ Status: `[ ]` to do · `[~]` in progress · `[x]` done · `[!]` needs a person.
 - [x] `docs/pitch.md`: script for the 2-minute video and the pitch.
 - [x] Browser run (Edge, headless) for the Weahs in EN and ES: picker, tour, investments couple widget, summit commitment, return on day 30, no console errors.
 - [ ] By hand, with sound and microphone: the live call and the other 3 cases.
+
+## Voice and AI hardening (18 Nov)
+- [x] One voice per language: narrations, local call and live agent share the voice; TTS model `eleven-v4` by default (the one the Castilian voice is tuned for).
+- [x] `npm test`: everything Cordi says without AI, 4 cases × EN/ES (no broken text, no mixed language, no empty step), go-ahead detection, figures read aloud.
+- [x] `npm run test:ai`: 12 real conversations × EN/ES with the real models (spoilers, unexplained camps, stock tips, prompt injection, panic, "huh?", wrong language, dying, couple disagreement, repeating, gibberish, asking for a human), plus suggestions, remarks, bad input and every agent brief. Rule checks (language, invented figures, forbidden figures) and a judge model. 32/32 on the last run; the judge itself is occasionally wrong, so a single red test needs reading, not just rerunning.
+- [x] Fixes found by those tests: hard moments (`HARD_MOMENTS`, `momentHint` in `src/server/cordi.ts`) go to chat, map and the live agent; temperature 0.9 → 0.6; suggestions merged into one line are split.

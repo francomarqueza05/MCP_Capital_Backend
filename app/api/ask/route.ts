@@ -2,7 +2,7 @@
 // the question. Returns Cordi's answer, or 503 when the model can't answer (the client then
 // falls back to its own line).
 import { ask, type ChatMessage } from "@/server/llm";
-import { caseById, stayOnStep, systemPrompt, type Where } from "@/server/cordi";
+import { caseById, momentHint, stayOnStep, systemPrompt, type Where } from "@/server/cordi";
 import { mapPrompt, mapState } from "@/server/map";
 import { langNote, useRequestLang } from "@/server/lang";
 
@@ -19,6 +19,9 @@ export async function POST(req: Request) {
   const c = caseById(String(b.caseId ?? ""));
   const question = String(b.question ?? "").trim().slice(0, 600);
   if (!c || !question) return Response.json({ error: "bad_request" }, { status: 400 });
+  // a hard moment (dying, wanting a person, lost, a couple disagreeing) or the same question again
+  const hint = momentHint(question, b.history ?? [], c);
+  const hinted = hint ? [{ role: "system" as const, content: hint }] : [];
 
   // on the map: Cordi as guide, with figures limited to what's been explained, and maybe an
   // offer to go to a camp ("go"), which the chat turns into a button
@@ -26,6 +29,7 @@ export async function POST(req: Request) {
     const out = await ask("fast", [
       { role: "system", content: mapPrompt(c, b.where.known ?? {}, { camp: b.where.camp, said: b.where.said }) + langNote(lang) },
       ...(b.history ?? []).slice(-8).map<ChatMessage>((m) => ({ role: m.who === "you" ? "user" : "assistant", content: String(m.text).slice(0, 800) })),
+      ...hinted,
       { role: "user", content: question },
     ], { json: true });
     if (!out) return Response.json({ error: "unavailable" }, { status: 503 });
@@ -44,6 +48,7 @@ export async function POST(req: Request) {
     ...(b.history ?? []).slice(-8).map<ChatMessage>((m) => ({ role: m.who === "you" ? "user" : "assistant", content: String(m.text).slice(0, 800) })),
     // the step rule again, right before the question: where the model looks hardest
     ...(stayOnStep(c, b.where ?? {}) ? [{ role: "system" as const, content: stayOnStep(c, b.where ?? {}) }] : []),
+    ...hinted,
     ...(lang === "en" ? [{ role: "system" as const, content: "Answer in English." }] : []),
     { role: "user", content: question },
   ];

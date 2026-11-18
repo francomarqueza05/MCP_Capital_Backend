@@ -45,7 +45,9 @@ export async function POST(req: Request) {
   try {
     const j = JSON.parse(out.replace(/^```(?:json)?|```$/g, "").trim());
     const questions = (Array.isArray(j.questions) ? j.questions : [])
-      .map((q: unknown) => String(q).replace(/[*_#`"]/g, "").trim())
+      // the model sometimes runs two questions together ("…día?,¿Podemos…?"): split them
+      .flatMap((q: unknown) => String(q).split(/(?<=\?)\s*,?\s*(?=[¿A-ZÁÉÍÓÚ])/))
+      .map((q: string) => q.replace(/[*_#`"]/g, "").replace(/^,\s*/, "").trim())
       .filter((q: string) => q.length > 3 && q.length <= 80)
       .slice(0, 3);
     return Response.json({ questions });
