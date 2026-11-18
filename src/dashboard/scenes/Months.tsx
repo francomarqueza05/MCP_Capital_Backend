@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // The cushion, counted in months of expenses. Each month is a block that drops into place with
 // weight; the recommended range is marked as empty slots waiting to be filled. For a big
 // purchase that empties the cushion, the purchase arrives and knocks the blocks out.
@@ -41,7 +42,7 @@ function Blocks({ months, total, min, max, knocked = -1 }: { months: number; tot
         <g>
           <path d={`M${a.x},${a.y - 9} v-6 H${b.x + SIZE} v6`} fill="none" stroke={C.lichen} />
           <text x={(a.x + b.x + SIZE) / 2} y={a.y - 21} textAnchor="middle" className="svg-label">
-            {min === max ? `Lo recomendado: ${min} meses` : `Lo recomendado: ${min} a ${max} meses`}
+            {min === max ? tr(`Recommended: ${min} months`, `Lo recomendado: ${min} meses`) : tr(`Recommended: ${min} to ${max} months`, `Lo recomendado: ${min} a ${max} meses`)}
           </text>
         </g>
       )}
@@ -80,8 +81,8 @@ export function Months({ t }: { t: Topic }) {
   const rows = Math.ceil(total / PER_ROW);
   return (
     <SceneFrame
-      title={`Si dejas de cobrar, aguantas ${num(n.months, 1)} meses`}
-      sub={short > 0 ? `Te faltan ${num(short, 1)} meses para llegar a lo mínimo recomendado.` : over > 0 ? `Tienes ${num(over, 1)} meses de más: dinero parado que podría trabajar para ti.` : "Estás justo en el rango recomendado."}
+      title={tr(`If your income stops, you last ${num(n.months, 1)} months`, `Si dejas de cobrar, aguantas ${num(n.months, 1)} meses`)}
+      sub={short > 0 ? tr(`You're ${num(short, 1)} months short of the recommended minimum.`, `Te faltan ${num(short, 1)} meses para llegar a lo mínimo recomendado.`) : over > 0 ? tr(`You have ${num(over, 1)} extra months: idle money that could be working for you.`, `Tienes ${num(over, 1)} meses de más: dinero parado que podría trabajar para ti.`) : tr("You're right in the recommended range.", "Estás justo en el rango recomendado.")}
       colour={tone(t.status)}
     >
       <Blocks months={n.months} total={total} min={n.min} max={n.max} />
@@ -100,11 +101,11 @@ export function NearGoal({ t }: { t: Topic }) {
     const id = setTimeout(() => setHit(true), 2300);
     return () => clearTimeout(id);
   }, [run]);
-  const goal = n.goal ?? "Un gasto grande";
+  const goal = n.goal ?? tr("A big expense", "Un gasto grande");
   return (
     <SceneFrame
-      title={`${goal} vacía tu colchón`}
-      sub={`Hoy cubres ${num(n.months, 1)} meses de gastos. Después del pago${n.when ? ` de ${n.when}` : ""}, te quedarían ${num(n.after, 1)}.`}
+      title={tr(`${goal} empties your cushion`, `${goal} vacía tu colchón`)}
+      sub={tr(`Today you cover ${num(n.months, 1)} months of expenses. After the payment${n.when ? ` in ${n.when}` : ""}, you'd have ${num(n.after, 1)} left.`, `Hoy cubres ${num(n.months, 1)} meses de gastos. Después del pago${n.when ? ` de ${n.when}` : ""}, te quedarían ${num(n.after, 1)}.`)}
       colour={C.bad}
       controls={
         <button
@@ -114,7 +115,7 @@ export function NearGoal({ t }: { t: Topic }) {
             setRun((r) => r + 1);
           }}
         >
-          Verlo otra vez
+          {tr("Watch it again", "Verlo otra vez")}
         </button>
       }
     >
@@ -130,9 +131,9 @@ export function NearGoal({ t }: { t: Topic }) {
 
 function Legend({ y }: { y: number }) {
   const items: [string, string][] = [
-    [C.bad, "Por debajo de lo mínimo"],
-    [C.good, "Dentro de lo recomendado"],
-    [C.warn, "Parado de más"],
+    [C.bad, tr("Below the minimum", "Por debajo de lo mínimo")],
+    [C.good, tr("Within what's recommended", "Dentro de lo recomendado")],
+    [C.warn, tr("Idle extra", "Parado de más")],
   ];
   return (
     <g>

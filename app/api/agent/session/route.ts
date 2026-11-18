@@ -5,14 +5,17 @@ import { env } from "@/server/env";
 import { caseById } from "@/server/cordi";
 import { explainBrief, persona } from "@/server/brief";
 import { mapBrief, type Known } from "@/server/map";
+import { useRequestLang } from "@/server/lang";
 
 type Body = { caseId: string; mode: "explain" | "free"; campId?: string; camp?: string; from?: number; said?: string[]; known?: Known; recent?: { who: "you" | "cordi"; text: string }[] };
 
 export async function POST(req: Request) {
+  const lang = useRequestLang(req);
+  const agentId = env.agentIdFor(lang);
   const b = (await req.json().catch(() => null)) as Body | null;
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });
-  if (!env.elevenlabsKey || !env.agentId) return Response.json({ error: "agent_unavailable" }, { status: 503 });
+  if (!env.elevenlabsKey || !agentId) return Response.json({ error: "agent_unavailable" }, { status: 503 });
 
   const said = (b.said ?? []).map(String).slice(-24);
   // a free call happens on the map: the same guide rule as the map's chat
@@ -22,7 +25,7 @@ export async function POST(req: Request) {
   const recent = (b.recent ?? []).slice(-10).map((m) => `${m.who === "you" ? "Person" : "Cordi"}: ${String(m.text).slice(0, 300)}`);
   const phase_brief = recent.length ? `${brief}\nRECENT CONVERSATION (continue from here; do not repeat answers already given):\n${recent.join("\n")}` : brief;
 
-  const res = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(env.agentId)}`, {
+  const res = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`, {
     headers: { "xi-api-key": env.elevenlabsKey },
     signal: AbortSignal.timeout(8000),
   }).catch(() => null);

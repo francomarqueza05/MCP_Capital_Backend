@@ -3,12 +3,30 @@
 // muted, or blocked by the browser, the experience carries on silently.
 import voiceManifest from "@/data/voice.json";
 import sfxManifest from "@/data/sfx.json";
+import { isEs, lang } from "./lang";
 
 export type VoiceLine = { text: string; file?: string; words?: number[]; end?: number };
 const VOICE = voiceManifest as Record<string, VoiceLine>;
 const SFX = sfxManifest as Record<string, string>;
 
-export const line = (id: string) => VOICE[id]?.text ?? id;
+/** The stock lines in English (the manifest holds the Spanish ones). */
+const EN_LINES: Record<string, string> = {
+  hello: "Hi, I'm Cordi!",
+  intro: "I'll help you understand your financial plan, step by step.",
+  howItWorks: "First you'll see a summary of where you stand. If anything isn't clear, tap me and we'll go through it together.",
+  askMode: "How would you like to ask me questions?",
+  sayAnything: "Say something, I'm listening.",
+  heardYou: "Perfect, I can hear you!",
+  micFailed: "I couldn't access the microphone. Let's carry on in writing; you can switch whenever you like.",
+  textMode: "Perfect, let's carry on in writing!",
+  summaryHere: "Here's your summary.",
+  howCanIHelp: "How can I help?",
+  listening: "I'm listening.",
+  micFailedShort: "I couldn't access the microphone. You can write to me down here.",
+  placeholderAnswer: "Good question! Once I'm connected to your plan, I'll explain it with your own numbers.",
+};
+const textOf = (id: string) => (VOICE[id] ? (isEs() ? VOICE[id].text : EN_LINES[id] ?? VOICE[id].text) : undefined);
+export const line = (id: string) => textOf(id) ?? id;
 export const hasVoice = (id: string) => Boolean(VOICE[id]?.file);
 
 let ctx: AudioContext | null = null;
@@ -31,7 +49,7 @@ export function unlock() {
   // the stock lines, fetched once in the live voice, so they play without a wait
   if (!stockFetched) {
     stockFetched = true;
-    for (const v of Object.values(VOICE)) prefetchSpeech(v.text);
+    for (const id of Object.keys(VOICE)) prefetchSpeech(line(id));
   }
   return ctx;
 }
@@ -275,7 +293,7 @@ function ttsFetch(text: string, now: boolean): Promise<string | null> {
         let url: string | null = null;
         for (let attempt = 0; attempt < 2 && !url; attempt++) {
           if (attempt) await new Promise((r) => setTimeout(r, 900));
-          url = await fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) })
+          url = await fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang: lang() }) })
             .then(async (r) => (r.ok ? URL.createObjectURL(await r.blob()) : null))
             .catch(() => null);
         }
@@ -304,7 +322,7 @@ function ttsUrl(text: string, now = true) {
 }
 /** Starts fetching a line's voice ahead of time, so it plays without a wait. */
 export const prefetchSpeech = (text: string) => {
-  if (tts && !muted && text && !VOICE[text]) void ttsUrl(text, false);
+  if (tts && !muted && text && !VOICE[text]) void ttsUrl(textOf(text) ?? text, false);
 };
 const estimate = (text: string, dur: number) => {
   const words = text.split(" ");
@@ -335,7 +353,7 @@ export function speak(id: string): Promise<Spoken | null> {
   const recording = () => Promise.resolve(null);
   // every line, the stock ones included ("¿En qué te ayudo?"), in the one live voice, so Cordi
   // never changes voice mid-experience
-  const text = v ? v.text : id;
+  const text = v ? line(id) : id;
   if (!tts || !text.trim()) return recording();
   return ttsUrl(text).then(async (url) => {
     if (my !== voiceSeq || muted) return null;

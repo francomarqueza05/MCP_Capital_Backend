@@ -5,10 +5,12 @@
 import { ask, type ChatMessage } from "@/server/llm";
 import { caseById, stayOnStep, systemPrompt, type Where } from "@/server/cordi";
 import { mapPrompt } from "@/server/map";
+import { langNote, useRequestLang } from "@/server/lang";
 
 type Body = { caseId: string; where?: Where; history?: { who: "you" | "cordi"; text: string }[] };
 
 export async function POST(req: Request) {
+  const lang = useRequestLang(req);
   const b = (await req.json().catch(() => null)) as Body | null;
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });
@@ -29,12 +31,13 @@ export async function POST(req: Request) {
       : "- No preguntes por lo que se explica en pasos posteriores (MÁS ADELANTE / PRÓXIMOS PASOS).",
     recent ? `CONVERSACIÓN RECIENTE:\n${recent}` : "",
     'Responde SOLO con JSON: {"questions": ["...", "...", "..."]}',
+    lang === "en" ? `Write the 3 questions in natural American English, first person${we ? " plural (we are a couple: \"our\", \"we pay\")" : ""}, max 8 words each.` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
   const messages: ChatMessage[] = [
-    { role: "system", content: system },
+    { role: "system", content: system + langNote(lang) },
     { role: "user", content: task },
   ];
   const out = await ask("fast", messages, { json: true });

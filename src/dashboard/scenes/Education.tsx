@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // College savings as one glass jar per child. The liquid rises with a spring and its surface
 // keeps moving, so a full jar still feels alive. The line marks what the degree will cost.
 import { motion, useAnimationFrame, useMotionValue, useTransform } from "motion/react";
@@ -42,7 +43,7 @@ function Jar({ x, name, share, per, phase }: { x: number; name: string; share: R
         {name}
       </text>
       <text x={x + JW / 2} y={TOP + JH + 38} textAnchor="middle" className="svg-small">
-        {`de ${short(per)}`}
+        {tr(`of ${short(per)}`, `de ${short(per)}`)}
       </text>
     </g>
   );
@@ -62,14 +63,14 @@ export function Education({ t, c }: { t: Topic; c: Case }) {
   const x0 = (560 - gapW) / 2;
   return (
     <SceneFrame
-      title={target >= 0.999 ? "Con ese aporte, la universidad queda cubierta" : `Para la universidad faltan ${short(n.gap)}`}
-      sub={n.have ? `Hay ${short(n.have)} ahorrados de los ${short(n.need)} que costará, en dinero de hoy.` : `Hoy no hay nada ahorrado para la universidad, y costará ${short(n.need)} en dinero de hoy.`}
+      title={target >= 0.999 ? tr("With that contribution, college is covered", "Con ese aporte, la universidad queda cubierta") : tr(`College is ${short(n.gap)} short`, `Para la universidad faltan ${short(n.gap)}`)}
+      sub={n.have ? tr(`${short(n.have)} saved of the ${short(n.need)} it will cost, in today's dollars.`, `Hay ${short(n.have)} ahorrados de los ${short(n.need)} que costará, en dinero de hoy.`) : tr(`Nothing is saved for college today, and it will cost ${short(n.need)} in today's dollars.`, `Hoy no hay nada ahorrado para la universidad, y costará ${short(n.need)} en dinero de hoy.`)}
       colour={target >= 0.999 ? C.good : C.warn}
       controls={
         n.extraSave > 0 ? (
-          <Slider label="Aporte extra al año" min={0} max={Math.ceil((n.extraSave * 1.5) / 100) * 100} step={50} value={extra} onChange={setExtra} format={(v) => money(v)} />
+          <Slider label={tr("Extra a year", "Aporte extra al año")} min={0} max={Math.ceil((n.extraSave * 1.5) / 100) * 100} step={50} value={extra} onChange={setExtra} format={(v) => money(v)} />
         ) : (
-          <p className="scene-note">Con lo que entra hoy no queda margen para aportar: primero hay que cuadrar el dinero de cada año.</p>
+          <p className="scene-note">{tr("With what comes in today there's no room to contribute: first the yearly money needs to balance.", "Con lo que entra hoy no queda margen para aportar: primero hay que cuadrar el dinero de cada año.")}</p>
         )
       }
     >

@@ -162,7 +162,7 @@ function ChatInput() {
       void writeDuring(q);
       return;
     }
-    converse(q, null, "Preguntas libres");
+    converse(q, null, tr("Open questions", "Preguntas libres"));
   };
   return (
     <form

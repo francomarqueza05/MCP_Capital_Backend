@@ -14,6 +14,7 @@ import { askCordi, checkAI, remember, session } from "@/ai/client";
 import { agentActive, agentMute, agentQuiet, agentSay, endAgent, startAgent } from "./agent";
 import { explain, explaining, interject, proceed, resumeCut, takeWheel, writeDuring } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
+import { tr } from "@/lib/lang";
 import { captionInBubble, hideBubble, holdBubble, setCaptions } from "./stage";
 
 export type CallState = "idle" | "connecting" | "speaking" | "listening" | "thinking";
@@ -32,7 +33,7 @@ export const call = createStore({
 
 export const inCall = () => call.get().state !== "idle";
 
-const TOPIC = "Llamada con Cordi";
+const TOPIC = () => tr("Call with Cordi", "Llamada con Cordi");
 const LOUD = 0.12; // the level that counts as someone talking
 // Cutting Cordi off takes real speech, not a slip: louder than talking level (and than the
 // room), and held. A cough, an "mm" or a short noise doesn't stop it.
@@ -198,8 +199,8 @@ async function endTurn() {
   }
   if (!heard) {
     // nothing understood: say so, and listen again
-    const again = "Perdona, no te he entendido bien. ¿Me lo repites, o me lo escribes en la conversación?";
-    logMsg("cordi", again, TOPIC);
+    const again = tr("Sorry, I didn't catch that. Can you say it again, or type it in the conversation?", "Perdona, no te he entendido bien. ¿Me lo repites, o me lo escribes en la conversación?");
+    logMsg("cordi", again, TOPIC());
     await say(again);
   } else if (explain.get().waiting && explain.get().how === "call" && isGo(heard)) {
     // a clear "sí, seguimos" while the explanation waits: on to the next step, like the button
@@ -210,7 +211,7 @@ async function endTurn() {
   } else {
     // a question out loud: no more countdown, the person moves on when they want
     takeWheel();
-    logMsg("you", heard, TOPIC);
+    logMsg("you", heard, TOPIC());
     await reply(heard);
   }
   if (my === turn && inCall()) listen();
@@ -219,9 +220,9 @@ async function endTurn() {
 /** Cordi's answer: the live AI with the family's analysis, or a kind fallback without it. */
 async function reply(question: string) {
   const my = turn;
-  const answer = (await askCordi(question, TOPIC)) ?? voiceLine("placeholderAnswer");
+  const answer = (await askCordi(question, TOPIC())) ?? voiceLine("placeholderAnswer");
   if (my !== turn) return;
-  logMsg("cordi", answer, TOPIC);
+  logMsg("cordi", answer, TOPIC());
   await say(answer);
 }
 
@@ -335,7 +336,7 @@ export async function startCall({ greet = true } = {}) {
       return true;
     }
     holdBubble(false);
-    call.set({ state: "idle", error: "No pude acceder al micrófono. Revisa el permiso del navegador, o escríbeme en la conversación." });
+    call.set({ state: "idle", error: tr("I couldn't access the microphone. Check the browser's permission, or write to me in the conversation.", "No pude acceder al micrófono. Revisa el permiso del navegador, o escríbeme en la conversación.") });
     orb.setEmo("concerned");
     return false;
   }
@@ -346,7 +347,7 @@ export async function startCall({ greet = true } = {}) {
     call.set({ state: "speaking" });
     return true;
   }
-  logMsg("cordi", "¡Hola! Soy Cordi. ¿En qué te ayudo?", TOPIC);
+  logMsg("cordi", tr("Hi! I'm Cordi. How can I help?", "¡Hola! Soy Cordi. ¿En qué te ayudo?"), TOPIC());
   if ((await say("hello")) && (await say("howCanIHelp")) && my === turn) listen();
   else if (my === turn && inCall() && call.get().state !== "listening") listen();
   return true;
@@ -410,7 +411,7 @@ export async function typeInCall(text: string) {
   heardAt = 0;
   call.set({ state: "thinking" });
   orb.setEmo("thinking");
-  logMsg("you", q, TOPIC);
+  logMsg("you", q, TOPIC());
   const my = turn;
   await reply(q);
   if (my === turn && inCall()) listen();

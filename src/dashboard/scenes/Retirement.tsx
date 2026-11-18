@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // Retirement, three ways depending on what the plan says:
 //   a gap      two mountains: the one you need to climb and the one your savings build;
 //   a run-out  the savings line from the day you retire down to the age it reaches zero;
@@ -47,10 +48,10 @@ function TwoMountains({ n }: { n: N }) {
   const haveLabelY = useTransform(haveTop, (y) => y - 12);
   return (
     <SceneFrame
-      title={done ? "Con ese ahorro, llegas a la cima" : `Para jubilarte a los ${n.retireAge} te faltan ${short(n.gap)}`}
-      sub={`Lo que necesitarás frente a lo que tendrás, en dinero de hoy. Sherpas calcula que con ${money(n.extraSave)} más al año llegarías.`}
+      title={done ? tr("With that saving, you reach the summit", "Con ese ahorro, llegas a la cima") : tr(`To retire at ${n.retireAge} you're ${short(n.gap)} short`, `Para jubilarte a los ${n.retireAge} te faltan ${short(n.gap)}`)}
+      sub={tr(`What you'll need against what you'll have, in today's dollars. Sherpas works out that ${money(n.extraSave)} more a year gets you there.`, `Lo que necesitarás frente a lo que tendrás, en dinero de hoy. Sherpas calcula que con ${money(n.extraSave)} más al año llegarías.`)}
       colour={done ? C.good : C.bad}
-      controls={<Slider label="Ahorro extra al año" min={0} max={Math.ceil((n.extraSave * 1.2) / 1000) * 1000} step={500} value={extra} onChange={setExtra} format={(v) => money(v)} />}
+      controls={<Slider label={tr("Extra saved a year", "Ahorro extra al año")} min={0} max={Math.ceil((n.extraSave * 1.2) / 1000) * 1000} step={500} value={extra} onChange={setExtra} format={(v) => money(v)} />}
     >
       <line x1={0} x2={VW} y1={base} y2={base} stroke={C.dim} />
       <motion.path d={needPath} fill="url(#hatch-l)" stroke={C.lichen} strokeDasharray="4 4" />
@@ -71,10 +72,10 @@ function TwoMountains({ n }: { n: N }) {
         {short(have)}
       </motion.text>
       <text x={170} y={base + 20} textAnchor="middle" className="svg-label">
-        Lo que necesitarás
+        {tr("What you'll need", "Lo que necesitarás")}
       </text>
       <text x={390} y={base + 20} textAnchor="middle" className="svg-label">
-        Lo que tendrás
+        {tr("What you'll have", "Lo que tendrás")}
       </text>
     </SceneFrame>
   );
@@ -109,11 +110,11 @@ function RunOut({ n }: { n: N }) {
   const dx = useTransform(dot, (d) => d[0]);
   const dy = useTransform(dot, (d) => d[1]);
   const ly = useTransform(dy, (y) => y - 14);
-  const ageLabel = useTransform(build, (k) => `${Math.floor(from + (end - from) * k)} años`);
+  const ageLabel = useTransform(build, (k) => `${Math.floor(from + (end - from) * k)} ${tr("yrs", "años")}`);
   const zeroW = useTransform(build, (k) => Math.max(0, xOf(Math.max(to, from + (end - from) * k)) - xOf(to)));
   const step = Math.max(2, Math.round((end - from) / 6));
   return (
-    <SceneFrame title={`Tus ahorros se acaban a los ${to} años`} sub={`Así baja tu dinero desde que te jubilas, a los ${from}. A partir de los ${to}, vivirías solo de la pensión.`} colour={C.bad}>
+    <SceneFrame title={tr(`Your savings run out at ${to}`, `Tus ahorros se acaban a los ${to} años`)} sub={tr(`This is how your money falls from when you retire, at ${from}. From ${to} on, you'd live on your pension alone.`, `Así baja tu dinero desde que te jubilas, a los ${from}. A partir de los ${to}, vivirías solo de la pensión.`)} colour={C.bad}>
       <line x1={X} y1={Y + PH} x2={X + PW} y2={Y + PH} stroke={C.dim} />
       {Array.from({ length: Math.floor((end - from) / step) + 1 }, (_, i) => from + i * step).map((age) => (
         <text key={age} x={xOf(age)} y={Y + PH + 18} textAnchor="middle" className="svg-small">
@@ -122,7 +123,7 @@ function RunOut({ n }: { n: N }) {
       ))}
       <rect x={xOf(to)} y={Y} width={X + PW - xOf(to)} height={PH} fill="url(#hatch)" opacity={0.6} />
       <text x={xOf(to) + 8} y={Y + 14} className="svg-small" fill={C.bad}>
-        sin ahorros
+        {tr("no savings", "sin ahorros")}
       </text>
       <motion.path d={area} fill="url(#v-warn)" />
       <motion.path d={line} fill="none" stroke={C.warn} strokeWidth={3} strokeLinecap="round" />
@@ -156,10 +157,10 @@ function Gauge({ n }: { n: N }) {
   const ny = useTransform([dS, build], ([v, k]: number[]) => point(v * k, R - 30)[1]);
   return (
     <SceneFrame
-      title={`Sacas un ${n.draw}% de tus ahorros al año`}
-      sub="Hasta un 6% al año suele poder sostenerse. Por encima, el dinero se agota antes."
+      title={tr(`You draw ${n.draw}% of your savings a year`, `Sacas un ${n.draw}% de tus ahorros al año`)}
+      sub={tr("Up to 6% a year can usually be sustained. Above that, the money runs out sooner.", "Hasta un 6% al año suele poder sostenerse. Por encima, el dinero se agota antes.")}
       colour={C.warn}
-      controls={<Slider label="Sacar al año" min={2} max={Math.ceil(n.draw)} step={0.5} value={d} onChange={setD} format={(v) => `${v}%`} />}
+      controls={<Slider label={tr("Draw a year", "Sacar al año")} min={2} max={Math.ceil(n.draw)} step={0.5} value={d} onChange={setD} format={(v) => `${v}%`} />}
     >
       <path d={arc(0, 6)} fill="none" stroke={C.good} strokeWidth={16} />
       <path d={arc(6, 8)} fill="none" stroke={C.warn} strokeWidth={16} />
@@ -167,7 +168,7 @@ function Gauge({ n }: { n: N }) {
       <motion.line x1={cx} y1={cy} x2={nx} y2={ny} stroke={C.snow} strokeWidth={4} strokeLinecap="round" />
       <circle cx={cx} cy={cy} r={9} fill={C.snow} />
       <text x={cx} y={cy + 34} textAnchor="middle" className="svg-figure" fill={d <= 6 ? C.good : C.bad}>
-        {`${d}% al año`}
+        {`${d}% ${tr("a year", "al año")}`}
       </text>
     </SceneFrame>
   );

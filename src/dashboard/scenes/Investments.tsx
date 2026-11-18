@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // The mix of investments as a balance. On the left, what is in shares (grows more, swings
 // more); on the right, the steadier part. The beam is level when the mix matches what fits the
 // family. It is a real pendulum: drag the mix and it swings, overshoots, then settles.
@@ -34,20 +35,20 @@ function Balance({ equity, target }: { equity: number; target: number }) {
   const colour = level ? C.good : C.warn;
   return (
     <SceneFrame
-      title={level ? "Tu dinero está en equilibrio" : diff < 0 ? "Tu dinero está más quieto de lo que te toca" : "Tienes más riesgo del que te toca"}
-      sub={`Hoy tienes un ${equity}% en acciones. Para tu edad y tus metas, lo que encaja es un ${target}%.`}
+      title={level ? tr("Your money is in balance", "Tu dinero está en equilibrio") : diff < 0 ? tr("Your money is sitting stiller than it should", "Tu dinero está más quieto de lo que te toca") : tr("You're taking more risk than fits you", "Tienes más riesgo del que te toca")}
+      sub={tr(`Today you have ${equity}% in stocks. For your age and goals, the right mix is ${target}%.`, `Hoy tienes un ${equity}% en acciones. Para tu edad y tus metas, lo que encaja es un ${target}%.`)}
       colour={colour}
-      controls={<Slider label="En acciones" min={Math.min(equity, target) - 15} max={Math.max(equity, target) + 15} value={eq} onChange={setEq} format={(v) => `${v}%`} />}
+      controls={<Slider label={tr("In stocks", "En acciones")} min={Math.min(equity, target) - 15} max={Math.max(equity, target) + 15} value={eq} onChange={setEq} format={(v) => `${v}%`} />}
     >
       <path d={`M${cx - 40},${236} L${cx},${pivot + 6} L${cx + 40},${236} Z`} fill={C.slate2} stroke={C.lichen} strokeOpacity={0.3} />
       <motion.g style={{ rotate: beam, x: cx, y: pivot }}>
         <rect x={-arm - 6} y={-4} width={arm * 2 + 12} height={8} rx={4} fill={C.lichen} />
       </motion.g>
       <circle cx={cx} cy={pivot} r={8} fill={C.snow} />
-      <Pan x={lx} y={ly} share={eq} label="En acciones" colour={C.dawn} />
-      <Pan x={rx} y={ry} share={100 - eq} label="Lo más estable" colour={C.lichen} />
+      <Pan x={lx} y={ly} share={eq} label={tr("In stocks", "En acciones")} colour={C.dawn} />
+      <Pan x={rx} y={ry} share={100 - eq} label={tr("Steadier assets", "Lo más estable")} colour={C.lichen} />
       <text x={cx} y={8} textAnchor="middle" className="svg-label" fill={colour}>
-        {level ? "Prácticamente nivelado" : diff < 0 ? `Faltan ${Math.round(-diff)} puntos en acciones` : `Sobran ${Math.round(diff)} puntos en acciones`}
+        {level ? tr("Practically level", "Prácticamente nivelado") : diff < 0 ? tr(`${Math.round(-diff)} points short in stocks`, `Faltan ${Math.round(-diff)} puntos en acciones`) : tr(`${Math.round(diff)} points too many in stocks`, `Sobran ${Math.round(diff)} puntos en acciones`)}
       </text>
     </SceneFrame>
   );
@@ -87,7 +88,7 @@ function Leveraged({ fund }: { fund: string }) {
   const lev = useTransform(build, (k) => line(k, 3));
   const op = useTransform(build, [0.45, 0.6], [0, 1]);
   return (
-    <SceneFrame title={`${fund} multiplica las caídas por tres`} sub="Si el mercado cae un 10%, este fondo cae alrededor de un 30%. Y para recuperarse necesita subir mucho más." colour={C.bad}>
+    <SceneFrame title={tr(`${fund} triples the falls`, `${fund} multiplica las caídas por tres`)} sub={tr("If the market falls 10%, this fund falls about 30%. And it needs to rise much more to recover.", "Si el mercado cae un 10%, este fondo cae alrededor de un 30%. Y para recuperarse necesita subir mucho más.")} colour={C.bad}>
       <line x1={X} y1={Y} x2={X + PW} y2={Y} stroke={C.dim} strokeDasharray="3 4" />
       <text x={X} y={Y - 10} className="svg-small">
         hoy
@@ -96,7 +97,7 @@ function Leveraged({ fund }: { fund: string }) {
       <motion.path d={lev} fill="none" stroke={C.bad} strokeWidth={3} strokeLinecap="round" />
       <motion.g style={{ opacity: op }}>
         <text x={X + PW * 0.5} y={Y + 44 + 26} textAnchor="middle" className="svg-label">
-          Mercado, −10%
+          {tr("Market, −10%", "Mercado, −10%")}
         </text>
         <text x={X + PW * 0.5} y={Y + 132 + 26} textAnchor="middle" className="svg-label" fill={C.bad}>
           {`${fund}, −30%`}

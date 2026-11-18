@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // A card balance that barely moves. Top: where each monthly payment actually goes (interest
 // versus the debt itself). Below: the balance over ten years at today's payment, and at the
 // payment you choose. Both reshape with weight as you drag.
@@ -52,18 +53,18 @@ function Card({ balance, monthly, interest }: { balance: number; monthly: number
   const rest = useTransform([payS, build], ([p, k]: number[]) => (W - (Math.min(interest, p) / p) * W) * k);
   const restX = useTransform(split, (s) => s + 3);
   const m = monthsToPay(balance, r, pay);
-  const free = !isFinite(m) ? "Con este pago no terminarías nunca" : m > 24 ? `Libre de deuda en ${num(m / 12, 1)} años` : `Libre de deuda en ${Math.ceil(m)} meses`;
+  const free = !isFinite(m) ? tr("At this payment you'd never finish", "Con este pago no terminarías nunca") : m > 24 ? tr(`Debt-free in ${num(m / 12, 1)} years`, `Libre de deuda en ${num(m / 12, 1)} años`) : tr(`Debt-free in ${Math.ceil(m)} months`, `Libre de deuda en ${Math.ceil(m)} meses`);
   const interestShare = Math.round((Math.min(interest, pay) / pay) * 100);
 
   return (
     <SceneFrame
-      title={`Pagas ${money(monthly)} al mes y la deuda casi no baja`}
-      sub={`La tarjeta cobra alrededor de un ${num(r * 1200, 1)}% al año. De cada pago, ${interestShare}% se va en intereses.`}
+      title={tr(`You pay ${money(monthly)} a month and the debt barely goes down`, `Pagas ${money(monthly)} al mes y la deuda casi no baja`)}
+      sub={tr(`The card charges about ${num(r * 1200, 1)}% a year. Of each payment, ${interestShare}% goes to interest.`, `La tarjeta cobra alrededor de un ${num(r * 1200, 1)}% al año. De cada pago, ${interestShare}% se va en intereses.`)}
       colour={C.bad}
-      controls={<Slider label="Pagar al mes" min={Math.round(monthly)} max={Math.round((monthly * 4) / 50) * 50} step={25} value={pay} onChange={setPay} format={(v) => money(v)} />}
+      controls={<Slider label={tr("Pay per month", "Pagar al mes")} min={Math.round(monthly)} max={Math.round((monthly * 4) / 50) * 50} step={25} value={pay} onChange={setPay} format={(v) => money(v)} />}
     >
       <text x={0} y={14} className="svg-label">
-        {`Adónde va cada pago de ${money(pay)}`}
+        {tr(`Where each ${money(pay)} payment goes`, `Adónde va cada pago de ${money(pay)}`)}
       </text>
       <motion.rect x={0} y={24} height={22} rx={6} fill={C.bad} width={split} />
       <motion.rect y={24} height={22} rx={6} fill={C.good} width={rest} style={{ x: restX }} />
@@ -71,13 +72,13 @@ function Card({ balance, monthly, interest }: { balance: number; monthly: number
         {`Intereses: ${money(Math.min(interest, pay))}`}
       </text>
       <text x={VW} y={64} textAnchor="end" className="svg-small" fill={C.good}>
-        {`Baja la deuda: ${money(Math.max(0, pay - interest))}`}
+        {tr(`Lowers the debt: ${money(Math.max(0, pay - interest))}`, `Baja la deuda: ${money(Math.max(0, pay - interest))}`)}
       </text>
 
       <line x1={X} y1={Y + PH} x2={X + PW} y2={Y + PH} stroke={C.dim} />
       {Array.from({ length: YEARS / 2 + 1 }, (_, i) => i * 2).map((yr) => (
         <text key={yr} x={X + (PW * yr) / YEARS} y={Y + PH + 16} textAnchor="middle" className="svg-small">
-          {yr === 0 ? "hoy" : `${yr} años`}
+          {yr === 0 ? tr("today", "hoy") : tr(`${yr} yrs`, `${yr} años`)}
         </text>
       ))}
       <text x={X - 8} y={Y + 4} textAnchor="end" className="svg-small">
@@ -90,7 +91,7 @@ function Card({ balance, monthly, interest }: { balance: number; monthly: number
       <motion.path d={nowLine} fill="none" stroke={C.bad} strokeWidth={2.5} strokeLinecap="round" />
       <motion.path d={newLine} fill="none" stroke={C.good} strokeWidth={3} strokeLinecap="round" />
       <text x={X + PW} y={Y - 6} textAnchor="end" className="svg-small" fill={C.bad}>
-        con el pago de hoy
+        {tr("at today's payment", "con el pago de hoy")}
       </text>
       <Pill key={free} x={X + PW / 2} y={Y + PH - 36} text={free} colour={isFinite(m) && m < 48 ? C.good : C.bad} />
     </SceneFrame>
@@ -104,18 +105,18 @@ function DebtToIncome({ t }: { t: Topic }) {
   const colour = tone(t.status);
   const limit = VW * 0.36;
   return (
-    <SceneFrame title={`${Math.round(share * 100)}% de tu sueldo se va en deudas`} sub="Hasta un 36% suele considerarse sano. Estás por debajo." colour={colour}>
+    <SceneFrame title={tr(`${Math.round(share * 100)}% of your income goes to debt`, `${Math.round(share * 100)}% de tu sueldo se va en deudas`)} sub={tr("Up to 36% is usually considered healthy. You're below it.", "Hasta un 36% suele considerarse sano. Estás por debajo.")} colour={colour}>
       <rect x={0} y={100} width={VW} height={44} rx={10} fill={C.faint} />
       <motion.rect x={0} y={100} height={44} rx={10} fill={colour} width={w} />
       <line x1={limit} x2={limit} y1={88} y2={156} stroke={C.lichen} strokeDasharray="3 3" />
       <text x={limit} y={80} textAnchor="middle" className="svg-small">
-        límite sano, 36%
+        {tr("healthy limit, 36%", "límite sano, 36%")}
       </text>
       <text x={0} y={172} className="svg-small" fill={colour}>
-        Pagos de deudas
+        {tr("Debt payments", "Pagos de deudas")}
       </text>
       <text x={VW} y={172} textAnchor="end" className="svg-small">
-        Tu sueldo bruto al mes
+        {tr("Your gross monthly income", "Tu sueldo bruto al mes")}
       </text>
     </SceneFrame>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { attachFx, drawFx, resizeFx } from "./fx";
 import { orb } from "./engine";
+import { tr } from "@/lib/lang";
 
 export function Orb({ onTap }: { onTap?: () => void }) {
   const root = useRef<HTMLDivElement>(null);
@@ -67,7 +68,7 @@ export function Orb({ onTap }: { onTap?: () => void }) {
         className="orb"
         role="button"
         tabIndex={0}
-        aria-label="Cordi, tu guía. Tócame para preguntar."
+        aria-label={tr("Cordi, your guide. Tap me to ask.", "Cordi, tu guía. Tócame para preguntar.")}
         onPointerDown={(e) => {
           e.stopPropagation();
           if (orb.mode !== "idle" && orb.mode !== "hold" && orb.mode !== "puppet") return;

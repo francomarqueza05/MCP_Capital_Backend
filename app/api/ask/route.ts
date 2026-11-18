@@ -4,10 +4,12 @@
 import { ask, type ChatMessage } from "@/server/llm";
 import { caseById, stayOnStep, systemPrompt, type Where } from "@/server/cordi";
 import { mapPrompt, mapState } from "@/server/map";
+import { langNote, useRequestLang } from "@/server/lang";
 
 type Body = { caseId: string; question: string; where?: Where; history?: { who: "you" | "cordi"; text: string }[] };
 
 export async function POST(req: Request) {
+  const lang = useRequestLang(req);
   let b: Body;
   try {
     b = await req.json();
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
   // offer to go to a camp ("go"), which the chat turns into a button
   if (b.where?.mode === "map") {
     const out = await ask("fast", [
-      { role: "system", content: mapPrompt(c, b.where.known ?? {}, { camp: b.where.camp, said: b.where.said }) },
+      { role: "system", content: mapPrompt(c, b.where.known ?? {}, { camp: b.where.camp, said: b.where.said }) + langNote(lang) },
       ...(b.history ?? []).slice(-8).map<ChatMessage>((m) => ({ role: m.who === "you" ? "user" : "assistant", content: String(m.text).slice(0, 800) })),
       { role: "user", content: question },
     ], { json: true });
@@ -38,10 +40,11 @@ export async function POST(req: Request) {
   }
 
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt(c, b.where ?? {}) },
+    { role: "system", content: systemPrompt(c, b.where ?? {}) + langNote(lang) },
     ...(b.history ?? []).slice(-8).map<ChatMessage>((m) => ({ role: m.who === "you" ? "user" : "assistant", content: String(m.text).slice(0, 800) })),
     // the step rule again, right before the question: where the model looks hardest
     ...(stayOnStep(c, b.where ?? {}) ? [{ role: "system" as const, content: stayOnStep(c, b.where ?? {}) }] : []),
+    ...(lang === "en" ? [{ role: "system" as const, content: "Answer in English." }] : []),
     { role: "user", content: question },
   ];
   const answer = await ask("fast", messages);

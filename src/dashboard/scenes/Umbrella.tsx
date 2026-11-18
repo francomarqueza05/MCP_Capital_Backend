@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // Liability cover. A lawsuit falls toward what the family owns (home, car, savings). Without
 // the policy it lands and takes a piece; with it, an umbrella catches it and it breaks apart.
 import { AnimatePresence, motion } from "motion/react";
@@ -9,9 +10,9 @@ import { C, SceneFrame, Toggle, useTicker, VH } from "./kit";
 
 const GROUND = VH - 40;
 const ASSETS = [
-  { id: "house", x: 150, label: "Casa" },
-  { id: "car", x: 280, label: "Coche" },
-  { id: "savings", x: 410, label: "Ahorros" },
+  { id: "house", x: 150, get label() { return tr("Home", "Casa"); } },
+  { id: "car", x: 280, get label() { return tr("Car", "Coche"); } },
+  { id: "savings", x: 410, get label() { return tr("Savings", "Ahorros"); } },
 ];
 
 function Asset({ id, x, hit }: { id: string; x: number; hit: boolean }) {
@@ -61,10 +62,10 @@ export function Umbrella({ t }: { t: Topic }) {
   const struck = !on && landed === target.id;
   return (
     <SceneFrame
-      title={on ? "Si te demandan, el seguro responde por ti" : "Una demanda podría llegar a lo que tienes"}
-      sub={n.recommended ? `El seguro de casa y coche cubre poco ante una demanda grande. Sherpas recomienda ${short(n.recommended)} de cobertura.` : `Tienes ${short(n.current ?? 0)} de cobertura ante demandas.`}
+      title={on ? tr("If you're sued, the insurance answers for you", "Si te demandan, el seguro responde por ti") : tr("A lawsuit could reach what you own", "Una demanda podría llegar a lo que tienes")}
+      sub={n.recommended ? tr(`Home and car insurance cover little against a big lawsuit. Sherpas recommends ${short(n.recommended)} of cover.`, `El seguro de casa y coche cubre poco ante una demanda grande. Sherpas recomienda ${short(n.recommended)} de cobertura.`) : tr(`You have ${short(n.current ?? 0)} of umbrella cover.`, `Tienes ${short(n.current ?? 0)} de cobertura ante demandas.`)}
       colour={on ? C.good : C.bad}
-      controls={n.recommended ? <Toggle on={on} onChange={setOn} labels={["Sin el seguro", "Con el seguro"]} /> : undefined}
+      controls={n.recommended ? <Toggle on={on} onChange={setOn} labels={[tr("Without it", "Sin el seguro"), tr("With it", "Con el seguro")]} /> : undefined}
     >
       <line x1={40} x2={520} y1={GROUND} y2={GROUND} stroke={C.dim} />
       <motion.path
@@ -91,7 +92,7 @@ export function Umbrella({ t }: { t: Topic }) {
         >
           <path d="M-8,-26 L6,-26 L-2,-6 L10,-6 L-10,22 L-4,0 L-14,0 Z" fill={C.bad} />
           <text x={16} y={-8} className="svg-small" fill={C.bad}>
-            Demanda
+            {tr("Lawsuit", "Demanda")}
           </text>
         </motion.g>
       </AnimatePresence>

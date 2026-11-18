@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { env } from "@/server/env";
 import { forSpeech } from "@/lib/speech";
+import { asLang, setLang, type Lang } from "@/lib/lang";
 
 const dir = join(process.cwd(), ".cache", "voice");
 let proxyDownUntil = 0;
@@ -37,18 +38,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 const SETTINGS = { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true };
 const SEED = 7;
-const LANG = "es";
 
 // some proxies refuse fields they don't know: if it turns down the voice settings, it's asked
 // again without them (and from then on), rather than leaving Cordi silent
 let proxyTakesSettings = true;
 
-async function viaProxy(text: string) {
+async function viaProxy(text: string, LANG: Lang) {
   if (!env.teamKey || Date.now() < proxyDownUntil) return null;
   await slot();
   try {
     for (let attempt = 0; attempt < 4; attempt++) {
-      const body = { model: env.voiceModel, voice: env.voiceId, input: text, response_format: "mp3", speed: env.voiceSpeed, seed: SEED, language_code: LANG, ...(proxyTakesSettings ? { voice_settings: { ...SETTINGS, speed: env.voiceSpeed } } : {}) };
+      const body = { model: env.voiceModel, voice: env.voiceIdFor(LANG), input: text, response_format: "mp3", speed: env.voiceSpeed, seed: SEED, language_code: LANG, ...(proxyTakesSettings ? { voice_settings: { ...SETTINGS, speed: env.voiceSpeed } } : {}) };
       const res = await fetch(`${env.llmProxyUrl}/v1/audio/speech`, {
         method: "POST",
         headers: { Authorization: `Bearer ${env.teamKey}`, "Content-Type": "application/json" },
@@ -78,13 +78,13 @@ async function viaProxy(text: string) {
   }
 }
 
-async function direct(text: string) {
+async function direct(text: string, LANG: Lang) {
   if (!env.elevenlabsKey) return null;
   const model = env.voiceModel.replace(/^eleven-/, "eleven_").replace(/[-.]/g, "_");
   // a burst of lines fetched ahead can hit the plan's limit on lines at once (429): wait and
   // try again rather than leave the line silent
   for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${env.voiceId}?output_format=mp3_44100_128`, {
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${env.voiceIdFor(LANG)}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": env.elevenlabsKey, "Content-Type": "application/json", accept: "audio/mpeg" },
       body: JSON.stringify({ text, model_id: model, seed: SEED, language_code: LANG, voice_settings: { ...SETTINGS, speed: env.voiceSpeed } }),
@@ -125,19 +125,22 @@ function perform(text: string) {
  * settings, the seed and the language. Part of each cached line's name, so changing any of it
  * makes every line again in the new voice instead of mixing old takes with new ones.
  */
-const VOICE_VERSION = `s${SETTINGS.stability}-b${SETTINGS.similarity_boost}-y${SETTINGS.style}-seed${SEED}-${LANG}`;
-const cached = (version: string, said: string) =>
-  join(dir, `${createHash("sha1").update(`${version}|${env.voiceModel}|${env.voiceId}|${env.voiceSpeed}|${said}`).digest("hex").slice(0, 16)}.mp3`);
+const VOICE_VERSION = (l: Lang) => `s${SETTINGS.stability}-b${SETTINGS.similarity_boost}-y${SETTINGS.style}-seed${SEED}-${l}`;
+const cached = (l: Lang, said: string) =>
+  join(dir, `${createHash("sha1").update(`${VOICE_VERSION(l)}|${env.voiceModel}|${env.voiceIdFor(l)}|${env.voiceSpeed}|${said}`).digest("hex").slice(0, 16)}.mp3`);
 
 export async function POST(req: Request) {
-  const text = String((await req.json().catch(() => ({})))?.text ?? "").trim().slice(0, 600);
+  const body = await req.json().catch(() => ({}));
+  const text = String(body?.text ?? "").trim().slice(0, 600);
   if (!text) return new Response("bad request", { status: 400 });
+  const l = asLang(body?.lang);
+  setLang(l);
   // the figures written out in words, so the voice reads them the way a person would
   const said = perform(forSpeech(text));
-  const file = cached(VOICE_VERSION, said);
+  const file = cached(l, said);
   let buf: Buffer | null = existsSync(file) ? readFileSync(file) : null;
   if (!buf) {
-    buf = (await direct(said)) ?? (await viaProxy(said));
+    buf = (await direct(said, l)) ?? (await viaProxy(said, l));
     if (buf) {
       try {
         mkdirSync(dir, { recursive: true });

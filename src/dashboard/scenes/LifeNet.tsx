@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // Life insurance as a safety net under each earner. Every knot is a slice of what the family
 // would need if that person were gone; the knots the policy does not pay for are holes.
 // Raising the cover knits the holes shut, one by one.
@@ -41,7 +42,7 @@ function Net({ y, name, has, need, seed }: { y: number; name: string; has: numbe
         {name}
       </text>
       <text x={x0 + COLS * CELL} y={y - 10} textAnchor="end" className="svg-small" fill={ok ? C.good : C.bad}>
-        {ok ? `Cubre ${short(need)}, lo que necesitaría su familia` : `Cubre ${short(has)} de ${short(need)}`}
+        {ok ? tr(`Covers ${short(need)}, what the family would need`, `Cubre ${short(need)}, lo que necesitaría su familia`) : tr(`Covers ${short(has)} of ${short(need)}`, `Cubre ${short(has)} de ${short(need)}`)}
       </text>
       {Array.from({ length: n }, (_, i) => {
         const cx = x0 + (i % COLS) * CELL;
@@ -76,12 +77,12 @@ export function LifeNet({ t }: { t: Topic }) {
   const y0 = Math.max(36, (240 - rows * block) / 2 + 30);
   return (
     <SceneFrame
-      title={missing ? (extra >= missing ? "Con esa cobertura, la red aguanta" : "Si faltaras, la red tiene agujeros") : "La red de tu familia está entera"}
-      sub="Cada rombo es una parte de lo que tu familia necesitaría para seguir adelante. Los agujeros son lo que el seguro no pagaría."
+      title={missing ? (extra >= missing ? tr("With that cover, the net holds", "Con esa cobertura, la red aguanta") : tr("If you were gone, the net has holes", "Si faltaras, la red tiene agujeros")) : tr("Your family's net is whole", "La red de tu familia está entera")}
+      sub={tr("Each diamond is part of what your family would need to carry on. The holes are what insurance wouldn't pay.", "Cada rombo es una parte de lo que tu familia necesitaría para seguir adelante. Los agujeros son lo que el seguro no pagaría.")}
       colour={missing && extra < missing ? tone(t.status) : C.good}
       controls={
         missing > 0 && (
-          <Slider label="Subir la cobertura" min={0} max={missing} step={10000} value={extra} onChange={setExtra} format={(v) => `+${short(v)}`} />
+          <Slider label={tr("Raise the cover", "Subir la cobertura")} min={0} max={missing} step={10000} value={extra} onChange={setExtra} format={(v) => `+${short(v)}`} />
         )
       }
     >

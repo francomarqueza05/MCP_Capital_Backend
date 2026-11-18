@@ -7,6 +7,7 @@ import { BAND, byImpact, EFFORT, fixFor, moveName, names } from "@/lib/copy";
 import { buildSteps } from "@/expedition/steps";
 import { beatsFor } from "@/explain/beats";
 import { KNOWLEDGE } from "./knowledge";
+import { isEs, tr } from "@/lib/lang";
 
 export const TOPIC_OF: Record<string, string[]> = {
   score: ["base"],
@@ -39,11 +40,13 @@ export function explainBrief(c: Case, campId: string, from: number, said: string
   if (!step) return null;
   const beats = beatsFor(step, c);
   return [
-    `PHASE: explain «${step.title}» step by step, in Spanish from Spain.`,
+    `PHASE: explain «${step.title}» step by step, ${tr("in natural American English", "in Spanish from Spain")}.`,
     `GOAL: ${names(c)} understands this part of their plan, at their pace.`,
-    "PACE: one block at a time. Call show_block with the block's id, then tell that block in 1 to 3 short sentences in your own words (do not read it). Then STOP and let them look at the chart: a «Seguimos» button on screen is how they move on.",
-    "DO NOT ask «¿seguimos?», «¿continuamos?» or similar after each block. Every two or three blocks at most, you may check understanding with a short, natural, varied question about the content itself (e.g. «¿Te cuadra?», «¿Lo ves en la barra?»). If they stay silent, do not insist: they are looking at the chart.",
-    "MOVING ON: only show the next block when they press the button (it arrives as «Sí, seguimos.») or clearly say to go on («sigue», «vale, siguiente»). A question, a doubt or silence is not a go: stay on the same block. Never skip blocks. If a message says BLOCKED, stay on the block without asking.",
+    `PACE: one block at a time. Call show_block with the block's id, then tell that block in 1 to 3 short sentences in your own words (do not read it). Then STOP and let them look at the chart: a «${tr("Continue", "Seguimos")}» button on screen is how they move on.`,
+    isEs()
+      ? "DO NOT ask «¿seguimos?», «¿continuamos?» or similar after each block. Every two or three blocks at most, you may check understanding with a short, natural, varied question about the content itself (e.g. «¿Te cuadra?», «¿Lo ves en la barra?»). If they stay silent, do not insist: they are looking at the chart."
+      : "DO NOT ask «shall we continue?» or similar after each block. Every two or three blocks at most, you may check understanding with a short, natural, varied question about the content itself (e.g. «Does that add up?», «See it in the bar?»). If they stay silent, do not insist: they are looking at the chart.",
+    `MOVING ON: only show the next block when they press the button (it arrives as «${tr("Yes, let's continue.", "Sí, seguimos.")}») or clearly say to go on («${tr("go on", "sigue")}», «${tr("OK, next", "vale, siguiente")}»). A question, a doubt or silence is not a go: stay on the same block. Never skip blocks. If a message says BLOCKED, stay on the block without asking.`,
     "STAY ON THIS BLOCK: talk only about the block on screen and this camp. If they ask about something else, answer in one sentence (call lookup if you need figures) and come back to the block. If they did not follow, tell it again more simply (use its SIMPLER line).",
     "NO SPOILERS: if what they ask is covered by a later block, do not explain it now. Say in one sentence that you will see it in a moment (name it in a few words) and come back to the block on screen.",
     `ON SCREEN (blocks in order${from ? `; they already saw ${from}, start with ${beats[from].id}` : ""}):`,
@@ -82,9 +85,9 @@ export function lookup(c: Case, topic: string) {
 /** Who they are, for the agent's dynamic variables. */
 export function persona(c: Case, said: string[]) {
   return {
-    name: c.household.names.join(" y "),
-    language_name: "Spanish (Spain)",
-    household: `${names(c)}; ${c.household.couple ? "pareja" : "una persona"}${c.household.kids.length ? `, hijos: ${c.household.kids.join(", ")}` : ""}`,
+    name: c.household.names.join(tr(" and ", " y ")),
+    language_name: tr("English (American)", "Spanish (Spain)"),
+    household: `${names(c)}; ${c.household.couple ? tr("couple", "pareja") : tr("one person", "una persona")}${c.household.kids.length ? `, ${tr("kids", "hijos")}: ${c.household.kids.join(", ")}` : ""}`,
     level: "basics",
     worry: "not known yet",
     motivation: "unknown",

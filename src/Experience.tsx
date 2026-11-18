@@ -17,7 +17,7 @@ import { hangUp, inCall } from "@/stage/call";
 import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
 import { LangSwitch, Login, ProfileChip } from "@/intro/Login";
-import { setLang, tr, type Lang } from "@/lib/lang";
+import { LANG_COOKIE, setLang, tr, type Lang } from "@/lib/lang";
 
 const LEAVE_MS = 700; // the fade to the start screen's sky before switching profile
 
@@ -26,6 +26,8 @@ export function Experience({ lang }: { lang: Lang }) {
   setLang(lang);
   useEffect(() => {
     document.documentElement.lang = lang;
+    // the server routes read the language from here (a ?lang= link sets it too)
+    document.cookie = `${LANG_COOKIE}=${lang}; path=/; max-age=31536000; samesite=lax`;
   }, [lang]);
   const [started, setStarted] = useState(false);
   const [caseId, setCaseId] = useState(DEFAULT_CASE);

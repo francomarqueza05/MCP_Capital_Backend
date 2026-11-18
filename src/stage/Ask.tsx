@@ -7,6 +7,7 @@ import { tones } from "@/lib/audio";
 import { orb } from "@/orb/engine";
 import { chat, converse } from "./chat";
 import { showBubble } from "./stage";
+import { tr } from "@/lib/lang";
 
 const read = (k: string) => {
   try {
@@ -29,7 +30,7 @@ export const setInputMode = (mode: "text" | "voice") => {
 export const openAsk = () => ask.set({ open: true });
 
 /** A free question: it joins the same conversation (and log) as the suggested ones. */
-const answer = (question: string) => converse(question, null, "Preguntas libres");
+const answer = (question: string) => converse(question, null, tr("Open questions", "Preguntas libres"));
 
 export function Ask() {
   const { open, mode } = useStore(ask, (s) => s);
@@ -63,14 +64,14 @@ export function Ask() {
       orb.setEmo("neutral");
       return;
     }
-    answer("(pregunta por voz)");
+    answer(tr("(voice question)", "(pregunta por voz)"));
   };
 
   return (
-    <div className="ask" role="dialog" aria-label="Pregúntale a Cordi">
+    <div className="ask" role="dialog" aria-label={tr("Ask Cordi", "Pregúntale a Cordi")}>
       <button
         className="ask-icon"
-        title={mode === "voice" ? "Escribir en lugar de hablar" : "Hablar en lugar de escribir"}
+        title={mode === "voice" ? tr("Type instead of talking", "Escribir en lugar de hablar") : tr("Talk instead of typing", "Hablar en lugar de escribir")}
         onClick={() => {
           tones.tap();
           setInputMode(mode === "voice" ? "text" : "voice");
@@ -85,7 +86,7 @@ export function Ask() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Pregunta lo que quieras sobre tu plan"
+            placeholder={tr("Ask anything about your plan", "Pregunta lo que quieras sobre tu plan")}
             aria-label="Tu pregunta"
           />
           <button className="ask-icon solid" title="Enviar" onClick={send}>
@@ -94,12 +95,12 @@ export function Ask() {
         </>
       ) : (
         <button className="ask-talk" onClick={mic}>
-          <IconMic /> Toca y habla
+          <IconMic /> {tr("Tap and talk", "Toca y habla")}
         </button>
       )}
       <button
         className="ask-icon"
-        title="Cerrar"
+        title={tr("Close", "Cerrar")}
         onClick={() => {
           ask.set({ open: false });
           orb.setEmo("neutral");

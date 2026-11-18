@@ -3,10 +3,12 @@
 import { caseById } from "@/server/cordi";
 import { explainBrief, figures, lookup, TOPIC_OF } from "@/server/brief";
 import { mapBrief, mapLookup, type Known } from "@/server/map";
+import { useRequestLang } from "@/server/lang";
 
 type Body = { caseId: string; tool: "lookup" | "next_brief" | "explain_brief"; topic?: string; from?: number; next?: string | null; campId?: string; camp?: string; said?: string[]; known?: Known; mode?: "explain" | "map" };
 
 export async function POST(req: Request) {
+  useRequestLang(req);
   const b = (await req.json().catch(() => null)) as Body | null;
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });

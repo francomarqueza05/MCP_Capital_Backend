@@ -53,7 +53,7 @@ export function where(topic?: string) {
     known: { seen: k.seen, done: k.done, marks: understanding.get().marks },
     campId: playing ? ex.stepId : session.get().campId || undefined,
     said: said.slice(-24),
-    camp: playing ? ex.title : topic && topic !== "Preguntas libres" && topic !== "Llamada con Cordi" ? topic : session.get().camp || undefined,
+    camp: playing ? ex.title : topic && !["Preguntas libres", "Llamada con Cordi", "Open questions", "Call with Cordi"].includes(topic) ? topic : session.get().camp || undefined,
     step: beat ? beat.say : undefined,
     stepIndex: playing ? Math.min(ex.i, ex.beats.length - 1) : undefined,
     onScreen: beat ? JSON.stringify(beat.visual.kind === "scene" ? { kind: "scene", topic: beat.visual.topic.id } : beat.visual) : undefined,

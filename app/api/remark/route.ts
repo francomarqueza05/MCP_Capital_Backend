@@ -3,10 +3,12 @@
 // own rules as a fallback, so a slow or failed model just means the local remark.
 import { ask } from "@/server/llm";
 import { caseById, systemPrompt, type Where } from "@/server/cordi";
+import { langNote, useRequestLang } from "@/server/lang";
 
 type Body = { caseId: string; where?: Where; act: unknown; fallback?: { text: string; choices?: { id: string; label: string }[] } | null };
 
 export async function POST(req: Request) {
+  const lang = useRequestLang(req);
   let b: Body;
   try {
     b = await req.json();
@@ -29,12 +31,13 @@ export async function POST(req: Request) {
     "- Si no aporta nada nuevo, mejor callar.",
     'Responde SOLO con JSON: {"text": "..."} o {"text": null}. Sin "choices", salvo en la acción "idle".',
     'Si la acción es "idle" (lleva un rato mirando sin hacer nada): pregúntale algo sobre el gráfico en pantalla que le ayude a entenderlo, y termina ofreciendo un ejemplo. Incluye exactamente estas opciones: {"id":"simpler","label":"Sí, con un ejemplo"}, {"id":"on","label":"No, seguimos"}, {"id":"stay","label":"Sigo mirando"}.',
+    lang === "en" ? 'In English, the option labels are "Yes, with an example", "No, let\'s go on" and "I\'m still looking". Write "text" in English, at most 22 words.' : "",
   ]
     .filter(Boolean)
     .join("\n");
 
   const out = await ask("fast", [
-    { role: "system", content: systemPrompt(c, b.where ?? {}) },
+    { role: "system", content: systemPrompt(c, b.where ?? {}) + langNote(lang) },
     { role: "user", content: task },
   ], { json: true });
   if (!out) return Response.json({ error: "unavailable" }, { status: 503 });

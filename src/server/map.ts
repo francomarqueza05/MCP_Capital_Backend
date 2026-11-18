@@ -9,6 +9,7 @@ import { buildSteps } from "@/expedition/steps";
 import { beatsFor } from "@/explain/beats";
 import { figures } from "./brief";
 import { KNOWLEDGE } from "./knowledge";
+import { tr } from "@/lib/lang";
 
 export type Known = {
   seen?: Record<string, number>;
@@ -78,7 +79,7 @@ export function mapBrief(c: Case, k: Known, camp: string | undefined, said: stri
     "WHAT YOU DO: orient (where to start, what is most urgent), recap what was seen, define terms in general, help prepare questions for the advisor, answer freely about camps marked EXPLICADO.",
     st.allDone
       ? "Everything has been explained: answer any question about the plan."
-      : "If a question needs the detail of a camp marked SIN EXPLICAR or A MEDIAS: do not explain it and do not give figures the map does not show. Say they will see it in that camp and suggest pressing «Explícame esto» there. lookup returns only what has been explained.",
+      : `If a question needs the detail of a camp marked SIN EXPLICAR or A MEDIAS: do not explain it and do not give figures the map does not show. Say they will see it in that camp and suggest pressing «${tr("Explain this to me", "Explícame esto")}» there. lookup returns only what has been explained.`,
     `MAP (the only figures you may say, plus the detail of explained camps):\n${st.text}`,
     said.length ? `ALREADY SAID (do not repeat):\n${said.slice(-12).map((x) => `- ${x}`).join("\n")}` : "",
     "DONE WHEN: they say goodbye or want to end the call.",
@@ -95,7 +96,7 @@ export function mapLookup(c: Case, k: Known, ids: string[], full: (id: string) =
   const not = ids.filter((id) => !k.done?.[id]);
   return [
     ok.map(full).join(" "),
-    not.length ? `Not explained yet: ${not.join(", ")}. Do not give its detail; suggest they open that camp and press «Explícame esto».` : "",
+    not.length ? `Not explained yet: ${not.join(", ")}. Do not give its detail; suggest they open that camp and press «${tr("Explain this to me", "Explícame esto")}».` : "",
   ]
     .filter(Boolean)
     .join(" ");

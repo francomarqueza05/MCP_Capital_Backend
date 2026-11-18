@@ -7,14 +7,15 @@ import { useStore } from "@/lib/store";
 import { call, cutIn, hangUp, startCall, toggleMute, type CallState } from "./call";
 import { agent } from "./agent";
 import { explain, inTheater } from "@/explain/player";
+import { tr } from "@/lib/lang";
 
-const STATUS: Record<CallState, string> = {
+const STATUS = (): Record<CallState, string> => ({
   idle: "",
-  connecting: "Conectando…",
-  speaking: "Cordi habla",
-  listening: "Te escucho",
-  thinking: "Cordi piensa…",
-};
+  connecting: tr("Connecting…", "Conectando…"),
+  speaking: tr("Cordi is talking", "Cordi habla"),
+  listening: tr("I'm listening", "Te escucho"),
+  thinking: tr("Cordi is thinking…", "Cordi piensa…"),
+});
 
 function Clock({ t0 }: { t0: number }) {
   const [now, setNow] = useState(() => Date.now());
@@ -49,7 +50,7 @@ export function CallBar() {
           key="call"
           className={`call s-${state}`}
           role="region"
-          aria-label="Llamada con Cordi"
+          aria-label={tr("Call with Cordi", "Llamada con Cordi")}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
@@ -58,19 +59,19 @@ export function CallBar() {
           <span className="call-live" aria-hidden />
           <div className="call-info">
             <span className="call-status" aria-live="polite">
-              {muted && state === "listening" ? "Micrófono silenciado" : STATUS[state]}
+              {muted && state === "listening" ? tr("Microphone muted", "Micrófono silenciado") : STATUS()[state]}
             </span>
             <Clock t0={t0} />
           </div>
           {state === "speaking" && !live && (
-            <button className="call-btn" onClick={cutIn} title="Interrumpir a Cordi">
-              Interrumpir
+            <button className="call-btn" onClick={cutIn} title={tr("Interrupt Cordi", "Interrumpir a Cordi")}>
+              {tr("Interrupt", "Interrumpir")}
             </button>
           )}
-          <button className={muted ? "call-icon on" : "call-icon"} onClick={toggleMute} aria-pressed={muted} title={muted ? "Activar micrófono" : "Silenciar micrófono"}>
+          <button className={muted ? "call-icon on" : "call-icon"} onClick={toggleMute} aria-pressed={muted} title={muted ? tr("Turn microphone on", "Activar micrófono") : tr("Mute microphone", "Silenciar micrófono")}>
             {muted ? <IconMicOff /> : <IconMic />}
           </button>
-          <button className="call-icon hang" onClick={hangUp} title="Colgar">
+          <button className="call-icon hang" onClick={hangUp} title={tr("Hang up", "Colgar")}>
             <IconHang />
           </button>
         </motion.div>
@@ -78,7 +79,7 @@ export function CallBar() {
         error && (
           <motion.p key="err" className="call-error" role="alert" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             {error}
-            <button onClick={() => call.set({ error: "" })} aria-label="Cerrar aviso">
+            <button onClick={() => call.set({ error: "" })} aria-label={tr("Close notice", "Cerrar aviso")}>
               ×
             </button>
           </motion.p>
@@ -89,11 +90,11 @@ export function CallBar() {
 }
 
 /** "Llamar a Cordi": starts the call. */
-export function CallButton({ className = "act", label = "Llamar a Cordi" }: { className?: string; label?: string }) {
+export function CallButton({ className = "act", label = tr("Call Cordi", "Llamar a Cordi") }: { className?: string; label?: string }) {
   const state = useStore(call, (s) => s.state);
   if (state !== "idle") return null;
   return (
-    <button className={className} onClick={() => startCall()} title="Hablar con Cordi por voz">
+    <button className={className} onClick={() => startCall()} title={tr("Talk to Cordi by voice", "Hablar con Cordi por voz")}>
       <IconPhone /> {label}
     </button>
   );

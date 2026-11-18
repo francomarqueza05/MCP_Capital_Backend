@@ -18,6 +18,7 @@ import { explain, reached, agentFinished, goNextCamp, nextCampAfter } from "@/ex
 import { call } from "./call";
 import { chat, logMsg } from "./chat";
 import { captionsOn, holdBubble, hideBubble, noteInBubble, speech } from "./stage";
+import { tr } from "@/lib/lang";
 
 export const agent = createStore({ mode: null as "explain" | "free" | null });
 
@@ -81,7 +82,7 @@ async function rearm(campId: string, from: number, title: string) {
     `NEW PHASE. The explanation of the previous camp is over; now explain "${title}". ${brief}
 The screen already shows block "${ex.beats[at].id}". Explain it now, then go block by block with show_block as before.`,
   );
-  agentSay(`Vamos con ${title.toLowerCase()}.`);
+  agentSay(tr(`Let's do ${title.toLowerCase()}.`, `Vamos con ${title.toLowerCase()}.`));
 }
 
 /** Puts block `to` on screen: what follows is the step itself, so the visual builds with it. */
@@ -111,7 +112,7 @@ export function advanceLive(): boolean {
   return true;
 }
 
-const topic = () => (agent.get().mode === "explain" ? explain.get().title : "Llamada con Cordi");
+const topic = () => (agent.get().mode === "explain" ? explain.get().title : tr("Call with Cordi", "Llamada con Cordi"));
 
 /**
  * Pause on the live agent. The SDK can't pause a conversation, and left in silence the agent
@@ -141,7 +142,7 @@ function watchPause() {
 function agentPause(on: boolean, restore: { muted: boolean; quiet: boolean }) {
   if (!conv) return;
   if (on) {
-    conv.sendContextualUpdate("The person paused the explanation. Stay completely silent: do not speak and do not ask whether they are still there, until they say \"Ya está, sigue.\"");
+    conv.sendContextualUpdate(`The person paused the explanation. Stay completely silent: do not speak and do not ask whether they are still there, until they say \"${tr("OK, go on.", "Ya está, sigue.")}\"`);
     conv.setVolume({ volume: 0 });
     conv.setMicMuted(true);
     pauseBeat ??= setInterval(() => conv?.sendUserActivity(), 1000);
@@ -245,9 +246,9 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
   const first =
     opts.mode === "explain"
       ? opts.from
-        ? `Vale, seguimos con ${opts.title?.toLowerCase()} donde lo dejamos.`
-        : `Vale, vamos con ${opts.title?.toLowerCase()}. ${we ? "Interrumpidme" : "Interrúmpeme"} cuando ${we ? "queráis" : "quieras"}.`
-      : `Aquí estoy. ¿Qué ${we ? "queréis" : "quieres"} que veamos de ${we ? "vuestro" : "tu"} plan?`;
+        ? tr(`OK, let's pick up ${opts.title?.toLowerCase()} where we left off.`, `Vale, seguimos con ${opts.title?.toLowerCase()} donde lo dejamos.`)
+        : tr(`OK, let's do ${opts.title?.toLowerCase()}. Interrupt me whenever you like.`, `Vale, vamos con ${opts.title?.toLowerCase()}. ${we ? "Interrumpidme" : "Interrúmpeme"} cuando ${we ? "queráis" : "quieras"}.`)
+      : tr("I'm here. What would you like to look at in your plan?", `Aquí estoy. ¿Qué ${we ? "queréis" : "quieres"} que veamos de ${we ? "vuestro" : "tu"} plan?`);
 
   agent.set({ mode: opts.mode });
   watchPause();
@@ -271,7 +272,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           const said = lastUser.trim().length > 0 && !/[¿?]/.test(lastUser);
           if (forward && !allowNext && !isGo(lastUser) && !said) {
             conv?.sendContextualUpdate(
-              `BLOCKED: the person has not asked to move on. Stay on block "${ex.beats[ex.i].id}" and wait, without asking if they want to continue: they move on with the on-screen button (it arrives as "Sí, seguimos.") or by saying so.`,
+              `BLOCKED: the person has not asked to move on. Stay on block "${ex.beats[ex.i].id}" and wait, without asking if they want to continue: they move on with the on-screen button (it arrives as "${tr("Yes, let's continue.", "Sí, seguimos.")}") or by saying so.`,
             );
             return;
           }
@@ -334,7 +335,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           if (explain.get().phase === "playing" && explain.get().waiting && isGo(message)) advanceLive();
           // the camp is done and the person says "vamos": on to the next camp, like its button
           else if (explain.get().phase === "done" && explain.get().nextId && isGo(message)) {
-            conv?.sendContextualUpdate("The person wants to go on to the next camp: it is on its way on screen. Answer only with a very short bridge (\"¡Vamos allá!\") and wait: its explanation starts as soon as it arrives.");
+            conv?.sendContextualUpdate(`The person wants to go on to the next camp: it is on its way on screen. Answer only with a very short bridge (\"${tr("Let's go!", "¡Vamos allá!")}\") and wait: its explanation starts as soon as it arrives.`);
             goNextCamp();
           }
         }

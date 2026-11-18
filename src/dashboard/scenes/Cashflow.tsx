@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "@/lib/lang";
 // The year's money as a river. What comes in enters on the left and splits: what goes out
 // (spending, taxes, saving) bends down; what is left over rises to the right. When more goes
 // out than comes in, a red stream is pulled from savings to make up the difference.
@@ -61,19 +62,19 @@ export function Cashflow({ t }: { t: Topic }) {
   const ok = flowNow >= 0;
   return (
     <SceneFrame
-      title={deficit ? (ok ? "Con ese recorte, el año vuelve a cuadrar" : "Cada año sale más de lo que entra") : "Cada año te sobra dinero"}
-      sub={deficit ? `Este año faltan ${money(-n.flow)} y salen de tus ahorros.` : `Entran ${short(income)} y te quedan ${money(n.flow)} para repartir entre tus metas.`}
+      title={deficit ? (ok ? tr("With that cut, the year balances again", "Con ese recorte, el año vuelve a cuadrar") : tr("Every year more goes out than comes in", "Cada año sale más de lo que entra")) : tr("Every year you have money to spare", "Cada año te sobra dinero")}
+      sub={deficit ? tr(`This year you're ${money(-n.flow)} short, and it comes out of your savings.`, `Este año faltan ${money(-n.flow)} y salen de tus ahorros.`) : tr(`${short(income)} comes in and ${money(n.flow)} is left to share between your goals.`, `Entran ${short(income)} y te quedan ${money(n.flow)} para repartir entre tus metas.`)}
       colour={deficit && !ok ? C.bad : C.snow}
       controls={
         deficit && (
           <Slider
-            label="Recortar gastos al mes"
+            label={tr("Cut spending per month", "Recortar gastos al mes")}
             min={0}
             max={Math.ceil(-n.flow / 12 / 50) * 50 + 150}
             step={25}
             value={cut}
             onChange={setCut}
-            format={(v) => `${money(v)} al mes`}
+            format={(v) => `${money(v)} ${tr("a month", "al mes")}`}
           />
         )
       }
@@ -88,19 +89,19 @@ export function Cashflow({ t }: { t: Topic }) {
       ))}
       <motion.g style={{ opacity: op }}>
         <text x={x0} y={cy - (income * scale) / 2 - 10} className="svg-label">
-          Entra {short(income)} al año
+          {tr(`${short(income)} comes in a year`, `Entra ${short(income)} al año`)}
         </text>
         {flowNow > 0 && (
           <motion.text x={x1} y={keepLabelY} textAnchor="end" className="svg-figure" fill={C.good} dy={-14}>
-            {`Te queda ${short(flowNow)}`}
+            {tr(`You keep ${short(flowNow)}`, `Te queda ${short(flowNow)}`)}
           </motion.text>
         )}
         <motion.text x={x1} y={outLabelY} textAnchor="end" className="svg-label" dy={-2}>
-          {`Sale ${short(out)}`}
+          {tr(`Out: ${short(out)}`, `Sale ${short(out)}`)}
         </motion.text>
         {!ok && (
           <text x={x0 + 40} y={VH - 6} className="svg-label" fill={C.bad}>
-            {`De tus ahorros: ${short(-flowNow)}`}
+            {tr(`From your savings: ${short(-flowNow)}`, `De tus ahorros: ${short(-flowNow)}`)}
           </text>
         )}
       </motion.g>

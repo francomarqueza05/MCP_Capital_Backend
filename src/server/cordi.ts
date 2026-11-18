@@ -2,14 +2,16 @@
 // every screen is built from), where in the climb the person is, and what's on screen now.
 // The model answers from this and nothing else: no invented figures, no advice beyond the plan.
 import raw from "@/data/cases.json";
-import type { Case } from "@/data/cases";
+import { localize, type Case } from "@/data/cases";
+import { lang } from "@/lib/lang";
 import { BAND, byImpact, CAPS, EFFORT, moveName, names } from "@/lib/copy";
 import { buildSteps } from "@/expedition/steps";
 import { beatsFor } from "@/explain/beats";
 import { KNOWLEDGE } from "./knowledge";
 
 const CASES = raw as unknown as Record<string, Case>;
-export const caseById = (id: string) => CASES[id] ?? null;
+/** The case in the request's language (set by useRequestLang before this is called). */
+export const caseById = (id: string) => (CASES[id] ? localize(CASES[id], lang()) : null);
 
 export type Where = {
   /** Camp id (a topic id, or "base" / "summit") and its title. */
