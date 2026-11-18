@@ -203,7 +203,7 @@ export function drawWorld(g: CanvasRenderingContext2D, f: Frame) {
   if (intro < 0) return;
 
   // ranges, back to front, each rising into place during the opening
-  const kFar = built(intro, 150, 1500);
+  const kFar = built(intro, 80, 900);
   if (kFar > 0) {
     layer(g, f, 0.3);
     g.globalAlpha = kFar;
@@ -211,19 +211,19 @@ export function drawWorld(g: CanvasRenderingContext2D, f: Frame) {
     g.fillStyle = gr.far;
     g.fill(p.far);
   }
-  const kMid = built(intro, 450, 1500);
+  const kMid = built(intro, 220, 900);
   if (kMid > 0) {
     layer(g, f, 0.58);
     g.globalAlpha = kMid;
     g.translate(0, 260 * (1 - kMid));
     g.fillStyle = "#141a4c";
     g.fill(p.mid);
-    g.globalAlpha = built(intro, 1100, 1800);
+    g.globalAlpha = built(intro, 550, 1100);
     mist(g, gr, 700, 1080, 760, 90);
   }
 
   layer(g, f, 1);
-  const kDawn = built(intro, 4200, 2200);
+  const kDawn = built(intro, 2600, 1500);
   if (kDawn > 0) {
     g.globalAlpha = kDawn;
     g.fillStyle = gr.dawn;
@@ -231,7 +231,7 @@ export function drawWorld(g: CanvasRenderingContext2D, f: Frame) {
     g.arc(SUMMIT.x, SUMMIT.y + 40, 820, 0, Math.PI * 2);
     g.fill();
   }
-  const kMain = built(intro, 750, 1500);
+  const kMain = built(intro, 380, 900);
   if (kMain > 0) {
     g.save();
     g.globalAlpha = kMain;
@@ -265,7 +265,7 @@ export function drawWorld(g: CanvasRenderingContext2D, f: Frame) {
   }
 
   // the yak, watching from base camp
-  const kYak = built(intro, 1700, 1500);
+  const kYak = built(intro, 850, 800);
   if (kYak > 0) {
     g.save();
     g.globalAlpha = kYak * 0.92;

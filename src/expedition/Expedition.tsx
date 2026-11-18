@@ -43,7 +43,7 @@ type Cordi =
 
 export type ExpeditionHandle = { start: () => void; skip: () => void };
 export type Phase = "wait" | "intro" | "overview" | "tour";
-const GUIDE_IN = 4000; // ms on the whole mountain before the guided tour starts by itself
+const GUIDE_IN = 3000; // ms on the whole mountain before the guided tour starts by itself
 
 export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: Phase) => void }>(function Expedition({ c, onPhase }, ref) {
   const steps = useMemo(() => buildSteps(c), [c]);
@@ -555,7 +555,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
             voice.audio.addEventListener("error", () => r(), { once: true });
           })
         : wait(ms);
-      spoken.then(() => pause(450)).then(end);
+      spoken.then(() => pause(550)).then(end);
       if (skipped.current) end();
     });
   }, []);
@@ -634,12 +634,12 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       setTimeout(() => {
         if (fromAbove) {
           setPhase("tour");
-          cam.current.k = 3.2;
-          cam.current.kz = 1.7;
+          cam.current.k = 5;
+          cam.current.kz = 4;
           setTimeout(() => {
             cam.current.k = 5;
             cam.current.kz = undefined;
-          }, 1800);
+          }, 1100);
         }
         arrive(i, open);
       }, dur + 80);
@@ -669,8 +669,8 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     setDetail(false);
     setPhase("overview");
     const cc = cam.current;
-    cc.k = 3;
-    cc.kz = 2;
+    cc.k = 5;
+    cc.kz = 4;
     frameWide();
     orb.setEmo("happy");
   }, [walking, frameWide, setPhase]);
@@ -679,12 +679,12 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     tones.tap();
     setAuto(true);
     const cc = cam.current;
-    cc.k = 3.4;
-    cc.kz = 1.6;
+    cc.k = 5;
+    cc.kz = 4;
     setTimeout(() => {
       cc.k = 5;
       cc.kz = undefined;
-    }, 2000);
+    }, 1100);
     const i = Math.max(0, idx);
     cordi.current = { mode: "camp", at: campU(i, n) };
     setPhase("tour");
@@ -719,33 +719,35 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     cc.x = cc.tx;
     cc.y = cc.ty + H * 0.45;
     cc.vx = cc.vy = cc.vz = 0;
-    cc.k = 0.55;
+    // a brisk opening: the camera springs are stiff enough that every push in and pull back
+    // lands in well under a second instead of drifting
+    cc.k = 2.2;
     introT0.current = reduced ? -1e9 : performance.now();
-    playSfx("ambient", { vol: 0.34, fadeAt: 11000 });
+    playSfx("ambient", { vol: 0.34, fadeAt: 7000 });
     // the opening lines go through the live voice too, so all of the intro is one voice
     prefetchSpeech(line("hello"));
     prefetchSpeech(line("intro"));
     prefetchSpeech(mountainLine);
     prefetchSpeech(steps[0].say);
 
-    // the ranges rise and the yak walks in (render.ts: from 1.7 s); the camera leans in on it
-    await pause(reduced ? 0 : 1900);
+    // the ranges rise and the yak walks in (render.ts: from 0.85 s); the camera leans in on it
+    await pause(reduced ? 0 : 900);
     const lively = !reduced && !skipped.current;
     if (lively) {
       const [yx, yy] = [campPos[0][0] - 190, campPos[0][1] + 14];
-      cc.k = 1.1;
-      cc.kz = 0.9;
+      cc.k = 4;
+      cc.kz = 3.2;
       frame(yx + 70, yy - 40, campZ() * 0.95);
-      await pause(2200);
+      await pause(1000);
     }
 
     // a light climbs the route from the yak to the summit, the camera on its heels, and each
     // flag pops up with its chime as it passes
     follow.current = lively;
-    cc.k = 2.4;
-    cc.kz = 1.8;
-    draw.current = { t0: performance.now(), dur: lively ? 5200 : 1, popped: 0 };
-    await pause(lively ? 5400 : 300);
+    cc.k = 7;
+    cc.kz = 5;
+    draw.current = { t0: performance.now(), dur: lively ? 3200 : 1, popped: 0 };
+    await pause(lively ? 3300 : 300);
     follow.current = false;
     if (skipped.current) {
       introT0.current = -1e9;
@@ -755,7 +757,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
 
     // at the summit, close up: Cordi pops into being and says hello
     cc.kz = undefined;
-    cc.k = 1.8;
+    cc.k = 6;
     const top = ROUTE.at(1);
     const peak = [top[0], top[1] - HOVER] as const;
     const base = ROUTE.at(0);
@@ -765,19 +767,19 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     orb.setEmo("happy");
     {
       const t0 = performance.now();
-      while (!skipped.current && performance.now() - t0 < 3000 && (Math.abs(cc.z - cc.tz) / cc.tz > 0.01 || Math.hypot(cc.x - cc.tx, cc.y - cc.ty) > 6 || Math.hypot(cc.vx, cc.vy) > 8)) await wait(40);
+      while (!skipped.current && performance.now() - t0 < 1200 && (Math.abs(cc.z - cc.tz) / cc.tz > 0.02 || Math.hypot(cc.x - cc.tx, cc.y - cc.ty) > 10 || Math.hypot(cc.vx, cc.vy) > 20)) await wait(40);
     }
     u.current = 1;
-    cordi.current = { mode: "pop", x: peak[0], y: peak[1], t0: performance.now(), dur: skipped.current ? 200 : 900, out: false, at: 1, leap: !skipped.current };
+    cordi.current = { mode: "pop", x: peak[0], y: peak[1], t0: performance.now(), dur: skipped.current ? 200 : 650, out: false, at: 1, leap: !skipped.current };
     tones.popIn();
     // the camera is still now: a ring where it appears stays put
     if (!skipped.current) {
       const [sx, sy] = toScreen(peak[0], peak[1]);
       ring(sx, sy, 16, 70, 0.7);
     }
-    await pause(skipped.current ? 300 : 700);
+    await pause(skipped.current ? 300 : 450);
     await narrate({ text: line("hello"), voice: line("hello") });
-    await pause(250);
+    await pause(300);
     await narrate({ text: line("intro"), voice: line("intro") });
     await pause(300);
     setNarr(null);
@@ -789,11 +791,11 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     tones.popOut();
     await wait(skipped.current ? 160 : 360);
     // ...the camera pulls back quickly to the whole mountain...
-    cc.k = 4.5;
-    cc.kz = 4.5;
+    cc.k = 8;
+    cc.kz = 8;
     frameWide();
     const t0 = performance.now();
-    while (performance.now() - t0 < 1600 && (Math.abs(cc.z - cc.tz) / cc.tz > 0.02 || Math.hypot(cc.x - cc.tx, cc.y - cc.ty) > 12)) await wait(40);
+    while (performance.now() - t0 < 900 && (Math.abs(cc.z - cc.tz) / cc.tz > 0.02 || Math.hypot(cc.x - cc.tx, cc.y - cc.ty) > 12)) await wait(40);
     // ...and once it's there, pop: Cordi is back, at base camp
     u.current = 0;
     cordi.current = { mode: "pop", x: landing[0], y: landing[1], t0: performance.now(), dur: 560, out: false, at: 0 };
@@ -805,13 +807,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     }
     cc.kz = undefined;
     orb.flashEmo("happy", 1400);
-    await wait(700);
+    await wait(350);
     touring.current = true;
     cc.k = 3;
     // with the whole mountain in view: what it means
     orb.setEmo("speaking");
     await narrate({ text: mountainLine, voice: mountainLine });
-    await pause(300);
+    await pause(350);
     setNarr(null);
     setPhase("overview");
     orb.flashEmo("happy", 1200);

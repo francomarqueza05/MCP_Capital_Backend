@@ -113,13 +113,14 @@ function Months({ value, tone, p }: { value: number; tone?: Tone; p: number }) {
           </motion.button>
         );
       })}
-      <AnimatePresence>
+      {/* a line that always keeps its height, so reading a month never moves the calendar */}
+      <span className="vx-tip" aria-live="polite">
         {hover !== null && (
-          <motion.span key="tip" className="vx-tip" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <motion.span key={hover} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
             Mes {hover + 1}: {value >= hover + 1 ? "cubierto" : value > hover ? "cubierto en parte" : "sin cubrir"}
           </motion.span>
         )}
-      </AnimatePresence>
+      </span>
     </div>
   );
 }
@@ -130,12 +131,12 @@ function Bars({ v, p }: { v: Extract<V, { kind: "bars" }>; p: number }) {
   const max = Math.max(...v.items.map((i) => i.of ?? i.value), 1);
   const [focus, setFocus] = useState<number | null>(null);
   const n = v.items.length;
+  const focused = focus !== null ? v.items[focus] : null;
   return (
     <div className="vx vx-bars" onPointerLeave={() => setFocus(null)}>
       {v.items.map((it, k) => {
         const on = p >= (k / n) * 0.8;
         const dim = focus !== null && focus !== k;
-        const share = it.of ? it.value / it.of : it.value / max;
         return (
           <motion.button
             type="button"
@@ -161,16 +162,19 @@ function Bars({ v, p }: { v: Extract<V, { kind: "bars" }>; p: number }) {
               {on ? <Num to={it.value} f={v.fmt} /> : fmt(v.fmt, 0)}
               {it.of !== undefined && <small> de {fmt(v.fmt, it.of)}</small>}
             </span>
-            <AnimatePresence>
-              {focus === k && (
-                <motion.span className="vx-bar-more" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                  {it.of !== undefined ? `${Math.round(share * 100)}% de lo posible en este tramo` : `${Math.round(share * 100)}% del mayor importe`}
-                </motion.span>
-              )}
-            </AnimatePresence>
           </motion.button>
         );
       })}
+      {/* The detail of the bar under the pointer, in a line of its own that always keeps its
+          height. It used to open inside the row: the rows below moved down, the pointer landed
+          on the next bar, that one opened and this one closed, over and over (the shaking). */}
+      <p className="vx-bars-note" aria-live="polite">
+        {focused && (
+          <motion.span key={focus} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+            {focused.label}: {focused.of !== undefined ? `${Math.round((focused.value / focused.of) * 100)}% de lo posible en este tramo` : `${Math.round((focused.value / max) * 100)}% del mayor importe`}
+          </motion.span>
+        )}
+      </p>
     </div>
   );
 }

@@ -2444,6 +2444,7 @@ select {
 .vx-months .vx-tip {
   grid-column: 1 / -1;
   margin-top: 0.25rem;
+  min-height: 1.5em;
 }
 .vx-month {
   position: relative;
@@ -2484,9 +2485,11 @@ select {
   height: 16px;
   border-radius: 8px;
 }
-.vx-bar-more {
-  grid-column: 1 / -1;
-  overflow: hidden;
+/* always one line tall, filled or not: showing a bar's detail never moves the bars */
+.vx-bars-note {
+  margin: 0;
+  min-height: 1.4em;
+  line-height: 1.4;
   font-size: 0.8rem;
   color: var(--lichen);
 }
