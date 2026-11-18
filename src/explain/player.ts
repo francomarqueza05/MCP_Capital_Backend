@@ -570,18 +570,24 @@ export const explaining = () => {
  */
 export function earlierStep(q: string): number | null {
   const s = explain.get();
+  // once the camp is done every step lies behind ("go back" is its last one); the live agent
+  // leaves i on its last block there, the local player one past it, so both count from the end
+  const at = s.phase === "done" ? s.beats.length : s.i;
   const n = q.match(/\b(?:step|paso|bloque)\s*(\d+)/i);
   if (n) {
     const k = Number(n[1]) - 1;
-    return k >= 0 && k < s.i ? k : null;
+    return k >= 0 && k < at ? k : null;
   }
-  if (s.i > 0 && /(previous|last one|one before|go back|back to the|again the|el anterior|la anterior|paso anterior|lo de antes|lo anterior|vuelve atr[aá]s|volver atr[aá]s|vuelve al|otra vez (el|la|lo) (de antes|anterior))/i.test(q)) return s.i - 1;
+  if (at > 0 && /(previous|last one|one before|go back|back to the|again the|el anterior|la anterior|paso anterior|lo de antes|lo anterior|vuelve atr[aá]s|volver atr[aá]s|vuelve al|otra vez (el|la|lo) (de antes|anterior))/i.test(q)) return at - 1;
   return null;
 }
 function goBackTo(k: number, q: string) {
   const s = explain.get();
   logMsg("you", q, s.title);
-  if (live()) moveLive(k);
+  // the flag is already planted: the explanation has ended, so a jump alone moved nothing.
+  // The same as tapping that step's chapter: it plays again from there
+  if (s.phase === "done") goTo(k);
+  else if (live()) moveLive(k);
   else jump(k);
 }
 

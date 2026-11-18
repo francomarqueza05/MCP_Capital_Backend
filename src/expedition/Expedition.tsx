@@ -28,6 +28,7 @@ import { beatsFor } from "@/explain/beats";
 import { explain, inTheater } from "@/explain/player";
 import { tr } from "@/lib/lang";
 import { resumeCamp } from "@/commit/memory";
+import { Commit } from "@/commit/Commit";
 
 const HOVER = 78; // Cordi floats this far above the trail, in world units
 const MOOD: Record<Step["status"], Emotion> = { good: "happy", warn: "thinking", bad: "concerned", goal: "happy" };
@@ -983,6 +984,9 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
             </>
           )
         }
+        // the end of the guided tour: the first step, its small steps, a date and the calendar,
+        // right here and not only inside "See the detail" (the same card, kept in sync)
+        below={phase === "tour" && step?.kind === "summit" ? <Commit c={c} /> : undefined}
       />
 
       {phase === "overview" && (

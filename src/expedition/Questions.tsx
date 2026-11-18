@@ -12,6 +12,7 @@ import { orb } from "@/orb/engine";
 import { addTry, chat, converse, markAsked } from "@/stage/chat";
 import { explain } from "@/explain/player";
 import { refreshSuggestions, setHovering, suggest, usedSuggestion } from "@/ai/suggest";
+import { ai } from "@/ai/client";
 import { firstQuestions, questionsFor, SIMPLER, type Question } from "./qa-bank";
 import type { Step } from "./steps";
 import { tr } from "@/lib/lang";
@@ -76,6 +77,8 @@ export function Suggestions({ step, c, delay = 0, title }: { step: Step; c: Case
   const exI = useStore(explain, (s) => s.i);
   const exPhase = useStore(explain, (s) => s.phase);
   const live = useStore(suggest, (s) => s);
+  // the AI is (or may be) there: still checking, or switched on
+  const aiMaybe = useStore(ai, (s) => s.on || !s.checked);
   useEffect(() => {
     if (!busy) refreshSuggestions(step.id);
   }, [step.id, msgs, exI, exPhase, busy]);
@@ -83,6 +86,9 @@ export function Suggestions({ step, c, delay = 0, title }: { step: Step; c: Case
   // the latest list for this camp stays up until the next one arrives (no flash of the fixed
   // ones in between); the fixed ones only before the first list for this camp
   const fresh = live.camp === step.id ? live.list : [];
+  // no list for this camp yet: wait for the AI's (about a second) rather than show the fixed
+  // ones and swap them a moment later; the fixed ones only if the AI isn't there or gave up
+  const waiting = !fresh.length && aiMaybe && live.fallbackCamp !== step.id;
   // never left "hovering" if the chips go away under the pointer
   useEffect(() => () => setHovering(false), []);
   const simpler = chips.find((q) => q.id === SIMPLER);
@@ -103,7 +109,7 @@ export function Suggestions({ step, c, delay = 0, title }: { step: Step; c: Case
         ...(simpler ? [{ key: simpler.id, label: simpler.q, next: false, go: () => ask(simpler) }] : []),
       ]
     : chips.map((q) => ({ key: q.id, label: q.q, next: followUps.includes(q), go: () => ask(q) }));
-  if (!list.length) return null;
+  if (!list.length || waiting) return null;
   return (
     <div className="qa-block" onPointerEnter={() => setHovering(true)} onPointerLeave={() => setHovering(false)}>
       <p className="qa-head">{title ?? (asked.length || msgs ? tr("Keep asking", "Seguir preguntando") : tr("Questions people often have here", "Preguntas que suelen surgir aquí"))}</p>

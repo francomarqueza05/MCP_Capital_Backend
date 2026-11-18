@@ -12,7 +12,7 @@ import { orb } from "@/orb/engine";
 import { logMsg } from "./chat";
 import { askCordi, checkAI, remember, session } from "@/ai/client";
 import { agentActive, agentMute, agentQuiet, agentSay, endAgent, startAgent } from "./agent";
-import { explain, explaining, interject, proceed, resumeCut, takeWheel, writeDuring } from "@/explain/player";
+import { earlierStep, explain, explaining, goTo, interject, proceed, resumeCut, takeWheel, writeDuring } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
 import { tr } from "@/lib/lang";
 import { captionInBubble, hideBubble, holdBubble, setCaptions } from "./stage";
@@ -393,8 +393,13 @@ export async function typeInCall(text: string) {
   if (agentActive()) {
     // a written "sí, seguimos" while the step waits moves on, like the button
     const ex = explain.get();
+    const back = ex.phase === "done" ? earlierStep(q) : null;
     if (ex.phase === "playing" && ex.waiting && isGo(q)) proceed();
-    else agentSay(q);
+    // the camp is done and they write to go back: that step again, like tapping its chapter
+    else if (back !== null) {
+      logMsg("you", q, ex.title);
+      goTo(back);
+    } else agentSay(q);
     return;
   }
   // during an explanation: on to the chat, where it can be read (see writeDuring)

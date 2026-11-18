@@ -9,10 +9,14 @@ let cache: Record<string, string> | null = null;
 function shared(): Record<string, string> {
   if (cache) return cache;
   cache = {};
-  // first file wins; a later one only fills in what the earlier ones left missing or empty
+  // on Vercel the keys come in as the project's environment variables: no files to read
+  if (process.env.VERCEL) return cache;
+  // first file wins; a later one only fills in what the earlier ones left missing or empty.
+  // Marked for the bundler to leave alone: traced, these reads pulled the whole project into
+  // the server build
   for (const file of [join(process.cwd(), ".env"), join(process.cwd(), "..", ".env")]) {
-    if (!existsSync(file)) continue;
-    for (const raw of readFileSync(file, "utf8").split(/\r?\n/)) {
+    if (!existsSync(/*turbopackIgnore: true*/ file)) continue;
+    for (const raw of readFileSync(/*turbopackIgnore: true*/ file, "utf8").split(/\r?\n/)) {
       const line = raw.trim();
       if (!line || line.startsWith("#")) continue;
       const eq = line.indexOf("=");

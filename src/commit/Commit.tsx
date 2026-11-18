@@ -50,7 +50,7 @@ export function Commit({ c }: { c: Case }) {
   if (allDone)
     return (
       <motion.section className="commit commit-done" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
-        <p className="commit-kicker">⛳ {tr("Every step done", "Todos los pasos hechos")}</p>
+        <p className="commit-kicker">{tr("Every step done", "Todos los pasos hechos")}</p>
         <h3 className="commit-title">{tr("You climbed the whole route.", "Habéis subido toda la ruta.")}</h3>
         <p className="commit-life">{tr("Your advisor can now look at the next goals with you.", "Tu asesor puede mirar ya contigo las siguientes metas.")}</p>
       </motion.section>
@@ -84,7 +84,7 @@ export function Commit({ c }: { c: Case }) {
     return (
       <motion.section className="commit is-set" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
         <p className="commit-kicker">
-          🤝 {tr("Committed", we ? "Comprometidos" : "Comprometido")} · {left > 0 ? tr(`${left} days left`, `quedan ${left} días`) : left === 0 ? tr("today", "hoy") : tr(`${-left} days late`, `${-left} días de retraso`)}
+          {tr("Committed", we ? "Comprometidos" : "Comprometido")} · {left > 0 ? tr(`${left} days left`, `quedan ${left} días`) : left === 0 ? tr("today", "hoy") : tr(`${-left} days late`, `${-left} días de retraso`)}
         </p>
         <h3 className="commit-title">{moveName(m)}</h3>
         <p className="commit-when">
@@ -108,7 +108,7 @@ export function Commit({ c }: { c: Case }) {
             {tr("Done! I did it", we ? "¡Hecho! Lo hicimos" : "¡Hecho! Lo hice")}
           </button>
           <button className="act act-quiet" onClick={() => downloadIcs(c, m, plan.due)}>
-            📅 {tr("Add to my calendar", "Añadir al calendario")}
+            {tr("Add to my calendar", "Añadir al calendario")}
           </button>
           <button className="commit-link" onClick={() => setEditing(true)}>
             {tr("Change step or date", "Cambiar paso o fecha")}
@@ -203,7 +203,7 @@ export function Commit({ c }: { c: Case }) {
 
       <div className="commit-actions">
         <button className="act act-main act-large" disabled={!ready} onClick={commit}>
-          🤝 {tr("Commit to this step", we ? "Nos comprometemos" : "Me comprometo")}
+          {tr("Commit to this step", we ? "Nos comprometemos" : "Me comprometo")}
         </button>
         {plan && (
           <button className="commit-link" onClick={() => setEditing(false)}>

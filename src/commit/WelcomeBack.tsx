@@ -17,6 +17,11 @@ import { daysUntil, finishPlan, isoDay, memory, now, setPlan } from "./memory";
 import { dateLabel } from "./Commit";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+/**
+ * Leaving with the rest of the greeting ("Not us: switch profile"): without its own way out the
+ * box stayed on screen over the four profiles coming back, and flickered.
+ */
+const OUT = { opacity: 0, y: 8, transition: { duration: 0.2 } };
 
 type Stage = "ask" | "yes" | "why" | "help";
 
@@ -39,7 +44,7 @@ export function WelcomeBack({ c }: { c: Case }) {
   // nothing promised yet: where they left the climb
   if (!move || !plan || (plan.done && stage !== "yes")) {
     return (
-      <motion.div className="wb" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
+      <motion.div className="wb" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={OUT} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
         <p className="wb-hi">{ago}</p>
         <p className="wb-text">
           {plan?.done && move
@@ -82,7 +87,7 @@ export function WelcomeBack({ c }: { c: Case }) {
   };
 
   return (
-    <motion.div className="wb" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
+    <motion.div className="wb" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={OUT} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
       <p className="wb-hi">{ago}</p>
       <AnimatePresence mode="wait">
         {stage === "ask" && (

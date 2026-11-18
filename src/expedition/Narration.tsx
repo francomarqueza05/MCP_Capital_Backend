@@ -18,7 +18,8 @@ export type Line = {
   whole?: boolean;
 };
 
-export function Narration({ line, total, hidden, actions }: { line: Line | null; total: number; hidden?: boolean; actions?: ReactNode }) {
+/** `below`: more under the buttons (at the summit, the first step to commit to). */
+export function Narration({ line, total, hidden, actions, below }: { line: Line | null; total: number; hidden?: boolean; actions?: ReactNode; below?: ReactNode }) {
   // what Cordi says shows in its bubble; here only where we are, and what to do
   if (!line || line.title === undefined) return <div className="narr" aria-live="polite" />;
   const titled = line.title !== undefined;
@@ -32,6 +33,7 @@ export function Narration({ line, total, hidden, actions }: { line: Line | null;
         </header>
       )}
       {actions && <div className="narr-actions">{actions}</div>}
+      {below && <div className="narr-below">{below}</div>}
     </div>
   );
 }

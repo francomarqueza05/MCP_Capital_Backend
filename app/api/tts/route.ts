@@ -8,7 +8,9 @@ import { env } from "@/server/env";
 import { forSpeech } from "@/lib/speech";
 import { asLang, setLang, type Lang } from "@/lib/lang";
 
-const dir = join(process.cwd(), ".cache", "voice");
+// On Vercel only /tmp can be written to: there the cache lives in /tmp (kept while the instance
+// lives). Elsewhere, in the repo's .cache (kept across restarts).
+const dir = process.env.VERCEL ? join("/tmp", "cordada-voice") : join(process.cwd(), ".cache", "voice");
 let proxyDownUntil = 0;
 
 // The proxy limits how many requests arrive at once (it answers 429). So calls to it go out

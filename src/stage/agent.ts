@@ -14,7 +14,7 @@ import { getCase } from "@/data/cases";
 import { tones } from "@/lib/audio";
 import { orb } from "@/orb/engine";
 import { remember, session, where } from "@/ai/client";
-import { explain, reached, agentFinished, goNextCamp, nextCampAfter, continueWithoutAgent, nextFrom } from "@/explain/player";
+import { explain, reached, agentFinished, goNextCamp, nextCampAfter, continueWithoutAgent, nextFrom, earlierStep, goTo } from "@/explain/player";
 import { call } from "./call";
 import { chat, logMsg } from "./chat";
 import { captionsOn, holdBubble, hideBubble, noteInBubble, speech } from "./stage";
@@ -484,6 +484,12 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           else if (explain.get().phase === "done" && explain.get().nextId && isGo(message)) {
             conv?.sendContextualUpdate(`The person wants to go on to the next camp: it is on its way on screen. Answer only with a very short bridge (\"${tr("Let's go!", "¡Vamos allá!")}\") and wait: its explanation starts as soon as it arrives.`);
             goNextCamp();
+          }
+          // the camp is done and the person asks to go back ("vuelve atrás", "el paso 2"): that
+          // step plays again, the same as tapping its chapter
+          else if (explain.get().phase === "done") {
+            const back = earlierStep(message);
+            if (back !== null) goTo(back);
           }
         }
       },

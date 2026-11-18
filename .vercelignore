@@ -1,0 +1,11 @@
+# never uploaded to Vercel: secrets (the keys go in the project's Environment Variables),
+# local caches and tooling
+.env
+.env.*
+!.env.example
+.cache
+.next
+node_modules
+graphify-out
+.claude
+*.log

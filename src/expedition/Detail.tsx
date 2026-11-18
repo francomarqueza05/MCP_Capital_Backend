@@ -124,13 +124,13 @@ function Review({ steps, onGo, couple }: { steps: Step[]; onGo: (i: number) => v
             <li key={s.id}>
               <button className="review-item" onClick={() => onGo(i)}>
                 <span>{s.title}</span>
-                <small>{m === "no" ? tr("😕 Wasn't clear", "😕 No quedó claro") : m === "meh" ? tr("🤔 Sort of", "🤔 Más o menos") : tr("Not confirmed", "Sin confirmar")} · {tr("Go over", "Repasar")}</small>
+                <small>{m === "no" ? tr("Wasn't clear", "No quedó claro") : m === "meh" ? tr("Sort of", "Más o menos") : tr("Not confirmed", "Sin confirmar")} · {tr("Go over", "Repasar")}</small>
               </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="review-ok">⛳ {tr("Every flag is planted: every stretch was clear.", `${couple ? "Habéis" : "Has"} plantado todas las banderas: cada tramo quedó claro.`)}</p>
+        <p className="review-ok">{tr("Every flag is planted: every stretch was clear.", `${couple ? "Habéis" : "Has"} plantado todas las banderas: cada tramo quedó claro.`)}</p>
       )}
     </motion.div>
   );
@@ -268,13 +268,13 @@ export function Detail({
             {step.kind === "summit" && steps && onGo && <Review steps={steps} onGo={onGo} couple={c.household.couple} />}
           </div>
 
-          <motion.footer className="detail-foot" {...reveal(1.2)}>
-            {onNext && (
+          {onNext && (
+            <motion.footer className="detail-foot" {...reveal(1.2)}>
               <button className="act act-main" onClick={onNext}>
                 {tr("Next camp", "Siguiente campamento")}
               </button>
-            )}
-          </motion.footer>
+            </motion.footer>
+          )}
           </div>
         </motion.aside>
       )}
