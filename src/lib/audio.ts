@@ -355,7 +355,10 @@ export function speak(id: string): Promise<Spoken | null> {
   // never changes voice mid-experience
   const text = v ? line(id) : id;
   if (!tts || !text.trim()) return recording();
-  return ttsUrl(text).then(async (url) => {
+  // a voice that takes too long is worse than none: after 9 s the line goes on at reading
+  // pace in the bubble (the fetch keeps going, so the next time it is there)
+  const late = new Promise<null>((r) => setTimeout(() => r(null), 9000));
+  return Promise.race([ttsUrl(text), late]).then(async (url) => {
     if (my !== voiceSeq || muted) return null;
     if (!url) return recording();
     const a = new Audio(url);

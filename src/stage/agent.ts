@@ -14,11 +14,11 @@ import { getCase } from "@/data/cases";
 import { tones } from "@/lib/audio";
 import { orb } from "@/orb/engine";
 import { remember, session, where } from "@/ai/client";
-import { explain, reached, agentFinished, goNextCamp, nextCampAfter } from "@/explain/player";
+import { explain, reached, agentFinished, goNextCamp, nextCampAfter, continueWithoutAgent } from "@/explain/player";
 import { call } from "./call";
 import { chat, logMsg } from "./chat";
 import { captionsOn, holdBubble, hideBubble, noteInBubble, speech } from "./stage";
-import { tr } from "@/lib/lang";
+import { lang, tr } from "@/lib/lang";
 
 export const agent = createStore({ mode: null as "explain" | "free" | null });
 
@@ -85,8 +85,39 @@ The screen already shows block "${ex.beats[at].id}". Explain it now, then go blo
   agentSay(tr(`Let's do ${title.toLowerCase()}.`, `Vamos con ${title.toLowerCase()}.`));
 }
 
+/**
+ * Never stuck on silence. After a block goes on screen the agent should start talking within a
+ * few seconds. If it doesn't, it gets one nudge; if it still says nothing, the step is marked
+ * as told so "Continue" lights up, and the screen moves on without it if needed.
+ */
+const SILENT_MS = 6500;
+let silentTimer: ReturnType<typeof setTimeout> | null = null;
+function clearSilence() {
+  if (silentTimer) clearTimeout(silentTimer);
+  silentTimer = null;
+}
+function watchSilence(nudged = false) {
+  clearSilence();
+  silentTimer = setTimeout(() => {
+    silentTimer = null;
+    if (!conv || explain.get().paused || call.get().state === "speaking") return;
+    const ex = explain.get();
+    if (ex.phase !== "playing") return;
+    if (!nudged) {
+      conv.sendContextualUpdate(`The screen shows block "${ex.beats[ex.i]?.id}" and you have not said anything yet. Explain it now, in one to three short sentences.`);
+      conv.sendUserActivity();
+      watchSilence(true);
+      return;
+    }
+    // still nothing: free the screen, the person moves on with "Continue"
+    explain.set({ saying: false, fresh: false, waiting: true, until: null });
+    speech.set({ p: 1 });
+  }, SILENT_MS);
+}
+
 /** Puts block `to` on screen: what follows is the step itself, so the visual builds with it. */
 function showBlock(to: number) {
+  watchSilence();
   const ex = explain.get();
   allowNext = false;
   lastUser = "";
@@ -222,6 +253,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
 
   const history = where().said ?? [];
   const r = await fetch("/api/agent/session", {
+    signal: AbortSignal.timeout(10000),
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -253,11 +285,13 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
   agent.set({ mode: opts.mode });
   watchPause();
   try {
-    conv = (await Conversation.startSession({
+    // a connection that never opens must not freeze the explanation: give up after 12 s and
+    // let the caller fall back to the local call
+    const opening = Conversation.startSession({
       signedUrl,
       connectionType: "websocket",
       dynamicVariables,
-      overrides: { agent: { language: "es", firstMessage: first } },
+      overrides: { agent: { language: lang(), firstMessage: first } },
       clientTools: {
         show_block: ({ block }: { block: string }) => {
           const ex = explain.get();
@@ -295,6 +329,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
       onModeChange: ({ mode }) => {
         if (!conv && mode) return;
         if (mode === "speaking") {
+          clearSilence();
           // no reply-start event seen (or a long pause): a new caption
           if (performance.now() - lastCharAt > 1500) newReply();
           call.set({ state: "speaking" });
@@ -341,10 +376,22 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
         }
       },
       onDisconnect: () => {
-        if (conv) endAgent(true);
+        if (!conv) return;
+        // dropped mid-camp: the explanation carries on locally from the same step
+        const mid = explain.get().phase === "playing" && agent.get().mode === "explain";
+        endAgent(true);
+        if (mid) void continueWithoutAgent();
       },
       onError: (m) => console.error("agent", m),
-    })) as VoiceConversation;
+    });
+    const timeout = new Promise<null>((r) => setTimeout(() => r(null), 12000));
+    const opened = (await Promise.race([opening, timeout])) as VoiceConversation | null;
+    if (!opened) {
+      // it may still open later: close it then, so no second voice turns up
+      void opening.then((c) => c.endSession()).catch(() => {});
+      throw new Error("agent session timed out");
+    }
+    conv = opened;
   } catch (e) {
     console.error("agent start", e);
     return fail();
@@ -373,6 +420,7 @@ function fail() {
 
 async function tool(body: Record<string, unknown>) {
   const r = await fetch("/api/agent/tool", {
+    signal: AbortSignal.timeout(6000),
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ caseId: session.get().caseId, ...body }),
@@ -384,6 +432,7 @@ async function tool(body: Record<string, unknown>) {
 export async function endAgent(dropped = false) {
   const c = conv;
   conv = null;
+  clearSilence();
   if (pauseBeat) clearInterval(pauseBeat);
   pauseBeat = null;
   cancelAnimationFrame(raf);

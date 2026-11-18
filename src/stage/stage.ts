@@ -238,9 +238,20 @@ export function captionInBubble(id: string) {
     orb.setEmo("speaking");
     if (voice) {
       let i = 0;
+      // audio that stops advancing (a stalled stream) ends the line instead of holding it forever
+      let lastT = -1;
+      let stuckSince = performance.now();
       const tick = () => {
         if (stopped) return;
         const t = voice.audio.currentTime;
+        if (t !== lastT || isVoiceHeld()) {
+          lastT = t;
+          stuckSince = performance.now();
+        } else if (performance.now() - stuckSince > 4000) {
+          show(words.length);
+          end();
+          return;
+        }
         let moved = false;
         while (i < words.length && t >= (voice.words[i] ?? 0) - 0.04) {
           i++;

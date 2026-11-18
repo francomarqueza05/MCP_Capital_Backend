@@ -71,8 +71,7 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
         <button
           className={`act act-main xp-go${waiting || paused ? " ready" : ""}`}
           onClick={proceed}
-          disabled={!waiting && !paused}
-          title={waiting ? tr("Go to the next step (take your time: tap the chart to explore it)", "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)") : paused ? tr("Carry on from here", "Seguir desde aquí") : tr("Cordi is explaining", "Cordi está explicando")}
+          title={waiting ? tr("Go to the next step (take your time: tap the chart to explore it)", "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)") : paused ? tr("Carry on from here", "Seguir desde aquí") : tr("Skip to the next step", "Saltar al siguiente paso")}
         >
           {last ? tr("Done", "Listo") : tr("Continue", "Seguimos")} <IconPlay />
         </button>

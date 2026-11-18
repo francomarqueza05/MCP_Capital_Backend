@@ -411,6 +411,17 @@ export const proceed = () => {
     togglePause();
     return;
   }
+  // still talking (or stuck waiting on a voice that never came): "Continue" is never a dead
+  // button. It skips to the next step right away; on the last one it closes the camp
+  if (!s0.waiting && !s0.paused && !live()) {
+    if (s0.i < s0.beats.length - 1) next();
+    else {
+      cut();
+      explain.set((x) => ({ i: x.beats.length }));
+      jumped = true;
+    }
+    return;
+  }
   explain.set({ waiting: false, until: null });
   if (live()) {
     // the next block goes on screen now; on the last one, the agent wraps the camp up
@@ -418,6 +429,25 @@ export const proceed = () => {
     agentSay(tr("Yes, let's continue.", "Sí, seguimos."));
   } else if (explain.get().how === "call" && inCall()) call.set({ state: "speaking" });
 };
+
+/**
+ * The live agent dropped (network, the service) in the middle of a camp: the explanation goes
+ * on from the same step with the local call (or the chat without a microphone), so the person
+ * never sees it stop. Called by agent.ts.
+ */
+export async function continueWithoutAgent() {
+  const s = explain.get();
+  if (s.phase !== "playing" || s.how !== "call") return;
+  const my = ++run;
+  explain.set({ waiting: false, paused: false, saying: false, cutOff: false });
+  if (!(await startCall({ greet: false }))) {
+    explain.set({ how: "chat" });
+    openChat();
+    chat.set({ busy: true });
+  } else if (inCall()) call.set({ state: "speaking" });
+  if (my !== run) return;
+  await loop(my);
+}
 /** The person is exploring the visual. Steps never move on by themselves any more, so there's
  * nothing to hold off; kept as the stage's touch hook. */
 export const hold = () => {};
