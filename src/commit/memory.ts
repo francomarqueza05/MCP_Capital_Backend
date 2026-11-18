@@ -37,6 +37,8 @@ export type Saved = {
   firstVisit: number;
   lastVisit: number;
   visits: number;
+  /** They pressed Start at least once (picking the profile alone is not a visit). */
+  begun?: boolean;
 };
 
 const KEY = (caseId: string) => `cordada.v1.${caseId}`;
@@ -97,7 +99,10 @@ export function openMemory(caseId: string) {
     progress.set({ at: saved.at ?? {} });
     const days = Math.floor((t - saved.lastVisit) / DAY);
     const planted = Object.values(saved.marks ?? {}).filter((m) => m === "yes").length;
-    memory.set({ caseId, saved, back: { days, plan: saved.plan, planted } });
+    // a return only once they climbed before and left something: a flag, a step seen, a promise.
+    // Otherwise (picked the card, switched language, never pressed Start) it is still a first time
+    const climbed = saved.begun && (planted > 0 || saved.plan || (saved.history ?? []).length > 0 || Object.keys(saved.seen ?? {}).length > 0);
+    memory.set({ caseId, saved, back: climbed ? { days, plan: saved.plan, planted } : null });
   } else {
     memory.set({ caseId, saved: null, back: null });
   }
@@ -116,6 +121,15 @@ export function openMemory(caseId: string) {
     write(KEY(caseId), next);
   };
   unsub = [understanding.subscribe(persist), known.subscribe(persist), progress.subscribe(persist)];
+}
+
+/** They pressed Start: from now on, coming back counts as a return. */
+export function markBegun() {
+  const s = memory.get().saved;
+  if (!s || s.begun) return;
+  const next = { ...s, begun: true };
+  memory.set({ saved: next });
+  write(KEY(memory.get().caseId), next);
 }
 
 /** Changes the plan (the commitment) and saves it. */

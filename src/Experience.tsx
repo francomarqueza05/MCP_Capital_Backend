@@ -18,7 +18,7 @@ import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
 import { LangSwitch, Login, ProfileChip } from "@/intro/Login";
 import { LANG_COOKIE, setLang, tr, type Lang } from "@/lib/lang";
-import { forget, memory, openMemory, shiftDays } from "@/commit/memory";
+import { forget, markBegun, memory, openMemory, shiftDays } from "@/commit/memory";
 
 const LEAVE_MS = 700; // the fade to the start screen's sky before switching profile
 
@@ -88,8 +88,9 @@ export function Experience({ lang }: { lang: Lang }) {
     setSound(withSound);
     setStarted(true);
     exp.current?.start();
-    // coming back: no need to watch the intro again
+    // coming back: no need to watch the intro again (first time, it always plays)
     if (memory.get().back) setTimeout(() => exp.current?.skip(), 400);
+    markBegun();
   };
 
   /**
