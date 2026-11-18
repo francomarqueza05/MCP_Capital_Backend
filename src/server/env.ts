@@ -41,6 +41,9 @@ export const env = {
   get agentId() {
     return get("ELEVENLABS_AGENT_ID");
   },
+  get agentIdEn() {
+    return get("ELEVENLABS_AGENT_ID_EN");
+  },
   /** The live agent for a language: English has its own (native voice, English turn-taking). */
   agentIdFor(lang: "en" | "es") {
     return (lang === "en" && get("ELEVENLABS_AGENT_ID_EN")) || get("ELEVENLABS_AGENT_ID");

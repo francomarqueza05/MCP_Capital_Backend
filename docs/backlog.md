@@ -18,8 +18,9 @@ Status: `[ ]` to do · `[~]` in progress · `[x]` done · `[!]` needs a person.
 - [x] Voice: `/api/tts` takes `lang` (language code, voice and cache per language). The stock lines exist in English.
 
 ### 2. English ElevenLabs agent
-- [x] Code: `ELEVENLABS_AGENT_ID_EN` and `VOICE_ID_EN` in `.env` are used for English. Without them, the Spanish agent runs with `language: en` (override) and the voice stays the same.
-- [!] Create the agent. From this machine `api.elevenlabs.io` timed out on 18 Nov, so it was not done. Steps: duplicate "Cordada guide" in ElevenLabs, set language English, pick a native English voice (eleven_v3_conversational), set the first message to "Hi {{name}}! I'm Cordi…", and put its id in `ELEVENLABS_AGENT_ID_EN`. Put the same voice in `VOICE_ID_EN`.
+- [x] English voice: `VOICE_ID_EN=EXAVITQu4vr4xnSDxMaL` (Sarah, ElevenLabs premade, American; checked with a TTS call). Narrations and the local call use it.
+- [x] In English the live agent runs only if `ELEVENLABS_AGENT_ID_EN` exists; otherwise the local call with the native voice. After a failed session the agent is skipped for 2 minutes, so nothing waits on it.
+- [!] Create the agent: `node scripts/agent-en.mjs` (copies the Spanish agent, sets English, the voice and the first message, writes the id to `.env`). On 18 Nov the ElevenLabs agents API timed out (POST and GET; TTS worked), so it could not run yet.
 
 ### 3. The conversation never gets stuck
 - [x] "Continue" is always active: while Cordi talks it skips to the next step; on the last step it closes the camp.

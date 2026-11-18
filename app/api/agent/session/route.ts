@@ -7,11 +7,18 @@ import { explainBrief, persona } from "@/server/brief";
 import { mapBrief, type Known } from "@/server/map";
 import { useRequestLang } from "@/server/lang";
 
+// When ElevenLabs does not answer, every "Explain this" would wait for it: after a failure the
+// agent is skipped for two minutes and the local call (same voice, same steps) starts at once.
+let downUntil = 0;
+
 type Body = { caseId: string; mode: "explain" | "free"; campId?: string; camp?: string; from?: number; said?: string[]; known?: Known; recent?: { who: "you" | "cordi"; text: string }[] };
 
 export async function POST(req: Request) {
   const lang = useRequestLang(req);
-  const agentId = env.agentIdFor(lang);
+  // in English, only an English agent: the Spanish one would speak English with a Spanish voice,
+  // and the local call already has the native English voice
+  const agentId = lang === "en" ? env.agentIdEn : env.agentId;
+  if (Date.now() < downUntil) return Response.json({ error: "agent_unavailable" }, { status: 503 });
   const b = (await req.json().catch(() => null)) as Body | null;
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });
@@ -30,6 +37,7 @@ export async function POST(req: Request) {
     signal: AbortSignal.timeout(8000),
   }).catch(() => null);
   if (!res?.ok) {
+    downUntil = Date.now() + 120_000;
     console.error("agent signed url", res?.status);
     return Response.json({ error: "agent_unavailable" }, { status: 503 });
   }
