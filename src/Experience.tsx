@@ -113,12 +113,8 @@ export function Experience({ lang }: { lang: Lang }) {
   return (
     <main className="stage">
       <Expedition ref={exp} c={getCase(caseId)} key={caseId} onPhase={setPhase} />
-      <Orb
-        onTap={() => {
-          if (inCall()) return;
-          showBubble("howCanIHelp", 2200);
-        }}
-      />
+      {/* tapping Cordi is just play: it bounces and reacts (orb.tapped), nothing to answer */}
+      <Orb />
       {/* in the intro Cordi rises over the mountain: its words go underneath it */}
       <Bubble below={phase === "intro"} />
       <Ask />

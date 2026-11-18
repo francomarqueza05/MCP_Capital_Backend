@@ -68,7 +68,7 @@ export function Orb({ onTap }: { onTap?: () => void }) {
         className="orb"
         role="button"
         tabIndex={0}
-        aria-label={tr("Cordi, your guide. Tap me to ask.", "Cordi, tu guía. Tócame para preguntar.")}
+        aria-label={tr("Cordi, your guide", "Cordi, tu guía")}
         onPointerDown={(e) => {
           e.stopPropagation();
           if (orb.mode !== "idle" && orb.mode !== "hold" && orb.mode !== "puppet") return;
