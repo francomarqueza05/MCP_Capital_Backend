@@ -293,7 +293,8 @@ function ttsFetch(text: string, now: boolean): Promise<string | null> {
         let url: string | null = null;
         for (let attempt = 0; attempt < 2 && !url; attempt++) {
           if (attempt) await new Promise((r) => setTimeout(r, 900));
-          url = await fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang: lang() }) })
+          // a GET, so the CDN keeps each line once made (see app/api/tts)
+          url = await fetch(`/api/tts?lang=${lang()}&text=${encodeURIComponent(text)}`)
             .then(async (r) => (r.ok ? URL.createObjectURL(await r.blob()) : null))
             .catch(() => null);
         }

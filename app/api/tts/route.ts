@@ -131,11 +131,8 @@ const VOICE_VERSION = (l: Lang) => `s${SETTINGS.stability}-b${SETTINGS.similarit
 const cached = (l: Lang, said: string) =>
   join(dir, `${createHash("sha1").update(`${VOICE_VERSION(l)}|${env.voiceModel}|${env.voiceIdFor(l)}|${env.voiceSpeed}|${said}`).digest("hex").slice(0, 16)}.mp3`);
 
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const text = String(body?.text ?? "").trim().slice(0, 600);
-  if (!text) return new Response("bad request", { status: 400 });
-  const l = asLang(body?.lang);
+/** One line in Cordi's voice: from the disk cache (local), or made now. */
+async function voiceFor(text: string, l: Lang): Promise<Buffer | null> {
   setLang(l);
   // the figures written out in words, so the voice reads them the way a person would
   const said = perform(forSpeech(text));
@@ -150,6 +147,32 @@ export async function POST(req: Request) {
       } catch {}
     }
   }
+  return buf;
+}
+
+/**
+ * GET /api/tts?text=…&lang=en: the same line, cacheable. On Vercel the disk is not kept between
+ * calls, so every line was made again (~2 s each). As a GET with a long s-maxage, Vercel's CDN
+ * keeps each line once made and serves it at once from the nearest edge (a new deployment
+ * starts a fresh cache, so a voice change is never mixed with old takes).
+ */
+export async function GET(req: Request) {
+  const q = new URL(req.url).searchParams;
+  const text = String(q.get("text") ?? "").trim().slice(0, 600);
+  if (!text) return new Response("bad request", { status: 400 });
+  const buf = await voiceFor(text, asLang(q.get("lang")));
+  if (!buf) return new Response("voice unavailable", { status: 502, headers: { "cache-control": "no-store" } });
+  return new Response(new Uint8Array(buf), {
+    headers: { "content-type": "audio/mpeg", "cache-control": "public, max-age=86400, s-maxage=31536000, immutable" },
+  });
+}
+
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  const text = String(body?.text ?? "").trim().slice(0, 600);
+  if (!text) return new Response("bad request", { status: 400 });
+  const buf = await voiceFor(text, asLang(body?.lang));
   if (!buf) return new Response("voice unavailable", { status: 502 });
   return new Response(new Uint8Array(buf), { headers: { "content-type": "audio/mpeg", "cache-control": "private, max-age=86400" } });
 }
+
