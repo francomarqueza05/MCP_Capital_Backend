@@ -343,7 +343,7 @@ function Score({ v, p }: { v: Extract<V, { kind: "score" }>; p: number }) {
             {/* where "today" is, kept on the scale once the needle moves on */}
             <line {...today} className="vx-dial-today" />
             <text x={tx1} y={ty1 - 22} className="vx-dial-label" textAnchor="middle">
-              hoy
+              {tr("today", "hoy")}
             </text>
             <text x={G.cx - G.r} y={G.cy + 22} className="vx-dial-end" textAnchor="middle">
               0

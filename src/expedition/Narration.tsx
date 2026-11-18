@@ -3,6 +3,7 @@
 // they are spoken (on the voice's own timing when there is a recording).
 import type { ReactNode } from "react";
 import type { Step } from "./steps";
+import { tr } from "@/lib/lang";
 
 export type Line = {
   text: string;
@@ -25,7 +26,7 @@ export function Narration({ line, total, hidden, actions }: { line: Line | null;
     <div className={`narr${titled ? " titled" : " intro"}${hidden ? " hidden" : ""}`} aria-live="polite" key={line.key}>
       {titled && (
         <header className="narr-head">
-          <p className="narr-where">{line.step === 0 ? "Campamento base" : line.step === total - 1 ? "La cima" : `Campamento ${line.step} de ${total - 2}`}</p>
+          <p className="narr-where">{line.step === 0 ? tr("Base camp", "Campamento base") : line.step === total - 1 ? tr("The summit", "La cima") : tr(`Camp ${line.step} of ${total - 2}`, `Campamento ${line.step} de ${total - 2}`)}</p>
           <h2 className="narr-title">{line.title}</h2>
           <p className={`narr-label t-${line.status}`}>{line.label}</p>
         </header>

@@ -91,7 +91,7 @@ function Leveraged({ fund }: { fund: string }) {
     <SceneFrame title={tr(`${fund} triples the falls`, `${fund} multiplica las caídas por tres`)} sub={tr("If the market falls 10%, this fund falls about 30%. And it needs to rise much more to recover.", "Si el mercado cae un 10%, este fondo cae alrededor de un 30%. Y para recuperarse necesita subir mucho más.")} colour={C.bad}>
       <line x1={X} y1={Y} x2={X + PW} y2={Y} stroke={C.dim} strokeDasharray="3 4" />
       <text x={X} y={Y - 10} className="svg-small">
-        hoy
+        {tr("today", "hoy")}
       </text>
       <motion.path d={market} fill="none" stroke={C.lichen} strokeWidth={3} strokeLinecap="round" />
       <motion.path d={lev} fill="none" stroke={C.bad} strokeWidth={3} strokeLinecap="round" />

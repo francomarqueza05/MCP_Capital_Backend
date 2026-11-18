@@ -37,7 +37,7 @@ export function WelcomeBack({ c }: { c: Case }) {
         : tr(`Welcome back. It's been ${back.days} days.`, `Hola de nuevo. Han pasado ${back.days} días.`);
 
   // nothing promised yet: where they left the climb
-  if (!move || !plan || plan.done) {
+  if (!move || !plan || (plan.done && stage !== "yes")) {
     return (
       <motion.div className="wb" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
         <p className="wb-hi">{ago}</p>

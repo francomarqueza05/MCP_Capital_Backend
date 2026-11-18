@@ -958,11 +958,11 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
             <>
               <ExplainButton step={step} c={c} />
               <button className="act" onClick={() => setDetail(true)}>
-                Ver el detalle
+                {tr("See the detail", "Ver el detalle")}
               </button>
               {idx < n - 1 && (
                 <button className="act" onClick={() => go(idx + 1)} disabled={walking}>
-                  Siguiente campamento
+                  {tr("Next camp", "Siguiente campamento")}
                 </button>
               )}
             </>
