@@ -11,9 +11,9 @@ import { createStore, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { call, hangUp, inCall, listenInCall, sayInCall, startCall, stopLine } from "@/stage/call";
 import { chat, closePanel, converse, cordiWrites, logMsg, openChat } from "@/stage/chat";
-import { advanceLive, agentActive, agentSay, allowAdvance, startAgent } from "@/stage/agent";
+import { advanceLive, agentActive, agentSay, allowAdvance, moveLive, startAgent } from "@/stage/agent";
 import { askCordi, checkAI, goExplain } from "@/ai/client";
-import { hideBubble } from "@/stage/stage";
+import { hideBubble, showBubble } from "@/stage/stage";
 import { beatsFor, type Beat } from "./beats";
 import { isGo } from "./confirm";
 import { tr } from "@/lib/lang";
@@ -392,7 +392,10 @@ function jump(to: number) {
   const s = explain.get();
   const i = Math.max(0, Math.min(s.beats.length - 1, to));
   if (live()) {
-    explain.set({ i, paused: false, waiting: false });
+    explain.set({ paused: false, waiting: false });
+    // the screen moves now and the place is saved, whatever the agent was about to do
+    if (i !== s.i && moveLive(i)) return;
+    explain.set({ i });
     agentSay(i === s.i ? tr("Can you say that again?", "¿Me lo repites?") : tr(`Let's go to block ${s.beats[i].id}.`, `Vamos al bloque ${s.beats[i].id}.`));
     return;
   }
@@ -659,11 +662,23 @@ export function leaveExplain() {
   closePanel();
 }
 
+/**
+ * "Leave": the explanation closes, the call hangs up, and the place is kept. Cordi says in one
+ * line where it was left, so leaving never feels like losing it ("Continue (2/3)" picks it up).
+ */
 export function endExplain() {
-  const how = explain.get().how;
+  const s = explain.get();
+  const how = s.how;
+  const mid = s.phase === "playing" && s.beats.length > 0 && s.i < s.beats.length - 1;
+  if (mid) save(s.stepId, Math.min(s.i, s.beats.length - 1));
   cancelExplain();
   if (how === "call") hangUp();
   closePanel();
+  if (mid)
+    setTimeout(
+      () => showBubble(tr(`Saved. We'll pick it up at step ${s.i + 1} of ${s.beats.length} whenever you like.`, `Guardado. Seguimos en el paso ${s.i + 1} de ${s.beats.length} cuando quieras.`), 3200),
+      350,
+    );
 }
 
 // hanging up ends a call's explanation too

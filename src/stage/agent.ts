@@ -134,6 +134,21 @@ function showBlock(to: number) {
  * without it, and the step stayed put). The agent is told it's already showing. False on the
  * last block (there the agent wraps up the camp itself).
  */
+/**
+ * The person moved to step `to` (an arrow, a chapter): the block goes on screen at once and
+ * the agent is told to explain it. For a while after, the agent can't pull the screen back to
+ * an earlier block (a show_block it had on its way would otherwise undo the person's click).
+ */
+let userMovedAt = 0;
+export function moveLive(to: number): boolean {
+  const ex = explain.get();
+  if (!conv || agent.get().mode !== "explain" || to < 0 || to >= ex.beats.length) return false;
+  userMovedAt = performance.now();
+  showBlock(to);
+  conv.sendContextualUpdate(`The person moved the screen to block "${ex.beats[to].id}". Stop what you were saying and explain that block now, in your own words. Do not call show_block for it.`);
+  return true;
+}
+
 export function advanceLive(): boolean {
   const ex = explain.get();
   const to = ex.i + 1;
@@ -300,6 +315,11 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           // forward only with the person's go-ahead; the first block, the same one, or going
           // back are always fine
           const forward = shownAny && i > ex.i;
+          // the person just moved the screen themselves: an older block from the agent doesn't undo it
+          if (i < ex.i && performance.now() - userMovedAt < 10000) {
+            conv?.sendContextualUpdate(`The screen stays on block "${ex.beats[ex.i].id}", where the person moved it. Explain that one.`);
+            return;
+          }
           // the person spoke since the step was shown and it wasn't a question: the agent heard a
           // go-ahead in it (a yes isGo doesn't know). Blocking it here left Cordi telling the
           // next step over the old visual
