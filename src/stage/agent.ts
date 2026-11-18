@@ -20,6 +20,9 @@ import { chat, logMsg } from "./chat";
 import { captionsOn, holdBubble, hideBubble, noteInBubble, speech } from "./stage";
 import { lang, tr } from "@/lib/lang";
 
+/** A goodbye: the only thing that lets the agent end the call from the map. */
+const BYE = /\b(bye|goodbye|see you|that'?s all|i'?m done|we'?re done|thanks?,? that'?s it|stop the call|hang up|adi[oó]s|hasta luego|hasta pronto|eso es todo|ya est[aá] por hoy|cuelga|terminamos)\b/i;
+
 export const agent = createStore({ mode: null as "explain" | "free" | null });
 
 let conv: VoiceConversation | null = null;
@@ -404,8 +407,16 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
             const ahead = nextCampAfter(getCase(session.get().caseId), explain.get().stepId);
             return tool({ tool: "next_brief", campId: explain.get().stepId, camp: explain.get().title, next: ahead?.title ?? null, said: where().said, known: where().known });
           }
-          ending = true;
-          return "END";
+          // On the map the agent may only end the call when the person says goodbye. A "continue"
+          // (or anything else) right after a camp used to land here, the call hung up, and that
+          // closed the next camp's explanation the moment it started.
+          const ex = explain.get();
+          const busy = ex.phase === "playing" || ex.phase === "choose" || ex.phase === "done" || Boolean(ex.nextId);
+          if (!busy && BYE.test(lastUser)) {
+            ending = true;
+            return "END";
+          }
+          return "Do NOT end the call and do not say goodbye. The person is still here: the app moves the screen (the next camp may be starting right now). Keep going with what is on screen, or answer briefly and wait.";
         },
       },
       onModeChange: ({ mode }) => {
