@@ -127,6 +127,20 @@ const clear = (stepId: string) => {
 };
 
 let run = 0; // bumps on every start/stop, so an old loop knows to quit
+/**
+ * While the call for an explanation is being opened (the live agent, then the local call as a
+ * fallback), the call state goes idle in between: that is not the person hanging up, and must
+ * not close the explanation (it did, when the agent failed for want of a microphone).
+ */
+let opening = false;
+async function openingCall<T>(fn: () => Promise<T>): Promise<T> {
+  opening = true;
+  try {
+    return await fn();
+  } finally {
+    opening = false;
+  }
+}
 let jumped = false; // a control moved the position: the loop shouldn't advance on its own
 
 const DWELL = 1300; // pause after each beat in the chat, so the visual can be read
@@ -183,9 +197,9 @@ export async function switchHow(how: How) {
   }
   const i = Math.min(s.i, s.beats.length - 1);
   if (how === "call") {
-    if ((await checkAI()).agent && (await startAgent({ mode: "explain", campId: s.stepId, from: i, title: s.title }))) return;
+    if ((await checkAI()).agent && (await openingCall(() => startAgent({ mode: "explain", campId: s.stepId, from: i, title: s.title })))) return;
     if (my !== run) return;
-    if (!(await startCall({ greet: false }))) {
+    if (!(await openingCall(() => startCall({ greet: false })))) {
       explain.set({ how: "chat" });
       openChat();
     }
@@ -225,14 +239,14 @@ export async function startExplain(how: How) {
   explain.set({ phase: "playing", how, i: from, paused: false });
   if (how === "call" && (await checkAI()).agent) {
     // the live agent narrates in its own words and moves the visuals with show_block
-    if (await startAgent({ mode: "explain", campId: s.stepId, from, title: s.title })) return;
+    if (await openingCall(() => startAgent({ mode: "explain", campId: s.stepId, from, title: s.title }))) return;
     if (my !== run) return;
   }
   if (how === "chat") {
     openChat();
     chat.set({ busy: true });
     logMsg("you", from ? tr(`Let's carry on with ${s.title.toLowerCase()}`, `Sigamos con ${s.title.toLowerCase()}`) : tr(`Explain ${s.title.toLowerCase()} to me`, `Explícame ${s.title.toLowerCase()}`), s.title);
-  } else if ((prefetchSpeech(s.beats[from].say), !(await startCall({ greet: false })))) {
+  } else if ((prefetchSpeech(s.beats[from].say), !(await openingCall(() => startCall({ greet: false }))))) {
     // no microphone: carry on in the chat instead
     explain.set({ how: "chat" });
     openChat();
@@ -443,7 +457,7 @@ export async function continueWithoutAgent() {
   if (s.phase !== "playing" || s.how !== "call") return;
   const my = ++run;
   explain.set({ waiting: false, paused: false, saying: false, cutOff: false });
-  if (!(await startCall({ greet: false }))) {
+  if (!(await openingCall(() => startCall({ greet: false })))) {
     explain.set({ how: "chat" });
     openChat();
     chat.set({ busy: true });
@@ -669,7 +683,8 @@ export function leaveExplain() {
 export function endExplain() {
   const s = explain.get();
   const how = s.how;
-  const mid = s.phase === "playing" && s.beats.length > 0 && s.i < s.beats.length - 1;
+  // only worth saying from step 2 on (on step 1 there is nothing to pick up)
+  const mid = s.phase === "playing" && s.i > 0 && s.i < s.beats.length - 1;
   if (mid) save(s.stepId, Math.min(s.i, s.beats.length - 1));
   cancelExplain();
   if (how === "call") hangUp();
@@ -684,5 +699,6 @@ export function endExplain() {
 // hanging up ends a call's explanation too
 call.subscribe(() => {
   const s = explain.get();
+  if (opening) return;
   if (!inCall() && s.how === "call" && (s.phase === "playing" || s.phase === "done")) cancelExplain();
 });

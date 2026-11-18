@@ -413,7 +413,8 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
     }
     conv = opened;
   } catch (e) {
-    console.error("agent start", e);
+    // expected (no microphone permission, service down): the local call takes over
+    console.warn("agent start", e);
     return fail();
   }
   if (call.get().quiet) conv?.setVolume({ volume: 0 });

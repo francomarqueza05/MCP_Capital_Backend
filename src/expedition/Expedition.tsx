@@ -502,6 +502,18 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
     frame(x, y - HOVER * 0.5, campZ());
   }, [sheet, theater, idx, walking, campPos, frame, phase]);
 
+  // an explanation that started on arrival (its "Next" button, or "take me there" from the
+  // chat) skipped the camp's panel: once it closes, the panel comes back, quietly, so the
+  // person is never left on a bare mountain with no way on
+  useEffect(() => {
+    if (theater || transit || phase !== "tour" || idx < 0) return;
+    setNarr((cur) => {
+      if (cur && cur.step === idx && cur.title !== undefined) return cur;
+      const st = steps[idx];
+      return { title: st.title, label: st.label, status: st.status, text: st.say, step: idx, times: st.say.split(" ").map(() => 0), key: Math.random(), whole: true };
+    });
+  }, [theater, transit, phase, idx, steps]);
+
   // ---------------------------------------------------------------- narration
   const narrate = useCallback(async (l: Line) => {
     if (skipped.current && l.title === undefined) return;
