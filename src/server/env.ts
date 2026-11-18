@@ -49,6 +49,13 @@ export const env = {
   get elevenlabsKey() {
     return get("ELEVENLABS_API_KEY");
   },
+  /**
+   * The key of the ElevenLabs account the live agent lives in. Only needed when that's another
+   * account than ELEVENLABS_API_KEY's (where Cordi's narration voice lives); else the same one.
+   */
+  get agentKey() {
+    return get("ELEVENLABS_AGENT_API_KEY") || get("ELEVENLABS_API_KEY");
+  },
   get agentId() {
     return get("ELEVENLABS_AGENT_ID");
   },

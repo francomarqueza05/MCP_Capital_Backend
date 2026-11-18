@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   await loadCases(); // the households, from the Sherpas MCP
   const c = b && caseById(String(b.caseId ?? ""));
   if (!b || !c) return Response.json({ error: "bad_request" }, { status: 400 });
-  if (!env.elevenlabsKey || !agentId) return Response.json({ error: "agent_unavailable" }, { status: 503 });
+  if (!env.agentKey || !agentId) return Response.json({ error: "agent_unavailable" }, { status: 503 });
 
   const said = (b.said ?? []).map(String).slice(-24);
   // a free call happens on the map: the same guide rule as the map's chat
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const phase_brief = recent.length ? `${brief}\nRECENT CONVERSATION (continue from here; do not repeat answers already given):\n${recent.join("\n")}` : brief;
 
   const res = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`, {
-    headers: { "xi-api-key": env.elevenlabsKey },
+    headers: { "xi-api-key": env.agentKey },
     signal: AbortSignal.timeout(8000),
   }).catch(() => null);
   if (!res?.ok) {

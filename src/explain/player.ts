@@ -9,7 +9,7 @@ import { understanding } from "@/expedition/understanding";
 import { holdVoice, line as voiceLine, prefetchSpeech, releaseVoice, stopVoice, tones } from "@/lib/audio";
 import { createStore, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
-import { call, hangUp, inCall, listenInCall, sayInCall, startCall, stopLine } from "@/stage/call";
+import { call, hangUp, inCall, listenInCall, sayAnswerInCall, sayInCall, startCall, stopLine } from "@/stage/call";
 import { chat, closePanel, converse, cordiWrites, logMsg, openChat } from "@/stage/chat";
 import { advanceLive, agentActive, agentSay, allowAdvance, AUTO_MS, moveLive, restartAuto, startAgent } from "@/stage/agent";
 import { askCordi, checkAI, goExplain } from "@/ai/client";
@@ -614,7 +614,7 @@ export async function interject(question: string, wasMid?: boolean) {
     const answer = (await askCordi(question, s.title)) ?? voiceLine("placeholderAnswer");
     if (my !== run) return true;
     logMsg("cordi", answer, s.title);
-    await sayInCall(answer);
+    await sayAnswerInCall(answer); // sentence by sentence: the first words come sooner
     if (my !== run) return true;
     if (!done) {
       const ask = goOnLine(couple);

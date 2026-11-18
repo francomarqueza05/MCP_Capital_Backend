@@ -6,7 +6,7 @@
 // there's no speech-to-text and Cordi answers with a placeholder line. The live agent
 // (POST /v1/voice/agent-session, ElevenLabs over WebSocket, with per-character timing for
 // exact captions) plugs in where `reply()` is.
-import { audioContext, line as voiceLine, setVoiceQuiet, stopVoice, tones } from "@/lib/audio";
+import { audioContext, line as voiceLine, prefetchSpeech, setVoiceQuiet, stopVoice, tones } from "@/lib/audio";
 import { createStore, lerp, wait } from "@/lib/store";
 import { orb } from "@/orb/engine";
 import { logMsg } from "./chat";
@@ -14,7 +14,7 @@ import { askCordi, checkAI, remember, session } from "@/ai/client";
 import { agentActive, agentMute, agentQuiet, agentSay, endAgent, startAgent } from "./agent";
 import { earlierStep, explain, explaining, goTo, interject, proceed, resumeCut, takeWheel, writeDuring } from "@/explain/player";
 import { isGo } from "@/explain/confirm";
-import { tr } from "@/lib/lang";
+import { lang, tr } from "@/lib/lang";
 import { captionInBubble, hideBubble, holdBubble, setCaptions } from "./stage";
 
 export type CallState = "idle" | "connecting" | "speaking" | "listening" | "thinking";
@@ -50,6 +50,8 @@ let heardAt = 0;
 let quietSince = 0;
 let loudSince = 0;
 let turn = 0; // bumps on every hang-up, so stale awaits know to stop
+/** The person cut Cordi off this turn (sustained voice, or words over it). */
+let barged = false;
 
 async function openMic() {
   try {
@@ -133,12 +135,41 @@ const norm = (t: string) =>
     .replace(/[^a-z0-9ñ ]+/g, " ")
     .split(/\s+/)
     .filter((w) => w.length > 2);
+/**
+ * How much of what was heard shares words with what Cordi is saying right now. Loose on
+ * purpose: used only to decide whether words heard over Cordi's voice are the person (and cut
+ * it off) or the speakers coming back through the microphone, half-recognized.
+ */
+function likeCordi(heard: string) {
+  const words = norm(heard);
+  if (!words.length) return 1;
+  const said = new Set(norm(recentSaid.at(-1) ?? ""));
+  return words.filter((w) => said.has(w)).length / words.length;
+}
+
+/**
+ * Its own voice coming back: what was heard is a stretch of what Cordi just said, word after
+ * word in the same order. Sharing words is not enough: a question about what Cordi is saying
+ * ("¿qué es el fondo de emergencia?") uses the same words, and counting shared words threw
+ * those questions away as echo, so Cordi carried on as if nobody had spoken.
+ */
 function isEcho(heard: string) {
   const words = norm(heard);
   if (!words.length) return true;
-  const said = new Set(recentSaid.flatMap(norm));
-  const same = words.filter((w) => said.has(w)).length;
-  return same / words.length >= 0.5;
+  const need = Math.max(3, Math.ceil(words.length * 0.7));
+  if (words.length < 3) return false;
+  for (const s of recentSaid) {
+    const said = norm(s);
+    // the longest run of heard words found in a row in what Cordi said
+    for (let i = 0; i < words.length; i++) {
+      for (let j = 0; j < said.length; j++) {
+        let k = 0;
+        while (i + k < words.length && j + k < said.length && words[i + k] === said[j + k]) k++;
+        if (k >= need) return true;
+      }
+    }
+  }
+  return false;
 }
 
 /** Cordi says one line, captioned in the bubble. Resolves false if it was cut off. */
@@ -146,6 +177,7 @@ async function say(id: string) {
   const my = turn;
   call.set({ state: "speaking" });
   loudSince = 0;
+  barged = false;
   remember(voiceLine(id));
   recentSaid.push(voiceLine(id));
   if (recentSaid.length > 4) recentSaid.shift();
@@ -156,6 +188,46 @@ async function say(id: string) {
   if (whole) quietAt = performance.now();
   line = null;
   return my === turn && whole;
+}
+
+/**
+ * A long new text (an answer just written by the AI), in pieces: Cordi starts with the first
+ * sentence as soon as its voice is ready, and the next one is made while this one plays.
+ * Making the whole answer's voice first kept the person waiting 5 to 6 seconds in silence
+ * (measured) before the first word; one sentence takes about 2.
+ */
+function pieces(text: string): string[] {
+  const parts = text.match(/[^.!?…]+[.!?…]+["»)]?\s*|[^.!?…]+$/g)?.map((p) => p.trim()).filter(Boolean) ?? [text];
+  // a long first sentence: cut where a person would breathe (a comma, else before "y", "pero",
+  // "porque"...), so the first piece is short and its voice is ready in a second or two
+  const first = parts[0];
+  if (parts.length && first.length > 70) {
+    const cuts = [/, /g, /\s(?=(?:y|pero|porque|aunque|así que|and|but|because|so)\s)/gi];
+    for (const re of cuts) {
+      let best = -1;
+      for (const m of first.matchAll(re)) {
+        const at = m.index! + (m[0].startsWith(",") ? 1 : 0);
+        if (at >= 25 && at <= 80 && first.length - at >= 20) best = at;
+      }
+      if (best > 0) {
+        parts.splice(0, 1, first.slice(0, best).trim(), first.slice(best).replace(/^,?\s*/, "").trim());
+        break;
+      }
+    }
+  }
+  return parts;
+}
+async function sayLong(text: string) {
+  const parts = pieces(text);
+  if (parts.length < 2) return say(text);
+  const my = turn;
+  prefetchSpeech(parts[1]);
+  for (let k = 0; k < parts.length; k++) {
+    if (parts[k + 1]) prefetchSpeech(parts[k + 1]);
+    const whole = await say(parts[k]);
+    if (!whole || my !== turn) return false;
+  }
+  return true;
 }
 
 function listen() {
@@ -174,12 +246,23 @@ async function endTurn() {
   orb.setEmo("thinking");
   const raw = await transcript();
   if (my !== turn) return;
+  const cutIn = barged;
+  barged = false;
   // its own voice coming back through the mic: not a turn, keep listening
   if (raw && isEcho(raw)) {
     if (!resumeCut() && inCall()) listen();
     return;
   }
   const heard = raw;
+  if (!heard && rec && cutIn) {
+    // they talked over Cordi for real but no words came through: Cordi asks instead of
+    // carrying on as if nobody had spoken (the explanation stays where it was cut)
+    const what = tr("Sorry, I didn't catch that. What were you saying?", "Perdona, no te he oído bien. ¿Qué me decías?");
+    logMsg("cordi", what, explaining() ? explain.get().title : TOPIC());
+    await say(what);
+    if (my === turn && inCall()) listen();
+    return;
+  }
   if (!heard && rec) {
     // a noise, nothing said: Cordi carries on if it had stopped, or keeps listening
     if (!resumeCut() && inCall()) listen();
@@ -223,7 +306,7 @@ async function reply(question: string) {
   const answer = (await askCordi(question, TOPIC())) ?? voiceLine("placeholderAnswer");
   if (my !== turn) return;
   logMsg("cordi", answer, TOPIC());
-  await say(answer);
+  await sayLong(answer);
 }
 
 // ---------------------------------------------------------------- what you said
@@ -239,22 +322,38 @@ function startRecognition() {
   const SR = (window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new () => Recognition }).webkitSpeechRecognition;
   if (!SR) return;
   const r = new SR();
-  r.lang = "es-ES";
+  r.lang = lang() === "es" ? "es-ES" : "en-US";
   r.continuous = true;
   r.interimResults = true;
   r.onresult = (e) => {
-    // only what's said while Cordi listens, and not the tail of its own voice
-    if (call.get().state !== "listening" || performance.now() - quietAt < ECHO_WINDOW) {
+    const st = call.get().state;
+    // while Cordi talks, words count only if the person is talking over it (loud, or words
+    // that aren't Cordi's own): those are the start of an interruption and must not be lost
+    let interim = "";
+    let finals = "";
+    for (let k = e.resultIndex; k < e.results.length; k++) {
+      const res = e.results[k];
+      if (res.isFinal) finals += ` ${res[0].transcript}`;
+      else interim += res[0].transcript;
+    }
+    const said = `${finals} ${interim}`.trim();
+    // the person's own words over Cordi's voice: three words or more, not Cordi's own
+    const theirs = norm(said).length >= 3 && likeCordi(said) < 0.5;
+    if (st === "speaking" && said && !isEcho(said) && (loudSince > 0 || theirs)) {
+      heardFinal += finals;
+      heardInterim = interim;
+      lastResult = performance.now();
+      // real words over Cordi's voice: that's an interruption, even before the loudness says so
+      if (theirs) interrupt();
+      return;
+    }
+    // otherwise only what's said while Cordi listens, and not the tail of its own voice
+    if (st !== "listening" || performance.now() - quietAt < ECHO_WINDOW) {
       heardFinal = "";
       heardInterim = "";
       return;
     }
-    let interim = "";
-    for (let k = e.resultIndex; k < e.results.length; k++) {
-      const res = e.results[k];
-      if (res.isFinal) heardFinal += ` ${res[0].transcript}`;
-      else interim += res[0].transcript;
-    }
+    heardFinal += finals;
     heardInterim = interim;
     lastResult = performance.now();
   };
@@ -301,7 +400,13 @@ function interrupt() {
   line = null;
   cut?.stop();
   orb.flashEmo("surprised", 500);
+  // what they've said so far over Cordi is the start of their turn: kept, not cleared
+  const keepFinal = heardFinal;
+  const keepInterim = heardInterim;
   listen();
+  heardFinal = keepFinal;
+  heardInterim = keepInterim;
+  barged = true;
   heardAt = performance.now(); // they're already talking
 }
 
@@ -311,6 +416,8 @@ export const userTalking = () => heardAt > 0;
 export const stopLine = () => line?.stop();
 /** Cordi says a line on the call (an explanation's step). False if it was cut off. */
 export const sayInCall = (text: string) => say(text);
+/** A new answer on the call, said sentence by sentence so it starts sooner. False if cut off. */
+export const sayAnswerInCall = (text: string) => sayLong(text);
 /** Hand the call back to the person: Cordi listens. */
 export const listenInCall = () => {
   if (inCall()) listen();
@@ -429,3 +536,6 @@ export const toggleMute = () => {
 
 /** "Stop talking": the same as talking over Cordi, from a button. */
 export const cutIn = () => interrupt();
+
+/** For tests/call.test.ts: the pieces of turn-taking that decide what counts as the person. */
+export const callInternals = { pieces, isEcho, likeCordi, saidLately: (lines: string[]) => recentSaid.splice(0, recentSaid.length, ...lines) };
