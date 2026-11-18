@@ -4,8 +4,14 @@
 // Word edges are Unicode-aware, so accented words ("sí", "continúa") match whole.
 const word = (alts: string) => new RegExp(`(?<![\\p{L}\\p{N}])(?:${alts})(?![\\p{L}\\p{N}])`, "iu");
 
-const GO = word("s[ií]+|vale|venga|seguimos|sigamos|sigue|siguiente|adelante|contin[uú]a|continuemos|continuamos|ok|okay|claro|de acuerdo|perfecto|entendido|listo|dale|pasa|pasemos");
-const STOP = word("no|espera|esperad|para|parad|todav[ií]a|repite|repetir|otra vez|por qu[eé]|c[oó]mo|cu[aá]nto|cu[aá]l|d[oó]nde|qu[eé] es|qu[eé] significa");
+const GO = word(
+  "yes|yeah|yep|yup|sure|next|continue|keep going|go on|go ahead|got it|sounds good|alright|all right|let'?s go|let'?s continue|move on|great|cool|" +
+    "s[ií]+|vale|venga|seguimos|sigamos|sigue|siguiente|adelante|contin[uú]a|continuemos|continuamos|ok|okay|claro|de acuerdo|perfecto|entendido|listo|dale|pasa|pasemos",
+);
+const STOP = word(
+  "wait|hold on|stop|not yet|again|repeat|why|how|what|which|where|don'?t|" +
+    "no|espera|esperad|para|parad|todav[ií]a|repite|repetir|otra vez|por qu[eé]|c[oó]mo|cu[aá]nto|cu[aá]l|d[oó]nde|qu[eé] es|qu[eé] significa",
+);
 
 export const isGo = (text: string) => {
   const t = text.trim();

@@ -1,6 +1,8 @@
 // What the voice reads, in words. The screen says "$280 k", "$15.032" or "45%", but read as is
 // the voice trips over them ("quince punto cero treinta y dos", "doscientos ochenta ka"). Before
 // a line goes to text-to-speech, every figure is written out the way a person would say it.
+// English voices read "$15,032" and "45%" well, so in English only ranges and k/M get words.
+import { isEs } from "./lang";
 
 const UNITS = [
   "cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
@@ -69,6 +71,11 @@ const SIGN = String.raw`([−–-]\s?|\+\s?)?`;
 const said = (sign: string | undefined) => (!sign ? "" : sign.trim() === "+" ? "más " : "menos ");
 
 export function forSpeech(text: string): string {
+  if (!isEs())
+    return text
+      .replace(/(\d)\s?[–-]\s?(\d)/g, "$1 to $2")
+      .replace(/\$(\d[\d.,]*)\s?k\b/g, "$$$1 thousand")
+      .replace(/\$(\d[\d.,]*)\s?M\b/g, "$$$1 million");
   return (
     text
       // ranges: "8–9", "15 a 20" stays; "8-9 meses" → "8 a 9 meses"

@@ -1,19 +1,22 @@
-// Figures the way a person says them out loud: rounded, with "unos", "casi", "algo más de".
-// Nobody says "faltan un millón cuatrocientos veintisiete mil cuatrocientos cincuenta y seis
-// dólares"; they say "casi un millón y medio". Used by everything Cordi says (the bubble shows
-// the same words; the voice reads them through forSpeech).
+// Figures the way a person says them out loud: rounded, with "about", "almost", "a little over"
+// ("unos", "casi", "algo más de" in Spanish). Nobody says "one million four hundred twenty-seven
+// thousand four hundred fifty-six dollars"; they say "almost one and a half million". Used by
+// everything Cordi says (the bubble shows the same words; the voice reads them through forSpeech).
 
 import type { Case, Topic } from "@/data/cases";
 import { fixFor } from "./copy";
 import { numberWords } from "./speech";
+import { isEs } from "./lang";
 
 /** 15000 → "15.000", always grouped (es-ES leaves four digits ungrouped). */
 const group = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
 const MILLIONS = ["", "un millón", "dos millones", "tres millones", "cuatro millones", "cinco millones", "seis millones", "siete millones", "ocho millones", "nueve millones", "diez millones"];
+const EN_N = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
 
-/** An amount of money, rounded the way it's said: "unos $15.000", "casi un millón y medio de dólares". */
+/** An amount of money, rounded the way it's said: "about $15,000", "almost one and a half million dollars". */
 export function money(n: number): string {
+  if (!isEs()) return moneyEn(n);
   const a = Math.abs(n);
   if (a >= 1e6) {
     const m = a / 1e6;
@@ -35,8 +38,30 @@ export function money(n: number): string {
   return `${near}$${group(r)}`;
 }
 
-/** Months, said simply: "un mes y medio", "casi ocho meses", "dieciséis meses". */
+function moneyEn(n: number): string {
+  const a = Math.abs(n);
+  if (a >= 1e6) {
+    const m = a / 1e6;
+    const whole = Math.floor(m);
+    const f = m - whole;
+    const name = (k: number) => (k > 0 && EN_N[k] ? EN_N[k] : String(k));
+    if (f < 0.04) return `${name(whole)} million dollars`;
+    if (f < 0.2) return `a little over ${name(whole)} million dollars`;
+    if (f < 0.42) return `over ${name(whole)} million dollars`;
+    if (f < 0.5) return `almost ${name(whole)} and a half million dollars`;
+    if (f < 0.6) return `${name(whole)} and a half million dollars`;
+    if (f < 0.85) return `over ${name(whole)} and a half million dollars`;
+    return `almost ${name(whole + 1)} million dollars`;
+  }
+  const step = a >= 1e5 ? 1e4 : a >= 1e4 ? 1e3 : a >= 1e3 ? 100 : 10;
+  const r = Math.round(a / step) * step;
+  const near = Math.abs(r - a) / Math.max(a, 1) < 0.001 ? "" : "about ";
+  return `${near}$${r.toLocaleString("en-US")}`;
+}
+
+/** Months, said simply: "a month and a half", "almost eight months", "sixteen months". */
 export function months(x: number): string {
+  if (!isEs()) return monthsEn(x);
   // a year or more: whole months are plenty ("unos dieciséis meses")
   if (x >= 10) {
     const r = Math.round(x);
@@ -52,8 +77,22 @@ export function months(x: number): string {
   return `${pre}${w(whole)} ${whole === 1 ? "mes" : "meses"}`;
 }
 
-/** A share as people say it: 0.13 → "13 de cada 100". */
-export const ofHundred = (share: number) => `${Math.round(share * 100)} de cada 100`;
+function monthsEn(x: number): string {
+  if (x >= 10) {
+    const r = Math.round(x);
+    return `${Math.abs(r - x) < 0.08 ? "" : "about "}${r} months`;
+  }
+  const half = Math.round(x * 2) / 2;
+  const whole = Math.floor(half);
+  const w = (k: number) => EN_N[k] ?? String(k);
+  const pre = Math.abs(half - x) < 0.08 ? "" : half > x ? "almost " : "a little over ";
+  if (half === 0) return "nothing";
+  if (half % 1) return `${pre}${whole ? `${w(whole)} ${whole === 1 ? "month" : "months"} and a half` : "half a month"}`;
+  return `${pre}${w(whole)} ${whole === 1 ? "month" : "months"}`;
+}
+
+/** A share as people say it: 0.13 → "13 out of every 100". */
+export const ofHundred = (share: number) => `${Math.round(share * 100)} ${isEs() ? "de cada" : "out of every"} 100`;
 
 /** One way of saying something, taking turns by position, so neighbours never sound the same. */
 export const pickBy = <T,>(i: number, options: T[]): T => options[Math.max(0, i) % options.length];
