@@ -1,33 +1,44 @@
 # Cordada
 
-Cordada es nuestra propuesta para la hackathon Sherpas x UPV ("Bring the plan to life"). Convierte el análisis financiero de Sherpas en una montaña que se sube con Cordi, una guía que explica cada parte del plan con su propia voz y con gráficos que se construyen mientras habla.
+Our entry for the Sherpas x UPV hackathon ("Bring the plan to life"). Cordada turns a family's Sherpas plan into a mountain they climb with **Cordi**, a guide that explains each part in its own voice, with charts that build while it talks, and that ends with the family committing to their first step.
 
-- **La montaña.** Cada tema del análisis es un campamento con su bandera. En la intro se dibujan la montaña y la ruta. Después se puede seguir la visita guiada o tocar cualquier bandera.
-- **"Explícame esto".** Cordi explica el campamento paso a paso, cada paso con su gráfico. Hay dos modos que se cambian en cualquier momento:
-  - **llamada** (por defecto): conversación por voz en vivo;
-  - **chat**: la conversación escrita, para releerla.
-- **Las cifras** salen solo de los datos de cada caso. Ni la guía ni ningún modelo inventa números.
+- **The mountain.** Each topic of the analysis is a camp with a flag. The intro draws the mountain and the route; then the guided tour, or any flag.
+- **"Explain this to me".** Cordi explains the camp step by step, each step with its chart: on a live **call** you can interrupt (default) or in the **chat**, switchable any time. "I don't get it" says it again more simply.
+- **The summit is a commitment.** Pick the first step, see what it changes in your life, do it in small steps, choose a date, and both partners say "I'm in". It goes into your calendar.
+- **The days after.** Cordi remembers. On the way back: "It's been 30 days. Did you do it?" A yes gets the new score and the next step; a "not yet" gets asked why and gets something smaller for today.
+- **English by default, Spanish as an option** (EN/ES switch, or `?lang=es`).
+- **Every figure comes from the case data.** Neither Cordi nor any model invents numbers.
+- **It never gets stuck.** Without AI, voice or microphone it carries on (recorded lines, local call, chat), and "Continue" always works.
 
-## Arrancarlo
+What we built and why: [docs/entrega.md](docs/entrega.md). The 2-minute script: [docs/pitch.md](docs/pitch.md).
 
-Node 22 o superior.
+## Run it
+
+Node 22 or later.
 
 ```bash
 npm install
-cp .env.example .env   # rellena las claves
+cp .env.example .env   # fill in the keys
 npm run dev            # http://localhost:3100
 ```
 
-- `?case=<id>` abre directamente una familia. Los ids son `daniel-emily-johnson`, `michael-carter`, `samantha-lewis` y `timothy-melanie-weah`.
-- Comprobación de tipos: `npm run typecheck`. Versión de producción: `npm run build` y luego `npm start`.
-
-## Claves (`.env`)
-
-| Variable | Para qué |
+| Link | What it does |
 |---|---|
-| `LLM_PROXY_URL`, `TEAM_KEY` | Proxy de IA de Sherpas: chat, comentarios de Cordi, sugerencias y voz de las narraciones |
-| `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` | Agente de voz en vivo de ElevenLabs, y voz de reserva para las narraciones |
-| `VOICE_ID` | Voz de Cordi |
+| `?case=<id>` | Opens a family: `daniel-emily-johnson`, `michael-carter`, `samantha-lewis`, `timothy-melanie-weah` |
+| `?lang=es` | Spanish (English is the default) |
+| `?days=30` | Demo clock: as if the family came back 30 days later (Shift+T adds 3 days) |
+| `?reset=1` | Forgets what this browser remembers about the family |
+
+Type check: `npm run typecheck`. Production: `npm run build`, then `npm start`.
+
+## Keys (`.env`)
+
+| Variable | What for |
+|---|---|
+| `LLM_PROXY_URL`, `TEAM_KEY` | Sherpas AI proxy: chat, Cordi's remarks, suggestions and the narration voice |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` | ElevenLabs live voice agent (Spanish), and fallback voice |
+| `ELEVENLABS_AGENT_ID_EN` | Optional: the English live agent (without it, the Spanish agent runs in English) |
+| `VOICE_ID`, `VOICE_ID_EN` | Cordi's voice; `VOICE_ID_EN` is an optional native English voice |
 
 ## Cómo está hecho
 

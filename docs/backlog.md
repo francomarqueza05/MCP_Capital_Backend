@@ -4,56 +4,49 @@ Branch `ganar-hackathon`. Hand-in **18 Nov 23:59** (repo, MVP, 2-minute video, o
 
 Judging (from the Sherpas brief): Captivating 20 · Understanding 20 · **Motivation to act 20** · Personal 15 · Creativity 15 · Friday plan 10 · bonus for "the days after".
 
-Status: `[ ]` to do · `[~]` in progress · `[x]` done.
+Status: `[ ]` to do · `[~]` in progress · `[x]` done · `[!]` needs a person.
 
 ## P0: before the hand-in
 
 ### 1. English by default, Spanish as an option
-- [ ] `src/lib/lang.ts`: `lang` store (`en` | `es`), read from `?lang=` and `localStorage`. `tr(en, es)` helper. The app remounts when the language changes, so everything built from the case rebuilds.
-- [ ] EN/ES switch in the top bar and on the profile picker.
-- [ ] Case data in English: an overlay for topic titles, labels, headlines, pillar names and goals (`src/data/cases.en.ts`).
-- [ ] Every text the person sees: `copy.ts`, `talk.ts`, `steps.ts`, `beats.ts`, `qa-bank.ts`, `remarks.ts`, `confirm.ts`, `player.ts`, the UI components and the scenes.
-- [ ] Number format follows the language (`$1.43M` in English, `$1,43 M` in Spanish).
-- [ ] Server: `/api/ask`, `/api/remark`, `/api/suggest`, the agent's briefs (`cordi.ts`, `brief.ts`, `map.ts`, `knowledge.ts`, `agent/tool`) answer in the person's language.
-- [ ] Recorded narrations (intro and so on): an English set, or live TTS with cache when there is no recording.
+- [x] `src/lib/lang.ts`: `tr(en, es)`; the language comes from `?lang=` or the `cordada.lang` cookie, and switching reloads the page.
+- [x] EN/ES switch on the profile picker and in the top bar.
+- [x] Case data in English (`src/data/cases.en.ts`, applied by `localize()`).
+- [x] Every text the person sees: route, steps, questions, panels, scenes, chat, call, remarks.
+- [x] Number format follows the language.
+- [x] Server: `/api/ask`, `remark`, `suggest`, the agent's briefs and tools read the cookie (`src/server/lang.ts`) and answer in English.
+- [x] Voice: `/api/tts` takes `lang` (language code, voice and cache per language). The stock lines exist in English.
 
 ### 2. English ElevenLabs agent
-- [ ] A copy of "Cordada guide" with English as its language and a native English voice. `ELEVENLABS_AGENT_ID_EN`.
-- [ ] `/api/agent/session` picks the agent by language. The Spanish one stays as is.
-- [ ] `VOICE_ID_EN` for narrations and the local call in English.
+- [x] Code: `ELEVENLABS_AGENT_ID_EN` and `VOICE_ID_EN` in `.env` are used for English. Without them, the Spanish agent runs with `language: en` (override) and the voice stays the same.
+- [!] Create the agent. From this machine `api.elevenlabs.io` timed out on 18 Nov, so it was not done. Steps: duplicate "Cordada guide" in ElevenLabs, set language English, pick a native English voice (eleven_v3_conversational), set the first message to "Hi {{name}}! I'm Cordi…", and put its id in `ELEVENLABS_AGENT_ID_EN`. Put the same voice in `VOICE_ID_EN`.
 
 ### 3. The conversation never gets stuck
-- [ ] Map every place where screen and voice wait on each other (`player.ts`, `agent.ts`, `call.ts`).
-- [ ] Watchdogs: if the agent says nothing for N seconds after `show_block` or after a step, the app narrates the step itself and continues.
-- [ ] If the WebSocket drops or the agent fails to open, reconnect once and then switch to the local call, without losing the step.
-- [ ] Every agent tool answers within a time limit, with a fallback.
-- [ ] "Continue" always works, even while Cordi is talking.
+- [x] "Continue" is always active: while Cordi talks it skips to the next step; on the last step it closes the camp.
+- [x] The agent session opens within 12 s or the local call takes over; the session and tool fetches time out.
+- [x] If the agent is silent 6.5 s after a block, it gets a nudge; still silent, the step is freed for "Continue".
+- [x] If the WebSocket drops mid-camp, the explanation carries on from the same step with the local call (`continueWithoutAgent`).
+- [x] A voice that takes more than 9 s is replaced by the bubble at reading pace; audio that stops advancing for 4 s ends the line.
 
 ### 4. Summit = commitment (Motivation to act)
-- [ ] At the summit, Cordi proposes the first step. The person accepts it and picks a date.
-- [ ] "Add to my calendar" (`.ics` file, no backend) with the step and how to do it.
-- [ ] "What if": the score before and after the step, and what it changes in their life, using only the case's figures.
-- [ ] A checklist of concrete sub-steps for each kind of move (for example, life cover: get quotes, choose term, sign).
+- [x] `src/commit/Commit.tsx`: pick the step (biggest lift first), what it changes in their life (case figures only), how in 3–4 small steps, a date, and for a couple both say "I'm in".
+- [x] Add to calendar (`.ics` with the steps and a reminder the day before), a checklist to tick off, "Done!" → Cordi celebrates and proposes the next step.
 
 ### 5. Coming back on day 3 or day 30 (bonus)
-- [ ] Save progress per case: flags planted, the chosen step, its date, what was understood.
-- [ ] On return, Cordi welcomes them back: what they saw, the step they chose and "did you do it?". Done = celebration and the next step. Not done = what is stopping you?
-- [ ] A hidden demo control that moves time forward (+3 days, +30 days) to show it in the pitch.
+- [x] `src/commit/memory.ts`: progress, flags and the plan saved per family in the browser.
+- [x] `src/commit/WelcomeBack.tsx`: "Welcome back, it's been N days. Did you do it?" Yes → new score and next step. Not yet → why? → a smaller step for today and a new date.
+- [x] Demo clock: `?days=30` in the link, or Shift+T (+3 days). `?reset=1` starts a family over.
 
 ### 6. Couples: one plan, two people (Personal)
-- [ ] Each partner answers on their own (for example, how much risk they are comfortable with). Cordi shows where they agree and where they don't.
-- [ ] Each partner accepts the step. "Waiting for Melanie" until both have.
+- [x] The commitment only counts when both partners say "I'm in" ("Waiting for Melanie…").
+- [ ] Each partner answers their risk comfort and Cordi shows where they agree.
 
 ## P1: if there is time
+- [ ] Big amounts in everyday terms ("$2.37M = X years of what you spend today").
+- [ ] Expert mode: shorter explanations and the Sherpas terms.
 
-### 7. Figures that mean something
-- [ ] Big amounts in everyday terms: "$2.37M = X years of what you spend today", calculated from the case's own data.
-
-### 8. Expert mode
-- [ ] An "I know finance" switch: shorter explanations, raw figures and the Sherpas terms.
-
-## P0: hand-in and demo
-- [ ] README in English: what it is, how to run it, and the language option.
-- [ ] One page on what we built and why.
-- [ ] Script for the 2-minute video and the pitch: the problem, Cordi in 20 s, the commitment, the return on day 30 and the close.
-- [ ] Full test on all 4 cases in EN and ES: `npm run typecheck`, `npm run build`.
+## Hand-in and demo
+- [x] README in English with the language option and the demo controls.
+- [x] `docs/entrega.md`: one page on what we built and why.
+- [x] `docs/pitch.md`: script for the 2-minute video and the pitch.
+- [ ] Full test by hand on all 4 cases in EN and ES (screen, voice, microphone).
