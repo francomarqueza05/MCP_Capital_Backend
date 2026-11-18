@@ -41,8 +41,10 @@ export const env = {
   get agentId() {
     return get("ELEVENLABS_AGENT_ID");
   },
+  /** The English agent, only once it speaks with the English voice (scripts/agent-en.mjs marks
+   * it ready): before that it is a copy of the Spanish one, and Cordi would change voice mid-way. */
   get agentIdEn() {
-    return get("ELEVENLABS_AGENT_ID_EN");
+    return get("ELEVENLABS_AGENT_EN_READY") === "1" ? get("ELEVENLABS_AGENT_ID_EN") : "";
   },
   /** The live agent for a language: English has its own (native voice, English turn-taking). */
   agentIdFor(lang: "en" | "es") {
@@ -57,8 +59,9 @@ export const env = {
   },
   get voiceModel() {
     // v3: the most natural and expressive by far (real intonation, takes direction through
-    // audio tags). It's slower to make a line (~2 s), so lines are fetched ahead of time
-    return get("VOICE_MODEL_LIVE") || "eleven-v3";
+    // audio tags). v4: the model Cordi's Castilian voice is fine-tuned for (the accent holds).
+    // It's slower to make a line (~2 s), so lines are fetched ahead of time
+    return get("VOICE_MODEL_LIVE") || "eleven-v4";
   },
   /** The natural pace: faster ran the sentences into each other with no breath between them. */
   get voiceSpeed() {

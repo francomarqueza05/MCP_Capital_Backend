@@ -52,4 +52,7 @@ api("PATCH", `/v1/convai/agents/${agent}`, {
     tts: { voice_id: voice, model_id: "eleven_v3_conversational" },
   },
 });
+// from now on the app uses it (before, it was a copy speaking with the Spanish voice)
+const now = readFileSync(ENV, "utf8");
+if (!/^ELEVENLABS_AGENT_EN_READY=1$/m.test(now)) writeFileSync(ENV, `${now.replace(/\n?$/, "\n")}ELEVENLABS_AGENT_EN_READY=1\n`);
 console.log("English agent ready:", agent);
