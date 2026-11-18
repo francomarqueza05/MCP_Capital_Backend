@@ -6,7 +6,7 @@
 import { pillarPoints, type Case, type Topic } from "@/data/cases";
 import { BAND, byImpact, CAPS, EFFORT, fixFor, moveName } from "@/lib/copy";
 import { tr } from "@/lib/lang";
-import { fixRank, money, months, pickBy } from "@/lib/talk";
+import { fixRank, money, months, pickBy, yearsOfSpending, yearsSaid } from "@/lib/talk";
 import type { Step } from "@/expedition/steps";
 
 export type Fmt = "money" | "months" | "pct" | "pts" | "years" | "plain";
@@ -373,6 +373,17 @@ function topic(t: Topic, c: Case, v: V): Maybe[] {
               },
               simpler: tr("It's a fuel tank for a long trip: right now it doesn't reach the destination.", "Es un depósito para un viaje largo: ahora mismo no llega hasta el destino."),
             },
+        // the gap in everyday terms: a number that big means little until it's years of life
+        !runs &&
+          +n.gap > 0 &&
+          !!yearsOfSpending(c, +n.gap) && {
+            id: "years",
+            say: tr(
+              `To put that gap in perspective: it's about ${yearsSaid(yearsOfSpending(c, +n.gap)!)}.`,
+              `Para ponerle tamaño a ese hueco: son unos ${yearsSaid(yearsOfSpending(c, +n.gap)!)}.`,
+            ),
+            visual: { kind: "figure", value: yearsOfSpending(c, +n.gap)!, fmt: "years", caption: tr("of what your household spends today", "de lo que se gasta hoy en casa"), tone: "warn" },
+          },
         {
           id: "share",
           say:
@@ -455,6 +466,20 @@ function topic(t: Topic, c: Case, v: V): Maybe[] {
             ],
           },
         })),
+        (() => {
+          const gap = (+n.shortfall || 0) + (+n.coShortfall || 0);
+          const y = gap ? yearsOfSpending(c, gap) : null;
+          return (
+            !!y && {
+              id: "years",
+              say: tr(
+                `In everyday terms: the missing cover is about ${yearsSaid(y)}. That's the time your family would have to get back on its feet.`,
+                `Dicho de otra forma: la cobertura que falta son unos ${yearsSaid(y)}. Es el tiempo que tendría la familia para recomponerse.`,
+              ),
+              visual: { kind: "figure" as const, value: y, fmt: "years" as const, caption: tr("of what your household spends today", "de lo que se gasta hoy en casa"), tone: "bad" as Tone },
+            }
+          );
+        })(),
         fixBeat,
       ];
     }

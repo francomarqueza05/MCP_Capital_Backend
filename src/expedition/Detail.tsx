@@ -16,7 +16,9 @@ import { ExplainButton } from "@/explain/ExplainUI";
 import { understanding } from "./understanding";
 import type { Step } from "./steps";
 import { tr } from "@/lib/lang";
+import { yearsOfSpending } from "@/lib/talk";
 import { Commit } from "@/commit/Commit";
+import { CoupleRisk } from "@/commit/Couple";
 
 const tone = (score: number) => (score >= 70 ? "good" : score >= 40 ? "warn" : "bad");
 const EASE = [0.76, 0, 0.18, 1] as const;
@@ -26,6 +28,11 @@ type Figure = { to: number; fmt: (v: number) => string; caption: string } | { te
 /** The one number that sums the camp up, counted up as the panel opens. */
 function figure(step: Step, c: Case): Figure | null {
   const we = c.household.couple;
+  // a big amount, also as years of what the household spends today
+  const years = (amount: number) => {
+    const y = yearsOfSpending(c, amount);
+    return y ? tr(` That's about ${y} years of your household's spending.`, ` Son unos ${String(y).replace(".", ",")} años de lo que se gasta en casa.`) : "";
+  };
   if (step.kind === "base") return { to: c.score.value, fmt: (v) => `${Math.round(v)}`, caption: tr("out of 100 possible points. Your financial health score.", `de 100 puntos posibles. ${we ? "Vuestra" : "Tu"} nota de salud financiera.`) };
   if (step.kind === "summit") {
     const best = byImpact(c.moves)[0];
@@ -42,7 +49,7 @@ function figure(step: Step, c: Case): Figure | null {
       return n.balance ? { to: +n.balance, fmt: (v) => money(v), caption: tr("on cards, and each month's payment barely covers the interest.", "en tarjetas, y el pago de cada mes apenas cubre los intereses.") } : { to: +n.dti * 100, fmt: (v) => `${Math.round(v)}%`, caption: tr("of income goes to debt. Up to 36% is healthy.", "del sueldo se va en deudas. Hasta un 36% es sano.") };
     case "retirement":
       if (n.runOut !== "Not applicable") return { to: +n.runOut, fmt: (v) => `${Math.round(v)}`, caption: tr("years old: at that age your savings would run out.", "años: a esa edad se acabarían tus ahorros.") };
-      if (+n.gap > 0) return { to: +n.gap, fmt: (v) => short(v), caption: tr(`short of retiring at ${n.retireAge} as you plan.`, `faltan para jubilarte a los ${n.retireAge} como planeas.`) };
+      if (+n.gap > 0) return { to: +n.gap, fmt: (v) => short(v), caption: tr(`short of retiring at ${n.retireAge} as you plan.`, `faltan para jubilarte a los ${n.retireAge} como planeas.`) + years(+n.gap) };
       return { to: +n.incomeShare, fmt: (v) => `${Math.round(v)}%`, caption: tr("of your retirement expenses would be covered.", "de tus gastos de jubilado quedarían cubiertos.") };
     case "cashflow":
       return { to: Math.abs(+n.flow), fmt: (v) => `${+n.flow < 0 ? "−" : "+"}${short(v)}`, caption: +n.flow < 0 ? tr("a year too much goes out, paid from your savings.", "al año salen de más, y se pagan con tus ahorros.") : tr("a year left to share between your goals.", "al año te quedan para repartir entre tus metas.") };
@@ -50,7 +57,7 @@ function figure(step: Step, c: Case): Figure | null {
       return { to: +n.gap, fmt: (v) => short(v), caption: tr("short of paying for college.", "faltan para pagar la universidad.") };
     case "life": {
       const s = (+n.shortfall || 0) + (+n.coShortfall || 0);
-      return s ? { to: s, fmt: (v) => short(v), caption: tr("of cover missing to protect your family.", "de cobertura faltan para proteger a tu familia.") } : { text: tr("Covered", "Cubierto"), caption: tr("Your family is protected if you were gone.", "Tu familia está protegida si faltaras.") };
+      return s ? { to: s, fmt: (v) => short(v), caption: tr("of cover missing to protect your family.", "de cobertura faltan para proteger a tu familia.") + years(s) } : { text: tr("Covered", "Cubierto"), caption: tr("Your family is protected if you were gone.", "Tu familia está protegida si faltaras.") };
     }
     case "umbrella":
       return n.recommended ? { to: +n.recommended, fmt: (v) => short(v), caption: tr("of umbrella cover, recommended and not taken out.", "de cobertura ante demandas, recomendado y sin contratar.") } : { to: +n.current, fmt: (v) => short(v), caption: tr("of umbrella cover. Well covered.", "de cobertura ante demandas. Bien cubierto.") };
@@ -233,6 +240,7 @@ export function Detail({
                 </Later>
               </motion.div>
             )}
+            {step.topic?.id === "investments" && <CoupleRisk c={c} t={step.topic} />}
             {fix && fix.after > fix.before && (
               <motion.p className="detail-fix" {...reveal(1.35)}>
                 {tr("What Sherpas suggests", "Lo que propone Sherpas")}: {moveName(fix).toLowerCase()}. {tr("Your score would go from", "La nota pasaría de")} {fix.before} {tr("to", "a")} <b>{fix.after}</b>.

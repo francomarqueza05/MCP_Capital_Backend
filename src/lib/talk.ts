@@ -105,3 +105,19 @@ export const fixRank = (c: Case, t: Topic) =>
       return f && f.after > f.before;
     })
     .findIndex((x) => x.id === t.id);
+
+/**
+ * A big amount in everyday terms: how many years of everything the household spends today it
+ * is (spending = what comes in minus what is left over, from the case's cash flow). Null when
+ * the case has no cash flow or the amount is too small to say it that way.
+ */
+export function yearsOfSpending(c: Case, amount: number): number | null {
+  const cf = c.topics.find((t) => t.id === "cashflow")?.numbers as Record<string, number> | undefined;
+  const out = cf ? +cf.income - +cf.flow : 0;
+  if (!out || amount < out * 0.75) return null;
+  return Math.round((amount / out) * 2) / 2;
+}
+export const yearsSaid = (y: number) =>
+  isEs()
+    ? `${y % 1 ? `${Math.floor(y)} años y medio` : `${y} ${y === 1 ? "año" : "años"}`} de todo lo que se gasta hoy en casa`
+    : `${y % 1 ? `${Math.floor(y)} and a half years` : `${y} ${y === 1 ? "year" : "years"}`} of everything your household spends today`;
