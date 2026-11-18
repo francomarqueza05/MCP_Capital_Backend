@@ -14,7 +14,7 @@ import { getCase } from "@/data/cases";
 import { tones } from "@/lib/audio";
 import { orb } from "@/orb/engine";
 import { remember, session, where } from "@/ai/client";
-import { explain, reached, agentFinished, goNextCamp, nextCampAfter, continueWithoutAgent } from "@/explain/player";
+import { explain, reached, agentFinished, goNextCamp, nextCampAfter, continueWithoutAgent, nextFrom } from "@/explain/player";
 import { call } from "./call";
 import { chat, logMsg } from "./chat";
 import { captionsOn, holdBubble, hideBubble, noteInBubble, speech } from "./stage";
@@ -191,10 +191,15 @@ export function moveLive(to: number): boolean {
 
 export function advanceLive(): boolean {
   const ex = explain.get();
-  const to = ex.i + 1;
+  const to = nextFrom(ex.i);
   if (!conv || agent.get().mode !== "explain" || to >= ex.beats.length) return false;
+  const back = to !== ex.i + 1; // returning from a detour to an earlier block
   showBlock(to);
-  conv.sendContextualUpdate(`The screen now shows block "${ex.beats[to].id}". Explain that block now, in your own words. Do not call show_block for it again.`);
+  conv.sendContextualUpdate(
+    back
+      ? `The screen is back on block "${ex.beats[to].id}", where the person was before going back. Say in a few words that you are back where you were, then pick it up from there. Do not call show_block for it.`
+      : `The screen now shows block "${ex.beats[to].id}". Explain that block now, in your own words. Do not call show_block for it again.`,
+  );
   return true;
 }
 
@@ -207,6 +212,8 @@ const topic = () => (agent.get().mode === "explain" ? explain.get().title : tr("
  * firing. Resuming puts the voice and the mic back as the person had them.
  */
 let pauseBeat: ReturnType<typeof setInterval> | null = null;
+let pausedMid = false; // paused while Cordi was telling the step (it kept going, muted)
+let holdBlock = false; // resumed mid-step: no moving on until that step has been told again
 let wasPaused = false;
 let watching = false;
 /**
@@ -229,6 +236,7 @@ function agentPause(on: boolean, restore: { muted: boolean; quiet: boolean }) {
   if (!conv) return;
   if (on) {
     clearAuto();
+    pausedMid = explain.get().saying || call.get().state === "speaking";
     conv.sendContextualUpdate(`The person paused the explanation. Stay completely silent: do not speak and do not ask whether they are still there, until they say \"${tr("OK, go on.", "Ya está, sigue.")}\"`);
     conv.setVolume({ volume: 0 });
     conv.setMicMuted(true);
@@ -239,6 +247,17 @@ function agentPause(on: boolean, restore: { muted: boolean; quiet: boolean }) {
   pauseBeat = null;
   conv.setVolume({ volume: restore.quiet ? 0 : 1 });
   conv.setMicMuted(restore.muted);
+  const ex = explain.get();
+  if (agent.get().mode !== "explain" || ex.phase !== "playing") return;
+  if (pausedMid) {
+    // the agent finished that step into the silence: it tells it again, from where it was cut,
+    // and the screen can't move on until it has
+    holdBlock = true;
+    lastUser = "";
+    explain.set({ fresh: false, waiting: false });
+    conv.sendContextualUpdate(`The person paused you in the middle of block "${ex.beats[ex.i].id}" and did not hear the rest. Do NOT move on and do NOT call show_block. Pick block "${ex.beats[ex.i].id}" up from where you were cut, briefly.`);
+    conv.sendUserMessage(tr("Sorry, I paused. Can you finish this part?", "Perdona, lo había pausado. ¿Terminas esta parte?"));
+  } else armAuto();
 }
 
 function stopCaption() {
@@ -366,14 +385,15 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           // go-ahead in it (a yes isGo doesn't know). Blocking it here left Cordi telling the
           // next step over the old visual
           const said = lastUser.trim().length > 0 && !/[¿?]/.test(lastUser);
-          if (forward && !allowNext && !isGo(lastUser) && !said) {
+          if (forward && (holdBlock || (!allowNext && !isGo(lastUser) && !said))) {
             conv?.sendContextualUpdate(
               `BLOCKED: the person has not asked to move on. Stay on block "${ex.beats[ex.i].id}" and wait, without asking if they want to continue: they move on with the on-screen button (it arrives as "${tr("Yes, let's continue.", "Sí, seguimos.")}") or by saying so.`,
             );
             return;
           }
           if (forward && i > ex.i + 1) conv?.sendContextualUpdate("Move one block at a time: show the next block, not a later one.");
-          showBlock(forward ? ex.i + 1 : i);
+          // forward from a detour goes back to where the person was
+          showBlock(forward ? nextFrom(ex.i) : i);
         },
         lookup: async ({ topic: t }: { topic: string }) => tool({ tool: "lookup", topic: t, mode: agent.get().mode === "explain" ? "explain" : "map", known: where().known }),
         phase_done: async () => {
@@ -404,6 +424,7 @@ export async function startAgent(opts: { mode: "explain" | "free"; campId?: stri
           orb.setEmo("listening");
           // the step has been told: anything said after it leaves the visual whole
           if (explain.get().phase === "playing") explain.set({ saying: false, fresh: false, waiting: true, until: null });
+          holdBlock = false;
           speech.set({ p: 1 });
           if (agent.get().mode === "explain" && explain.get().phase === "playing") {
             // just said hello and nothing is on screen yet: straight into the first block,

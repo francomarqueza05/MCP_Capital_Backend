@@ -64,6 +64,11 @@ export const explain = createStore({
    */
   waiting: false,
   until: null as number | null,
+  /**
+   * The furthest step reached in this explanation. Going back to an earlier one (an arrow, or
+   * asking Cordi to go over it again) is a detour: moving on returns here, not step by step.
+   */
+  furthest: 0,
   /** Where to start: 0, or the step saved from last time ("seguir donde lo dejé"). */
   from: 0,
   /** When the current countdown to the next step started (it drives the button's fill). */
@@ -112,7 +117,13 @@ export function nextCampAfter(c: Case, stepId: string): Step | null {
   return [...steps.slice(here + 1), ...steps.slice(0, here)].find((s) => !clear(s.id) && s.id !== stepId) ?? null;
 }
 
+/** Where moving on goes from step i: back to the furthest step after a detour, else the next. */
+export const nextFrom = (i: number) => {
+  const f = explain.get().furthest;
+  return i < f ? f : i + 1;
+};
 const save = (stepId: string, i: number) => {
+  if (explain.get().stepId === stepId) explain.set((x) => ({ furthest: Math.max(x.furthest, i) }));
   progress.set((p) => ({ at: { ...p.at, [stepId]: i } }));
   known.set((k) => ({ seen: { ...k.seen, [stepId]: Math.max(k.seen[stepId] ?? 0, i + 1) } }));
 };
@@ -170,7 +181,7 @@ export function offerExplain(step: Step, c: Case, quiet = false) {
   tones.tap();
   const beats = beatsFor(step, c);
   const saved = progress.get().at[step.id] ?? 0;
-  explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false, manual: false, left: null, redo: false, cutOff: false });
+  explain.set({ phase: "choose", how: null, stepId: step.id, title: step.title, beats, i: 0, furthest: saved > 0 && saved < beats.length ? saved : 0, from: saved > 0 && saved < beats.length ? saved : 0, paused: false, saying: false, manual: false, left: null, redo: false, cutOff: false });
   if (quiet) return;
   // never asked how: it starts right away, the way the person used last (a call the first time)
   void startExplain(savedHow());
@@ -334,7 +345,7 @@ async function loop(my: number) {
       while (my === run && performance.now() - t < DWELL && !explain.get().paused && !jumped) await wait(60);
     }
     if (my !== run) return;
-    if (!jumped && !explain.get().paused) explain.set((x) => ({ i: x.i + 1 }));
+    if (!jumped && !explain.get().paused) explain.set((x) => ({ i: nextFrom(x.i) }));
   }
   if (my === run) await finish(my);
 }
@@ -385,9 +396,9 @@ export const togglePause = () => {
   const p = !s.paused;
   if (live()) {
     // the agent goes silent (and comes back) with the pause itself: see watchPause in agent.ts
+    // (resuming is told to the agent by agentPause in agent.ts: same step, from where it was)
     explain.set({ paused: p });
     if (p) orb.setEmo("neutral");
-    else agentSay(tr("OK, go on.", "Ya está, sigue."));
     return;
   }
   const now = performance.now();
@@ -553,9 +564,35 @@ export const explaining = () => {
  * A question in the middle of an explanation. Returns once Cordi has answered and asked to go
  * on; the explanation itself resumes later, on the person's yes.
  */
+/**
+ * "Go back", "the previous one again", "step 2": which earlier step they want to see again, or
+ * null. The screen goes there, Cordi tells it again, and moving on returns to where they were.
+ */
+export function earlierStep(q: string): number | null {
+  const s = explain.get();
+  const n = q.match(/\b(?:step|paso|bloque)\s*(\d+)/i);
+  if (n) {
+    const k = Number(n[1]) - 1;
+    return k >= 0 && k < s.i ? k : null;
+  }
+  if (s.i > 0 && /(previous|last one|one before|go back|back to the|again the|el anterior|la anterior|paso anterior|lo de antes|lo anterior|vuelve atr[aá]s|volver atr[aá]s|vuelve al|otra vez (el|la|lo) (de antes|anterior))/i.test(q)) return s.i - 1;
+  return null;
+}
+function goBackTo(k: number, q: string) {
+  const s = explain.get();
+  logMsg("you", q, s.title);
+  if (live()) moveLive(k);
+  else jump(k);
+}
+
 export async function interject(question: string, wasMid?: boolean) {
   const s = explain.get();
   if (!explaining()) return false;
+  const back = earlierStep(question);
+  if (back !== null) {
+    goBackTo(back, question);
+    return true;
+  }
   takeWheel();
   const midStep = wasMid ?? (s.saying || s.cutOff || (s.paused && !s.waiting));
   const my = ++run; // whatever was playing stops listening for its turn
@@ -612,6 +649,11 @@ export async function writeDuring(q: string) {
   if (isGo(q) && (s.waiting || s.paused)) {
     logMsg("you", q, s.title);
     proceed();
+    return true;
+  }
+  const back = earlierStep(q);
+  if (back !== null) {
+    goBackTo(back, q);
     return true;
   }
   const wasMid = s.saying || s.cutOff || (s.paused && !s.waiting);
