@@ -49,7 +49,8 @@ api("PATCH", `/v1/convai/agents/${agent}`, {
       language: "en",
       first_message: "Hi {{name}}! I'm Cordi, the guide your advisor's team set up for you. I'm an AI, and you can interrupt me any time. Let's start with where you stand today.",
     },
-    tts: { voice_id: voice, model_id: "eleven_v3_conversational" },
+    // eleven v4 at 24 kHz: flash v2.5 and 16 kHz output sounded robotic next to the narrations
+    tts: { voice_id: voice, model_id: "eleven_v4", agent_output_audio_format: "pcm_24000", expressive_mode: true },
   },
 });
 // from now on the app uses it (before, it was a copy speaking with the Spanish voice)

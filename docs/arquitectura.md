@@ -183,7 +183,7 @@ Cada nivel prueba sus modelos en orden si hay un error, se agota el tiempo o la 
 
 ## 7. La llamada con el agente, de punta a punta
 
-El agente es "Cordada guide" en ElevenLabs, con `gemini-3.1-flash-lite` y la voz `eleven_v3_conversational`. Su configuración fija (instrucciones base y herramientas) se escribió con `scripts/agent.ts`, que está en el tag `legacy-backend`. Para cambiarla hay que tocarla en ElevenLabs.
+Los agentes son "Cordada guide" (español, voz Raquel) y "Cordada guide (English)" (voz Sarah) en ElevenLabs, con `gemini-3.1-flash-lite` y la voz en `eleven_v4` a 24 kHz (con `eleven_flash_v2_5` y 16 kHz sonaba robótica). Su configuración fija (instrucciones base y herramientas) se escribió con `scripts/agent.ts`, que está en el tag `legacy-backend`. Para cambiarla hay que tocarla en ElevenLabs.
 
 ```mermaid
 sequenceDiagram
