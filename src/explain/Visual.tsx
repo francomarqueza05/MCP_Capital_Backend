@@ -19,6 +19,7 @@ import { speech } from "@/stage/stage";
 import type { Fmt, Tone, Visual as V } from "./beats";
 import { fmt } from "./format";
 import { notify } from "./remarks";
+import { tr } from "@/lib/lang";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const SPRING = { type: "spring", stiffness: 170, damping: 22 } as const;
@@ -151,7 +152,7 @@ function Bars({ v, p }: { v: Extract<V, { kind: "bars" }>; p: number }) {
             }}
             animate={{ opacity: on ? (dim ? 0.35 : 1) : 0, x: on ? 0 : -16 }}
             transition={{ duration: 0.45, ease: EASE }}
-            aria-label={`${it.label}: ${fmt(v.fmt, it.value)}${it.of ? ` de ${fmt(v.fmt, it.of)}` : ""}`}
+            aria-label={`${it.label}: ${fmt(v.fmt, it.value)}${it.of ? ` ${tr("of", "de")} ${fmt(v.fmt, it.of)}` : ""}`}
           >
             <span className="vx-bar-label">{it.label}</span>
             <span className="vx-bar-track">
@@ -160,7 +161,7 @@ function Bars({ v, p }: { v: Extract<V, { kind: "bars" }>; p: number }) {
             </span>
             <span className="vx-bar-val">
               {on ? <Num to={it.value} f={v.fmt} /> : fmt(v.fmt, 0)}
-              {it.of !== undefined && <small> de {fmt(v.fmt, it.of)}</small>}
+              {it.of !== undefined && <small> {tr("of", "de")} {fmt(v.fmt, it.of)}</small>}
             </span>
           </motion.button>
         );
@@ -209,7 +210,7 @@ function Range({ v, p }: { v: Extract<V, { kind: "range" }>; p: number }) {
         <span className="vx-range-label">{v.label}</span>
         <AnimatePresence mode="wait">
           <motion.span key={inside ? "in" : "out"} className={`vx-range-state ${inside ? "t-good" : "t-bad"}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: dotOn ? 1 : 0, y: 0 }} exit={{ opacity: 0, y: 6 }}>
-            {inside ? "Dentro de la zona sana" : val < v.lo ? "Por debajo de lo sano" : "Por encima de lo sano"}
+            {inside ? tr("In the healthy zone", "Dentro de la zona sana") : val < v.lo ? tr("Below healthy", "Por debajo de lo sano") : tr("Above healthy", "Por encima de lo sano")}
           </motion.span>
         </AnimatePresence>
       </div>
@@ -359,13 +360,13 @@ function Score({ v, p }: { v: Extract<V, { kind: "score" }>; p: number }) {
             <span className={`vx-dial-n ${after && up > 0 ? "t-good" : ""}`}>
               <Num to={value} f="pts" />
             </span>
-            <span className="vx-dial-of">de 100</span>
+            <span className="vx-dial-of">{tr("of 100", "de 100")}</span>
           </div>
         </div>
         <div className="vx-score-side">
-          <div className="vx-toggle" role="group" aria-label="Comparar la nota">
+          <div className="vx-toggle" role="group" aria-label={tr("Compare the score", "Comparar la nota")}>
             <button type="button" className={!after ? "on" : ""} onClick={() => setAfter(false)}>
-              Hoy · {v.from}
+              {tr("Today", "Hoy")} · {v.from}
             </button>
             <button
               type="button"
@@ -375,11 +376,11 @@ function Score({ v, p }: { v: Extract<V, { kind: "score" }>; p: number }) {
                 void notify({ type: "flip", after: true, from: v.from, to: v.to });
               }}
             >
-              Con este paso · {v.to}
+              {tr("With this step", "Con este paso")} · {v.to}
             </button>
           </div>
           <motion.span className="vx-score-up t-good" animate={{ opacity: after ? 1 : 0, y: after ? 0 : 6 }}>
-            {up > 0 ? `+${up} puntos` : "Mantiene la nota y quita un freno"}
+            {up > 0 ? tr(`+${up} points`, `+${up} puntos`) : tr("Keeps the score and removes a brake", "Mantiene la nota y quita un freno")}
           </motion.span>
         </div>
       </div>

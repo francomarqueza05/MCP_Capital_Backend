@@ -16,6 +16,7 @@ import { askCordi, checkAI, goExplain } from "@/ai/client";
 import { hideBubble } from "@/stage/stage";
 import { beatsFor, type Beat } from "./beats";
 import { isGo } from "./confirm";
+import { tr } from "@/lib/lang";
 
 export type How = "chat" | "call";
 type Phase = "off" | "choose" | "playing" | "done";
@@ -190,7 +191,7 @@ export async function switchHow(how: How) {
     }
   } else {
     openChat();
-    logMsg("you", "Sigamos por escrito", s.title);
+    logMsg("you", tr("Let's carry on in writing", "Sigamos por escrito"), s.title);
   }
   if (my !== run) return;
   if (explain.get().how === "chat") chat.set({ busy: true });
@@ -230,7 +231,7 @@ export async function startExplain(how: How) {
   if (how === "chat") {
     openChat();
     chat.set({ busy: true });
-    logMsg("you", from ? `Sigamos con ${s.title.toLowerCase()}` : `Explícame ${s.title.toLowerCase()}`, s.title);
+    logMsg("you", from ? tr(`Let's carry on with ${s.title.toLowerCase()}`, `Sigamos con ${s.title.toLowerCase()}`) : tr(`Explain ${s.title.toLowerCase()} to me`, `Explícame ${s.title.toLowerCase()}`), s.title);
   } else if ((prefetchSpeech(s.beats[from].say), !(await startCall({ greet: false })))) {
     // no microphone: carry on in the chat instead
     explain.set({ how: "chat" });
@@ -252,7 +253,10 @@ async function recap(my: number, from: number) {
   const s = explain.get();
   const prev = s.beats[from - 1];
   const gist = prev ? prev.say.split(/(?<=[.!?])\s/)[0] : "";
-  const text = `Seguimos donde lo dejamos, en el paso ${from + 1} de ${s.beats.length}.${gist ? ` Lo último que vimos: ${gist}` : ""}`;
+  const text = tr(
+    `Picking up where we left off, at step ${from + 1} of ${s.beats.length}.${gist ? ` The last thing we saw: ${gist}` : ""}`,
+    `Seguimos donde lo dejamos, en el paso ${from + 1} de ${s.beats.length}.${gist ? ` Lo último que vimos: ${gist}` : ""}`,
+  );
   explain.set({ saying: true });
   if (s.how === "call" && inCall()) {
     logMsg("cordi", text, s.title);
@@ -342,7 +346,7 @@ async function finish(my: number) {
   const s = explain.get();
   clear(s.stepId);
   explain.set({ phase: "done", saying: false });
-  const close = "Si te queda alguna duda, escríbeme o pregúntame lo que quieras.";
+  const close = tr("If anything's still unclear, write to me or ask me anything.", "Si te queda alguna duda, escríbeme o pregúntame lo que quieras.");
   if (s.how === "call" && inCall()) {
     logMsg("cordi", close, s.title);
     await sayInCall(close);
@@ -366,7 +370,7 @@ export const togglePause = () => {
     // the agent goes silent (and comes back) with the pause itself: see watchPause in agent.ts
     explain.set({ paused: p });
     if (p) orb.setEmo("neutral");
-    else agentSay("Ya está, sigue.");
+    else agentSay(tr("OK, go on.", "Ya está, sigue."));
     return;
   }
   const now = performance.now();
@@ -389,7 +393,7 @@ function jump(to: number) {
   const i = Math.max(0, Math.min(s.beats.length - 1, to));
   if (live()) {
     explain.set({ i, paused: false, waiting: false });
-    agentSay(i === s.i ? "¿Me lo repites?" : `Vamos al bloque ${s.beats[i].id}.`);
+    agentSay(i === s.i ? tr("Can you say that again?", "¿Me lo repites?") : tr(`Let's go to block ${s.beats[i].id}.`, `Vamos al bloque ${s.beats[i].id}.`));
     return;
   }
   jumped = true;
@@ -411,7 +415,7 @@ export const proceed = () => {
   if (live()) {
     // the next block goes on screen now; on the last one, the agent wraps the camp up
     if (!advanceLive()) allowAdvance();
-    agentSay("Sí, seguimos.");
+    agentSay(tr("Yes, let's continue.", "Sí, seguimos."));
   } else if (explain.get().how === "call" && inCall()) call.set({ state: "speaking" });
 };
 /** The person is exploring the visual. Steps never move on by themselves any more, so there's
@@ -451,15 +455,15 @@ export async function notClear() {
   takeWheel();
   if (live()) {
     explain.set({ paused: false, waiting: false });
-    agentSay("No lo he entendido, ¿me lo explicas más fácil?");
+    agentSay(tr("I didn't get that. Can you explain it more simply?", "No lo he entendido, ¿me lo explicas más fácil?"));
     return;
   }
   takeWheel();
   const my = ++run; // the old loop stops; this one picks up from here
   cut();
   explain.set({ paused: false, phase: "playing" });
-  if (s.how === "chat") logMsg("you", "No lo entiendo", s.title);
-  const again = b.simpler ?? `Te lo digo de otra forma. ${b.say}`;
+  if (s.how === "chat") logMsg("you", tr("I don't get it", "No lo entiendo"), s.title);
+  const again = b.simpler ?? tr(`Let me put it another way. ${b.say}`, `Te lo digo de otra forma. ${b.say}`);
   await sayBeat(b, my, again);
   if (my !== run) return;
   await wait(DWELL);
@@ -472,10 +476,12 @@ export async function notClear() {
 // The person talks or writes during an explanation: Cordi stops right there, answers, asks if
 // they go on, and waits. A yes (said, written, or "Seguimos") picks up where it was: the step it
 // was cut off in, told again, or the next one if the step had finished.
-const GO_ON = ["¿Seguimos?", "¿Te parece si seguimos?", "¿Lo dejamos aquí o seguimos?", "¿Continuamos?", "Cuando quieras, seguimos."];
+const GO_ON_ES = ["¿Seguimos?", "¿Te parece si seguimos?", "¿Lo dejamos aquí o seguimos?", "¿Continuamos?", "Cuando quieras, seguimos."];
+const GO_ON_EN = ["Shall we go on?", "Ready to keep going?", "Stop here, or carry on?", "Shall we continue?", "Whenever you're ready, we'll go on."];
 let goOnTurn = 0;
 const goOnLine = (couple: boolean) => {
-  const l = GO_ON[goOnTurn++ % GO_ON.length];
+  const list = tr(GO_ON_EN, GO_ON_ES);
+  const l = list[goOnTurn++ % list.length];
   return couple ? l.replace("¿Te parece", "¿Os parece") : l;
 };
 let couple = false;
@@ -590,18 +596,18 @@ export async function replay() {
   if (!s.beats.length) return;
   if (live()) {
     explain.set({ phase: "playing", i: 0, waiting: false });
-    agentSay("No me ha quedado claro. ¿Me lo vuelves a explicar desde el principio, más despacio?");
+    agentSay(tr("That wasn't clear to me. Can you explain it again from the start, more slowly?", "No me ha quedado claro. ¿Me lo vuelves a explicar desde el principio, más despacio?"));
     return;
   }
   const my = ++run;
   explain.set({ phase: "playing", i: 0, paused: false, beats: s.beats.map((b) => (b.simpler ? { ...b, say: `${b.simpler} ${b.say}` } : b)) });
   if (s.how === "call" && inCall()) {
     call.set({ state: "speaking" });
-    logMsg("cordi", "Vamos otra vez, más despacio.", s.title);
-    await sayInCall("Vamos otra vez, más despacio.");
+    logMsg("cordi", tr("Let's go again, more slowly.", "Vamos otra vez, más despacio."), s.title);
+    await sayInCall(tr("Let's go again, more slowly.", "Vamos otra vez, más despacio."));
   } else {
     chat.set({ busy: true });
-    await cordiWrites("Vamos otra vez, más despacio.", s.title, undefined, () => my === run);
+    await cordiWrites(tr("Let's go again, more slowly.", "Vamos otra vez, más despacio."), s.title, undefined, () => my === run);
   }
   if (my === run) await loop(my);
 }

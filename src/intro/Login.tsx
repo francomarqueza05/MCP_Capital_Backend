@@ -1,5 +1,5 @@
 "use client";
-// "¿Quién sube hoy?": the start screen as a profile picker. One card per example household,
+// "Who's climbing today?": the start screen as a profile picker. One card per example household,
 // with their avatars; picking one brings it to the centre while the rest step back, and the
 // greeting and the start buttons come in. The mountain stays behind, waiting.
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
@@ -7,6 +7,7 @@ import { useRef } from "react";
 import { CASE_IDS, CASES, type Case } from "@/data/cases";
 import { names } from "@/lib/copy";
 import { tones } from "@/lib/audio";
+import { lang, LANGS, switchLang, tr } from "@/lib/lang";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -28,19 +29,37 @@ function Avatars({ c, size = 64 }: { c: Case; size?: number }) {
 
 const who = (c: Case) => {
   const k = c.household.kids.length;
-  return `${c.household.couple ? "Pareja" : "Una persona"}${k ? ` · ${k} ${k > 1 ? "hijos" : "hijo"}` : ""}`;
+  return tr(
+    `${c.household.couple ? "Couple" : "Single"}${k ? ` · ${k} ${k > 1 ? "kids" : "kid"}` : ""}`,
+    `${c.household.couple ? "Pareja" : "Una persona"}${k ? ` · ${k} ${k > 1 ? "hijos" : "hijo"}` : ""}`,
+  );
 };
+
+/** EN | ES. Switching reloads the page in the other language, on the same profile. */
+export function LangSwitch({ className = "" }: { className?: string }) {
+  return (
+    <div className={`lang-switch ${className}`} role="group" aria-label={tr("Language", "Idioma")}>
+      {LANGS.map((l) => (
+        <button key={l} aria-pressed={lang() === l} onClick={() => lang() !== l && switchLang(l)}>
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function Login({ selected, onSelect, onBegin }: { selected: string | null; onSelect: (id: string | null) => void; onBegin: (withSound: boolean) => void }) {
   const c = selected ? CASES[selected] : null;
-  // back from a profile ("No soy yo"): its card flies home to the row, already visible, and the
+  // back from a profile ("Not me"): its card flies home to the row, already visible, and the
   // rest come back quickly instead of replaying the first entrance
   const last = useRef<string | null>(null);
   const back = selected ? null : last.current;
   if (selected) last.current = selected;
   const out = { opacity: 0, y: 8, transition: { duration: 0.2 } };
+  const we = c?.household.couple;
   return (
     <div className="lg">
+      <LangSwitch className="lang-switch-start" />
       <motion.h1 className="start-mark" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE }}>
         cordada
       </motion.h1>
@@ -50,7 +69,7 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
           {!c ? (
             <motion.div key="pick" className="lg-pick" exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.25 } }}>
               <motion.p className="lg-ask" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: back ? 0.15 : 0.35 }}>
-                ¿Quién sube hoy?
+                {tr("Who's climbing today?", "¿Quién sube hoy?")}
               </motion.p>
               <ul className="lg-cards">
                 {CASE_IDS.map((id, i) => {
@@ -84,7 +103,7 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
                 })}
               </ul>
               <motion.p className="lg-note" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: back ? 0.4 : 1 }}>
-                Familias de ejemplo con su análisis de Sherpas Wealth
+                {tr("Example families with their Sherpas Wealth analysis", "Familias de ejemplo con su análisis de Sherpas Wealth")}
               </motion.p>
             </motion.div>
           ) : (
@@ -95,18 +114,21 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
                 <span className="lg-who">{who(c)}</span>
               </motion.div>
               <motion.p className="start-tag" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={out} transition={{ delay: 0.25, duration: 0.6, ease: EASE }}>
-                Hola, {names(c)}. {c.household.couple ? "Vuestro" : "Tu"} plan financiero es una montaña. Cordi {c.household.couple ? "os" : "te"} acompaña a subirla.
+                {tr(
+                  `Hi, ${names(c)}. Your financial plan is a mountain. Cordi will climb it with you.`,
+                  `Hola, ${names(c)}. ${we ? "Vuestro" : "Tu"} plan financiero es una montaña. Cordi ${we ? "os" : "te"} acompaña a subirla.`,
+                )}
               </motion.p>
               <motion.div className="start-actions" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={out} transition={{ delay: 0.4, duration: 0.6, ease: EASE }}>
                 <button className="act act-main act-large" onClick={() => onBegin(true)} autoFocus>
-                  Empezar la ruta
+                  {tr("Start the climb", "Empezar la ruta")}
                 </button>
                 <button className="act act-quiet" onClick={() => onBegin(false)}>
-                  Empezar sin sonido
+                  {tr("Start without sound", "Empezar sin sonido")}
                 </button>
               </motion.div>
               <motion.button className="lg-back" onClick={() => onSelect(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={out} transition={{ delay: 0.6 }}>
-                No {c.household.couple ? "somos nosotros" : "soy yo"}: cambiar de perfil
+                {tr(`Not ${we ? "us" : "me"}: switch profile`, `No ${we ? "somos nosotros" : "soy yo"}: cambiar de perfil`)}
               </motion.button>
             </motion.div>
           )}
@@ -119,10 +141,10 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
 /** The current profile in the top bar, with a way back to the picker. */
 export function ProfileChip({ c, onSwitch }: { c: Case; onSwitch: () => void }) {
   return (
-    <button className="lg-chip" onClick={onSwitch} title="Cambiar de perfil">
+    <button className="lg-chip" onClick={onSwitch} title={tr("Switch profile", "Cambiar de perfil")}>
       <Avatars c={c} size={26} />
       <span>{names(c)}</span>
-      <small>Cambiar</small>
+      <small>{tr("Switch", "Cambiar")}</small>
     </button>
   );
 }

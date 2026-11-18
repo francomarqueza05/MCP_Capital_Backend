@@ -15,6 +15,7 @@ import { Gauge, Suggestions } from "./Questions";
 import { ChatPlayer } from "@/explain/ExplainUI";
 import { Visual } from "@/explain/Visual";
 import type { Step } from "./steps";
+import { tr } from "@/lib/lang";
 
 const time = (t: number) => new Date(t).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
@@ -56,7 +57,10 @@ export function Conversation({ step, c, compact = false }: { step: Step; c: Case
           <div className="chat-empty">
             <p className="chat-hello">
               <span className="chat-who">Cordi</span>
-              Hola. {we ? "Preguntadme" : "Pregúntame"} lo que no quede claro de {we ? "vuestro" : "tu"} plan: lo explico con {we ? "vuestros" : "tus"} números y sin prisa.
+              {tr(
+                "Hi. Ask me anything about your plan that isn't clear: I'll explain it with your own numbers, no rush.",
+                `Hola. ${we ? "Preguntadme" : "Pregúntame"} lo que no quede claro de ${we ? "vuestro" : "tu"} plan: lo explico con ${we ? "vuestros" : "tus"} números y sin prisa.`,
+              )}
             </p>
           </div>
         )}
@@ -74,13 +78,13 @@ export function Conversation({ step, c, compact = false }: { step: Step; c: Case
                 <div key={m.id} className={away ? "chat-line away" : "chat-line"}>
                 {stepStarts && m.step !== undefined && (
                   <p className="chat-step">
-                    Paso {m.step + 1}
-                    {g.topic === ex.title ? ` de ${ex.n}` : ""}
+                    {tr("Step", "Paso")} {m.step + 1}
+                    {g.topic === ex.title ? ` ${tr("of", "de")} ${ex.n}` : ""}
                   </p>
                 )}
                 <motion.div className={`chat-msg from-${m.who}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                   <span className="chat-meta">
-                    {m.who === "you" ? "Tú" : "Cordi"} · {time(m.at)}
+                    {m.who === "you" ? tr("You", "Tú") : "Cordi"} · {time(m.at)}
                   </span>
                   <p>
                     {text}
@@ -89,10 +93,10 @@ export function Conversation({ step, c, compact = false }: { step: Step; c: Case
                   {m.go && m.id === lastGo && (
                     <div className="chat-quick">
                       <button type="button" onClick={() => goExplain(m.go!)}>
-                        Llévame a {campTitle(m.go)} y explícamelo
+                        {tr(`Take me to ${campTitle(m.go)} and explain it`, `Llévame a ${campTitle(m.go)} y explícamelo`)}
                       </button>
                       <button type="button" onClick={() => chat.set((s) => ({ msgs: s.msgs.map((x) => (x.id === m.id ? { ...x, go: undefined } : x)) }))}>
-                        Luego
+                        {tr("Later", "Luego")}
                       </button>
                     </div>
                   )}
@@ -119,7 +123,7 @@ export function Conversation({ step, c, compact = false }: { step: Step; c: Case
         {thinking && (
           <div className="chat-msg from-cordi">
             <span className="chat-meta">Cordi</span>
-            <p className="chat-typing" aria-label="Cordi está pensando">
+            <p className="chat-typing" aria-label={tr("Cordi is thinking", "Cordi está pensando")}>
               <span />
               <span />
               <span />
@@ -129,7 +133,7 @@ export function Conversation({ step, c, compact = false }: { step: Step; c: Case
         {!busy && (
           <div className="chat-next">
             {!compact && <Gauge step={step} c={c} />}
-            <Suggestions step={step} c={c} title={msgs.length ? `Más sobre ${step.title.toLowerCase()}` : "Para empezar"} />
+            <Suggestions step={step} c={c} title={msgs.length ? tr(`More about ${step.title.toLowerCase()}`, `Más sobre ${step.title.toLowerCase()}`) : tr("To start", "Para empezar")} />
           </div>
         )}
       </div>
@@ -171,8 +175,8 @@ function ChatInput() {
       <input ref={input} value={text} onChange={(e) => {
           setText(e.target.value);
           chat.set({ typedAt: Date.now() });
-        }} placeholder="Escribe tu pregunta sobre el plan" aria-label="Tu pregunta" />
-      <button type="submit" className="ask-icon solid" title="Enviar" disabled={locked || !text.trim()}>
+        }} placeholder={tr("Type your question about the plan", "Escribe tu pregunta sobre el plan")} aria-label={tr("Your question", "Tu pregunta")} />
+      <button type="submit" className="ask-icon solid" title={tr("Send", "Enviar")} disabled={locked || !text.trim()}>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12h13M13 6l6 6-6 6" />
         </svg>

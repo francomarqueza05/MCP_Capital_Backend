@@ -16,11 +16,17 @@ import { RemarkCard } from "@/explain/RemarkCard";
 import { hangUp, inCall } from "@/stage/call";
 import { showBubble } from "@/stage/stage";
 import { Expedition, type ExpeditionHandle, type Phase } from "@/expedition/Expedition";
-import { Login, ProfileChip } from "@/intro/Login";
+import { LangSwitch, Login, ProfileChip } from "@/intro/Login";
+import { setLang, tr, type Lang } from "@/lib/lang";
 
 const LEAVE_MS = 700; // the fade to the start screen's sky before switching profile
 
-export function Experience() {
+export function Experience({ lang }: { lang: Lang }) {
+  // before anything below renders: every text is built in this language
+  setLang(lang);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
   const [started, setStarted] = useState(false);
   const [caseId, setCaseId] = useState(DEFAULT_CASE);
   const [sound, setSound] = useState(true);
@@ -101,6 +107,7 @@ export function Experience() {
         <header className="topbar">
           <span className="wordmark">cordada</span>
           <div className="topbar-right">
+            <LangSwitch />
             <ProfileChip c={getCase(caseId)} onSwitch={switchProfile} />
           </div>
         </header>
@@ -109,7 +116,7 @@ export function Experience() {
       <AnimatePresence>
         {phase === "intro" && (
           <motion.button key="skip" className="act act-quiet skip" onClick={() => exp.current?.skip()} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 1.2 } }} exit={{ opacity: 0, transition: { duration: 0.2 } }}>
-            Saltar la intro
+            {tr("Skip the intro", "Saltar la intro")}
           </motion.button>
         )}
         {leaving && <motion.div key="leave" className="leave-curtain" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: LEAVE_MS / 1000 - 0.1, ease: "easeInOut" }} />}

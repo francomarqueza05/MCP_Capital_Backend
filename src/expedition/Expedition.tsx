@@ -26,6 +26,7 @@ import { offerExplain, startExplain } from "@/explain/player";
 import { ExplainButton } from "@/explain/ExplainUI";
 import { beatsFor } from "@/explain/beats";
 import { explain, inTheater } from "@/explain/player";
+import { tr } from "@/lib/lang";
 
 const HOVER = 78; // Cordi floats this far above the trail, in world units
 const MOOD: Record<Step["status"], Emotion> = { good: "happy", warn: "thinking", bad: "concerned", goal: "happy" };
@@ -47,7 +48,7 @@ const GUIDE_IN = 3000; // ms on the whole mountain before the guided tour starts
 
 export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: Phase) => void }>(function Expedition({ c, onPhase }, ref) {
   const steps = useMemo(() => buildSteps(c), [c]);
-  const mountainLine = c.household.couple ? "Vuestro plan es esta montaña. Cada bandera es una parte de vuestro análisis." : "Tu plan es esta montaña. Cada bandera es una parte de tu análisis.";
+  const mountainLine = tr("Your plan is this mountain. Each flag is one part of your analysis.", c.household.couple ? "Vuestro plan es esta montaña. Cada bandera es una parte de vuestro análisis." : "Tu plan es esta montaña. Cada bandera es una parte de tu análisis.");
   const n = steps.length;
   const marks = useStore(understanding, (s) => s.marks);
   // "Llévame y explícamelo" from the chat: fly to that camp, open it, offer the explanation
@@ -970,10 +971,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       />
 
       {phase === "overview" && (
-        <section className="overview" aria-label="Toda la ruta">
-          <h2 className="overview-title">Toda la ruta</h2>
+        <section className="overview" aria-label={tr("The whole route", "Toda la ruta")}>
+          <h2 className="overview-title">{tr("The whole route", "Toda la ruta")}</h2>
           <p className="overview-text">
-            {n - 2} campamentos entre la base y la cima. Toca una bandera para ir directo, o deja que Cordi {c.household.couple ? "os" : "te"} guíe desde abajo.
+            {tr(
+              `${n - 2} camps between the base and the summit. Tap a flag to go straight there, or let Cordi guide you from the bottom.`,
+              `${n - 2} campamentos entre la base y la cima. Toca una bandera para ir directo, o deja que Cordi ${c.household.couple ? "os" : "te"} guíe desde abajo.`,
+            )}
           </p>
           <div className="overview-actions">
             <button
@@ -982,7 +986,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
               onClick={guide}
             >
               {idx < 0 && !auto && <span className="auto-fill" aria-hidden />}
-              <span className="auto-label">{idx < 0 ? "Empezar la visita guiada" : "Seguir la visita guiada"}</span>
+              <span className="auto-label">{idx < 0 ? tr("Start the guided tour", "Empezar la visita guiada") : tr("Continue the guided tour", "Seguir la visita guiada")}</span>
             </button>
           </div>
         </section>

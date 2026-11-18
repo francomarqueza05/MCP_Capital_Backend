@@ -21,6 +21,7 @@ import { tones } from "@/lib/audio";
 import { endExplain, explain, goNextCamp, setCouple, nextCampAfter, known, progress, goTo, hold, inTheater, next, proceed, notClear, offerExplain, prev, repeat, switchHow, togglePause } from "./player";
 import { Visual } from "./Visual";
 import { beatsFor } from "./beats";
+import { tr } from "@/lib/lang";
 
 /** "Explícame esto": Cordi starts explaining on a call, right away. Picks up where it was left. */
 export function ExplainButton({ step, c, className = "act act-main" }: { step: Step; c: Case; className?: string }) {
@@ -29,7 +30,7 @@ export function ExplainButton({ step, c, className = "act act-main" }: { step: S
   const busy = phase === "playing" || phase === "choose";
   return (
     <button className={className} onClick={() => offerExplain(step, c)} disabled={busy}>
-      <IconPlay /> {saved > 0 ? `Continuar explicación (${saved + 1}/${beatsFor(step, c).length})` : "Explícame esto"}
+      <IconPlay /> {saved > 0 ? tr(`Continue (${saved + 1}/${beatsFor(step, c).length})`, `Continuar explicación (${saved + 1}/${beatsFor(step, c).length})`) : tr("Explain this to me", "Explícame esto")}
     </button>
   );
 }
@@ -42,27 +43,27 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
     <div className={compact ? "xp-controls compact" : "xp-controls"}>
       {!done ? (
         <>
-          <button className="xp-icon" onClick={prev} disabled={i === 0} title="Paso anterior" aria-label="Paso anterior">
+          <button className="xp-icon" onClick={prev} disabled={i === 0} title={tr("Previous step", "Paso anterior")} aria-label={tr("Previous step", "Paso anterior")}>
             <IconPrev />
           </button>
-          <button className="xp-icon main" onClick={togglePause} title={paused ? "Seguir" : "Pausar"} aria-label={paused ? "Seguir" : "Pausar"}>
+          <button className="xp-icon main" onClick={togglePause} title={paused ? tr("Resume", "Seguir") : tr("Pause", "Pausar")} aria-label={paused ? tr("Resume", "Seguir") : tr("Pause", "Pausar")}>
             {paused ? <IconPlay /> : <IconPause />}
           </button>
-          <button className="xp-icon" onClick={next} disabled={i >= beats.length - 1} title="Paso siguiente" aria-label="Paso siguiente">
+          <button className="xp-icon" onClick={next} disabled={i >= beats.length - 1} title={tr("Next step", "Paso siguiente")} aria-label={tr("Next step", "Paso siguiente")}>
             <IconNext />
           </button>
-          <button className="xp-icon" onClick={repeat} title="Repetir este paso" aria-label="Repetir este paso">
+          <button className="xp-icon" onClick={repeat} title={tr("Repeat this step", "Repetir este paso")} aria-label={tr("Repeat this step", "Repetir este paso")}>
             <IconRepeat />
           </button>
           <button className="xp-text" onClick={notClear}>
-            No lo entiendo
+            {tr("I don't get it", "No lo entiendo")}
           </button>
         </>
       ) : (
-        <span className="xp-done">Explicación terminada</span>
+        <span className="xp-done">{tr("Explanation finished", "Explicación terminada")}</span>
       )}
       <button className="xp-text quiet" onClick={endExplain}>
-        {done ? "Cerrar" : "Salir"}
+        {done ? tr("Close", "Cerrar") : tr("Leave", "Salir")}
       </button>
       {/* "¿Seguimos?" lives here, always in the same place: dim while Cordi talks, lit and
           gently pulsing when it waits for the person to move on */}
@@ -71,9 +72,9 @@ function Controls({ compact = false, goOn = false }: { compact?: boolean; goOn?:
           className={`act act-main xp-go${waiting || paused ? " ready" : ""}`}
           onClick={proceed}
           disabled={!waiting && !paused}
-          title={waiting ? "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)" : paused ? "Seguir desde aquí" : "Cordi está explicando"}
+          title={waiting ? tr("Go to the next step (take your time: tap the chart to explore it)", "Pasar al siguiente paso (tómate tu tiempo: toca el gráfico para explorarlo)") : paused ? tr("Carry on from here", "Seguir desde aquí") : tr("Cordi is explaining", "Cordi está explicando")}
         >
-          {last ? "Listo" : "Seguimos"} <IconPlay />
+          {last ? tr("Done", "Listo") : tr("Continue", "Seguimos")} <IconPlay />
         </button>
       )}
     </div>
@@ -110,12 +111,12 @@ function NextUp({ c, stepId }: { c: Case; stepId: string }) {
       <PlantedFlag />
       <div className="nextup-text">
         <motion.span className="nextup-kicker" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }}>
-          Bandera plantada
+          {tr("Flag planted", "Bandera plantada")}
         </motion.span>
         <motion.h3 className="nextup-title" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}>
           {title}
         </motion.h3>
-        <motion.div className="nextup-progress" aria-label={`${planted} de ${flags} banderas`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+        <motion.div className="nextup-progress" aria-label={tr(`${planted} of ${flags} flags`, `${planted} de ${flags} banderas`)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
           <div className="nextup-flags">
             {order.map((s, i) => (
               <motion.span
@@ -134,19 +135,19 @@ function NextUp({ c, stepId }: { c: Case; stepId: string }) {
             ))}
           </div>
           <small>
-            {planted} de {flags}
+            {planted} {tr("of", "de")} {flags}
           </small>
         </motion.div>
         <motion.div className="nextup-actions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05, duration: 0.5 }}>
           {ahead ? (
             <button className="act act-main act-large nextup-go" onClick={goNext} autoFocus>
-              Siguiente: {ahead.title} <IconPlay />
+              {tr("Next", "Siguiente")}: {ahead.title} <IconPlay />
             </button>
           ) : (
-            <p className="nextup-all">{we ? "¡Habéis" : "¡Has"} plantado todas las banderas! La cima os espera con el resumen y el primer paso.</p>
+            <p className="nextup-all">{tr("Every flag is planted! The summit is waiting with the summary and your first step.", `${we ? "¡Habéis" : "¡Has"} plantado todas las banderas! La cima ${we ? "os" : "te"} espera con el resumen y el primer paso.`)}</p>
           )}
           <button className="act act-quiet" onClick={() => endExplain()}>
-            Volver al mapa
+            {tr("Back to the map", "Volver al mapa")}
           </button>
         </motion.div>
       </div>
@@ -244,14 +245,14 @@ function Fit({ children }: { children: React.ReactNode }) {
 function Dots() {
   const { i, beats, phase } = useStore(explain, (s) => s);
   return (
-    <div className="xp-dots" role="group" aria-label={`Paso ${Math.min(i + 1, beats.length)} de ${beats.length}`}>
+    <div className="xp-dots" role="group" aria-label={tr(`Step ${Math.min(i + 1, beats.length)} of ${beats.length}`, `Paso ${Math.min(i + 1, beats.length)} de ${beats.length}`)}>
       {beats.map((b, k) => (
         <button
           type="button"
           key={b.id + k}
           className={k < i || phase === "done" ? "on" : k === i ? "now" : ""}
           onClick={() => goTo(k)}
-          aria-label={`Ir al paso ${k + 1}`}
+          aria-label={tr(`Go to step ${k + 1}`, `Ir al paso ${k + 1}`)}
           aria-current={k === i ? "step" : undefined}
         />
       ))}
@@ -267,7 +268,7 @@ export function ChatPlayer() {
     <div className="xp-bar">
       <div className="xp-bar-top">
         <span className="xp-bar-title">
-          {phase === "done" ? "Explicado" : paused ? "En pausa" : "Explicando"}: {title}
+          {phase === "done" ? tr("Explained", "Explicado") : paused ? tr("Paused", "En pausa") : tr("Explaining", "Explicando")}: {title}
         </span>
         <span className="xp-bar-n">
           {Math.min(i + 1, beats.length)} / {beats.length}
@@ -470,7 +471,7 @@ export function ExplainStage({ c }: { c: Case }) {
           <motion.section
             ref={stage}
             className="theater-stage"
-            aria-label={`Explicación: ${title}`}
+            aria-label={`${tr("Explanation", "Explicación")}: ${title}`}
             initial={{ opacity: 0, x: 40, scale: 0.98 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 30 }}
@@ -478,14 +479,14 @@ export function ExplainStage({ c }: { c: Case }) {
           >
             <header className="theater-head">
               <div>
-                <span className="xp-stage-kicker">Cordi te explica</span>
+                <span className="xp-stage-kicker">{tr("Cordi explains", "Cordi te explica")}</span>
                 <h2>{title}</h2>
               </div>
-              <div className="theater-how" role="group" aria-label="Cómo te lo explica Cordi">
-                <button type="button" className={how === "call" ? "on" : ""} onClick={() => switchHow("call")} aria-pressed={how === "call"} title="Cordi te lo cuenta en voz alta">
-                  <IconPhone /> Llamada
+              <div className="theater-how" role="group" aria-label={tr("How Cordi explains it", "Cómo te lo explica Cordi")}>
+                <button type="button" className={how === "call" ? "on" : ""} onClick={() => switchHow("call")} aria-pressed={how === "call"} title={tr("Cordi tells you out loud", "Cordi te lo cuenta en voz alta")}>
+                  <IconPhone /> {tr("Call", "Llamada")}
                 </button>
-                <button type="button" className={how === "chat" ? "on" : ""} onClick={() => switchHow("chat")} aria-pressed={how === "chat"} title="Por escrito, con toda la conversación para releer">
+                <button type="button" className={how === "chat" ? "on" : ""} onClick={() => switchHow("chat")} aria-pressed={how === "chat"} title={tr("In writing, with the whole conversation to read again", "Por escrito, con toda la conversación para releer")}>
                   <IconChat /> Chat
                 </button>
               </div>
@@ -535,7 +536,7 @@ export function ExplainStage({ c }: { c: Case }) {
             <motion.aside
               key="chat"
               className="theater-chat"
-              aria-label="Conversación con Cordi"
+              aria-label={tr("Conversation with Cordi", "Conversación con Cordi")}
               initial={{ opacity: 0, x: 48, scale: 0.97, filter: "blur(8px)" }}
               animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)", transition: { delay: 0.28, duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
               exit={{ opacity: 0, x: 36, scale: 0.98, filter: "blur(6px)", transition: { duration: 0.28, ease: [0.7, 0, 0.84, 0] } }}
@@ -544,7 +545,7 @@ export function ExplainStage({ c }: { c: Case }) {
                 <span className="chat-avatar" aria-hidden />
                 <div>
                   <p className="chat-name">Cordi</p>
-                  <p className="chat-where">{waiting ? "Te espero: pregúntame lo que quieras" : saying ? "Escribiendo…" : title}</p>
+                  <p className="chat-where">{waiting ? tr("I'm here: ask me anything", "Te espero: pregúntame lo que quieras") : saying ? tr("Typing…", "Escribiendo…") : title}</p>
                 </div>
               </header>
               <Conversation step={step} c={c} compact />
@@ -590,8 +591,8 @@ function CallDock() {
           onClick={toggleMute}
           disabled={!on || noMic}
           aria-pressed={muted}
-          aria-label={noMic ? "Sin micrófono" : muted ? "Activar tu micrófono" : "Silenciar tu micrófono"}
-          title={noMic ? "Sin acceso al micrófono: escríbeme" : muted ? "Activar tu micrófono" : "Silenciar tu micrófono"}
+          aria-label={noMic ? tr("No microphone", "Sin micrófono") : muted ? tr("Turn your microphone on", "Activar tu micrófono") : tr("Mute your microphone", "Silenciar tu micrófono")}
+          title={noMic ? tr("No microphone access: write to me", "Sin acceso al micrófono: escríbeme") : muted ? tr("Turn your microphone on", "Activar tu micrófono") : tr("Mute your microphone", "Silenciar tu micrófono")}
         >
           {muted ? <IconMicOff /> : <IconMic />}
           {state === "listening" && !muted && <span className="dock-live" aria-hidden />}
@@ -601,8 +602,8 @@ function CallDock() {
           className={quiet ? "dock-btn off" : "dock-btn"}
           onClick={toggleQuiet}
           aria-pressed={quiet}
-          aria-label={quiet ? "Volver a oír a Cordi" : "Silenciar a Cordi"}
-          title={quiet ? "Volver a oír a Cordi" : "Silenciar a Cordi (sigue con subtítulos)"}
+          aria-label={quiet ? tr("Hear Cordi again", "Volver a oír a Cordi") : tr("Mute Cordi", "Silenciar a Cordi")}
+          title={quiet ? tr("Hear Cordi again", "Volver a oír a Cordi") : tr("Mute Cordi (carries on with captions)", "Silenciar a Cordi (sigue con subtítulos)")}
         >
           {quiet ? <IconVoiceOff /> : <IconVoice />}
         </button>
@@ -628,10 +629,10 @@ function CallDock() {
                 send();
               }
             }}
-            placeholder={state === "thinking" ? "Cordi está pensando…" : "Pregúntale por escrito"}
-            aria-label="Pregunta a Cordi por escrito"
+            placeholder={state === "thinking" ? tr("Cordi is thinking…", "Cordi está pensando…") : tr("Type a question", "Pregúntale por escrito")}
+            aria-label={tr("Type a question to Cordi", "Pregunta a Cordi por escrito")}
           />
-          <button type="submit" className="dock-send" title="Enviar" aria-label="Enviar" disabled={!text.trim() || !on}>
+          <button type="submit" className="dock-send" title={tr("Send", "Enviar")} aria-label={tr("Send", "Enviar")} disabled={!text.trim() || !on}>
             <svg {...svg}>
               <path d="M5 12h13M13 6l6 6-6 6" />
             </svg>

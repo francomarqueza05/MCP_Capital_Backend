@@ -13,6 +13,7 @@ import { fmt } from "./format";
 import { remarkFromAI, remember } from "@/ai/client";
 import { agentActive, agentNote } from "@/stage/agent";
 import { chat, logMsg } from "@/stage/chat";
+import { tr } from "@/lib/lang";
 import { explain } from "./player";
 
 export type Choice = { id: string; label: string };
@@ -152,26 +153,26 @@ function localRules({ act }: Context): Remark | null {
     case "what-if": {
       const inside = act.value >= act.lo && act.value <= act.hi;
       const was = act.real >= act.lo && act.real <= act.hi;
-      if (inside && !was) return { text: `¡Eso es! Con ${fmt(act.fmt, act.value)} estarías en la zona sana.` };
-      if (!inside && act.value < act.lo) return { text: `Con ${fmt(act.fmt, act.value)} aún faltaría para llegar a ${fmt(act.fmt, act.lo)}.` };
-      if (!inside && act.value > act.hi) return { text: `Pasarse tampoco es ideal: lo que sobra podría trabajar en otras metas.` };
+      if (inside && !was) return { text: tr(`That's it! With ${fmt(act.fmt, act.value)} you'd be in the healthy zone.`, `¡Eso es! Con ${fmt(act.fmt, act.value)} estarías en la zona sana.`) };
+      if (!inside && act.value < act.lo) return { text: tr(`With ${fmt(act.fmt, act.value)} you'd still be short of ${fmt(act.fmt, act.lo)}.`, `Con ${fmt(act.fmt, act.value)} aún faltaría para llegar a ${fmt(act.fmt, act.lo)}.`) };
+      if (!inside && act.value > act.hi) return { text: tr("Going over isn't ideal either: the extra could be working on other goals.", "Pasarse tampoco es ideal: lo que sobra podría trabajar en otras metas.") };
       return null;
     }
     case "focus":
       if (act.of !== undefined && act.of > 0) {
         const left = act.of - act.value;
-        return left > 0 ? { text: `En ${act.label.toLowerCase()} quedan ${fmt(act.fmt, left)} por ganar.` } : { text: `${act.label}: al máximo. ¡Bien!` };
+        return left > 0 ? { text: tr(`In ${act.label.toLowerCase()} there are ${fmt(act.fmt, left)} still to earn.`, `En ${act.label.toLowerCase()} quedan ${fmt(act.fmt, left)} por ganar.`) } : { text: tr(`${act.label}: maxed out. Nice!`, `${act.label}: al máximo. ¡Bien!`) };
       }
       return null;
     case "flip":
-      return act.after && act.to > act.from ? { text: `Fíjate: ${act.to - act.from} puntos más con un solo paso.` } : null;
+      return act.after && act.to > act.from ? { text: tr(`Look: ${act.to - act.from} more points from a single step.`, `Fíjate: ${act.to - act.from} puntos más con un solo paso.`) } : null;
     case "idle":
       return {
-        text: "¿Quieres que te lo cuente con un ejemplo más sencillo?",
+        text: tr("Want me to put it with a simpler example?", "¿Quieres que te lo cuente con un ejemplo más sencillo?"),
         choices: [
-          { id: "simpler", label: "Sí, con un ejemplo" },
-          { id: "on", label: "No, seguimos" },
-          { id: "stay", label: "Sigo mirando" },
+          { id: "simpler", label: tr("Yes, with an example", "Sí, con un ejemplo") },
+          { id: "on", label: tr("No, let's go on", "No, seguimos") },
+          { id: "stay", label: tr("I'm still looking", "Sigo mirando") },
         ],
       };
   }

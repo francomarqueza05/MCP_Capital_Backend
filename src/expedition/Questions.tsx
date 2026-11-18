@@ -14,6 +14,7 @@ import { explain } from "@/explain/player";
 import { refreshSuggestions, setHovering, suggest, usedSuggestion } from "@/ai/suggest";
 import { firstQuestions, questionsFor, SIMPLER, type Question } from "./qa-bank";
 import type { Step } from "./steps";
+import { tr } from "@/lib/lang";
 import { mark, MARKS, understanding, type Mark } from "./understanding";
 
 const NONE: string[] = [];
@@ -49,11 +50,14 @@ function useCamp(step: Step, c: Case) {
     }
     addTry(step.id);
     const simpler = byId.get(SIMPLER);
-    if (simpler && !asked.includes(SIMPLER)) return ask(simpler, m === "no" ? "No lo he entendido, explícamelo más simple" : simpler.q);
+    if (simpler && !asked.includes(SIMPLER)) return ask(simpler, m === "no" ? tr("I didn't get it, explain it more simply", "No lo he entendido, explícamelo más simple") : simpler.q);
     orb.flashEmo("concerned", 1200);
     await converse(
-      "Sigo sin verlo claro",
-      `No pasa nada, es de lo más normal. Lo dejo apuntado para que ${we ? "lo habléis" : "lo hables"} con ${we ? "vuestro" : "tu"} asesor. Si ${we ? "queréis" : "quieres"}, ${we ? "escribidme" : "escríbeme"} la duda con ${we ? "vuestras" : "tus"} palabras.`,
+      tr("I still don't see it", "Sigo sin verlo claro"),
+      tr(
+        "That's completely normal. I'll note it down so you can talk it over with your advisor. If you like, write me your question in your own words.",
+        `No pasa nada, es de lo más normal. Lo dejo apuntado para que ${we ? "lo habléis" : "lo hables"} con ${we ? "vuestro" : "tu"} asesor. Si ${we ? "queréis" : "quieres"}, ${we ? "escribidme" : "escríbeme"} la duda con ${we ? "vuestras" : "tus"} palabras.`,
+      ),
       step.title,
     );
   };
@@ -102,7 +106,7 @@ export function Suggestions({ step, c, delay = 0, title }: { step: Step; c: Case
   if (!list.length) return null;
   return (
     <div className="qa-block" onPointerEnter={() => setHovering(true)} onPointerLeave={() => setHovering(false)}>
-      <p className="qa-head">{title ?? (asked.length || msgs ? "Seguir preguntando" : "Preguntas que suelen surgir aquí")}</p>
+      <p className="qa-head">{title ?? (asked.length || msgs ? tr("Keep asking", "Seguir preguntando") : tr("Questions people often have here", "Preguntas que suelen surgir aquí"))}</p>
       <div className="qa-chips">
         <AnimatePresence mode="popLayout">
           {list.map((q, i) => (
@@ -135,15 +139,15 @@ export function Gauge({ step, c, delay = 0 }: { step: Step; c: Case; delay?: num
     <motion.div key={`gauge-${said}`} className="gauge" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}>
       {marked === "yes" ? (
         <p className="gauge-done">
-          <span aria-hidden>⛳</span> Bandera plantada: {we ? "lo tenéis claro" : "lo tienes claro"}.
+          <span aria-hidden>⛳</span> {tr("Flag planted: you've got it.", `Bandera plantada: ${we ? "lo tenéis claro" : "lo tienes claro"}.`)}
           <button className="gauge-undo" onClick={() => rate("meh")}>
-            Aún tengo dudas
+            {tr("I still have questions", "Aún tengo dudas")}
           </button>
         </p>
       ) : (
         <>
-          <p className="qa-head">{tries || marked ? "¿Y ahora, más claro?" : `¿${we ? "Os" : "Te"} ha quedado claro este tramo?`}</p>
-          <div className="gauge-row" role="group" aria-label="Cuánto lo has entendido">
+          <p className="qa-head">{tries || marked ? tr("Clearer now?", "¿Y ahora, más claro?") : tr("Is this stretch clear?", `¿${we ? "Os" : "Te"} ha quedado claro este tramo?`)}</p>
+          <div className="gauge-row" role="group" aria-label={tr("How well you understood it", "Cuánto lo has entendido")}>
             {MARKS.map((m) => (
               <button key={m.id} className={`gauge-btn g-${m.id}`} onClick={() => rate(m.id)}>
                 <span aria-hidden>{m.icon}</span> {m.label}
