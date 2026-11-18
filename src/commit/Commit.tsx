@@ -137,7 +137,7 @@ export function Commit({ c }: { c: Case }) {
     cordiSays(
       tr(
         `Deal. ${moveName(chosen)}, by ${dateLabel(due)}. Add it to your calendar, and I'll ask you how it went when you come back.`,
-        `Trato hecho. ${moveName(chosen)}, para el ${dateLabel(due)}. ${we ? "Añadidlo" : "Añádelo"} al calendario, y cuando ${we ? "volváis" : "vuelvas"} te pregunto cómo fue.`,
+        `Trato hecho. ${moveName(chosen)}, para el ${dateLabel(due)}. ${we ? "Añadidlo" : "Añádelo"} al calendario, y cuando ${we ? "volváis" : "vuelvas"} ${we ? "os" : "te"} pregunto cómo fue.`,
       ),
       7000,
     );

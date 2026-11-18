@@ -40,14 +40,15 @@ Status: `[ ]` to do · `[~]` in progress · `[x]` done · `[!]` needs a person.
 
 ### 6. Couples: one plan, two people (Personal)
 - [x] The commitment only counts when both partners say "I'm in" ("Waiting for Melanie…").
-- [ ] Each partner answers their risk comfort and Cordi shows where they agree.
+- [x] Each partner answers their risk comfort on the investments camp; Cordi says where they agree (`src/commit/Couple.tsx`).
 
 ## P1: if there is time
-- [ ] Big amounts in everyday terms ("$2.37M = X years of what you spend today").
+- [x] Big amounts as years of household spending (retirement gap, missing life cover).
 - [ ] Expert mode: shorter explanations and the Sherpas terms.
 
 ## Hand-in and demo
 - [x] README in English with the language option and the demo controls.
 - [x] `docs/entrega.md`: one page on what we built and why.
 - [x] `docs/pitch.md`: script for the 2-minute video and the pitch.
-- [ ] Full test by hand on all 4 cases in EN and ES (screen, voice, microphone).
+- [x] Browser run (Edge, headless) for the Weahs in EN and ES: picker, tour, investments couple widget, summit commitment, return on day 30, no console errors.
+- [ ] By hand, with sound and microphone: the live call and the other 3 cases.
