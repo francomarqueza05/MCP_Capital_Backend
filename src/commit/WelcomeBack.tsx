@@ -44,7 +44,11 @@ export function WelcomeBack({ c }: { c: Case }) {
         <p className="wb-text">
           {plan?.done && move
             ? tr(`Last time you finished «${moveName(move)}». Let's pick the next step at the summit.`, `La última vez ${we ? "terminasteis" : "terminaste"} «${moveName(move)}». Elijamos el siguiente paso en la cima.`)
-            : tr(`You planted ${back.planted} of ${flags} flags. Let's carry on where you left off.`, `${we ? "Plantasteis" : "Plantaste"} ${back.planted} de ${flags} banderas. Sigamos donde lo ${we ? "dejasteis" : "dejaste"}.`)}
+            : (() => {
+                const at = buildSteps(c).find((x) => x.id === memory.get().saved?.camp);
+                const where = at && at.kind !== "base" ? tr(` You were at «${at.title}»: we'll pick it up there.`, ` ${we ? "Estabais" : "Estabas"} en «${at.title}»: seguimos ahí.`) : tr(" Let's carry on where you left off.", ` Sigamos donde lo ${we ? "dejasteis" : "dejaste"}.`);
+                return back.planted ? tr(`You planted ${back.planted} of ${flags} flags.`, `${we ? "Plantasteis" : "Plantaste"} ${back.planted} de ${flags} banderas.`) + where : where.trim();
+              })()}
         </p>
       </motion.div>
     );

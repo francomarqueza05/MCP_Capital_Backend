@@ -8,6 +8,7 @@
 import { createStore } from "@/lib/store";
 import { understanding, type Mark } from "@/expedition/understanding";
 import { known, progress } from "@/explain/player";
+import { session } from "@/ai/client";
 
 export type Plan = {
   /** The Sherpas move they chose (its English title, as in the data). */
@@ -37,6 +38,8 @@ export type Saved = {
   firstVisit: number;
   lastVisit: number;
   visits: number;
+  /** The camp they were at last (its id): coming back, the climb resumes there. */
+  camp?: string;
   /** They pressed Start at least once (picking the profile alone is not a visit). */
   begun?: boolean;
 };
@@ -101,7 +104,7 @@ export function openMemory(caseId: string) {
     const planted = Object.values(saved.marks ?? {}).filter((m) => m === "yes").length;
     // a return only once they climbed before and left something: a flag, a step seen, a promise.
     // Otherwise (picked the card, switched language, never pressed Start) it is still a first time
-    const climbed = saved.begun && (planted > 0 || saved.plan || (saved.history ?? []).length > 0 || Object.keys(saved.seen ?? {}).length > 0);
+    const climbed = saved.begun && (planted > 0 || saved.plan || (saved.history ?? []).length > 0 || Object.keys(saved.seen ?? {}).length > 0 || (saved.camp && saved.camp !== "base"));
     memory.set({ caseId, saved, back: climbed ? { days, plan: saved.plan, planted } : null });
   } else {
     memory.set({ caseId, saved: null, back: null });
@@ -116,11 +119,11 @@ export function openMemory(caseId: string) {
   const persist = () => {
     const s = memory.get().saved;
     if (!s) return;
-    const next: Saved = { ...s, marks: understanding.get().marks, done: known.get().done, seen: known.get().seen, at: progress.get().at, lastVisit: now() };
+    const next: Saved = { ...s, marks: understanding.get().marks, done: known.get().done, seen: known.get().seen, at: progress.get().at, camp: session.get().campId || s.camp, lastVisit: now() };
     memory.set({ saved: next });
     write(KEY(caseId), next);
   };
-  unsub = [understanding.subscribe(persist), known.subscribe(persist), progress.subscribe(persist)];
+  unsub = [understanding.subscribe(persist), known.subscribe(persist), progress.subscribe(persist), session.subscribe(persist)];
 }
 
 /** They pressed Start: from now on, coming back counts as a return. */
@@ -151,6 +154,9 @@ export function finishPlan() {
   memory.set({ saved: next, back: memory.get().back ? { ...memory.get().back!, plan: doneStep } : null });
   write(KEY(memory.get().caseId), next);
 }
+
+/** The camp to resume at on a return (null on a first visit). */
+export const resumeCamp = () => (memory.get().back ? (memory.get().saved?.camp ?? null) : null);
 
 /** Forget this household (start over), for the demo. */
 export function forget(caseId: string) {

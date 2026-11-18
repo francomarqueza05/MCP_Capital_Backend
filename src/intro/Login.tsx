@@ -6,7 +6,7 @@ import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { useRef } from "react";
 import { CASE_IDS, CASES, getCase, type Case } from "@/data/cases";
 import { useStore } from "@/lib/store";
-import { memory } from "@/commit/memory";
+import { forget, memory } from "@/commit/memory";
 import { WelcomeBack } from "@/commit/WelcomeBack";
 import { names } from "@/lib/copy";
 import { tones } from "@/lib/audio";
@@ -138,6 +138,27 @@ export function Login({ selected, onSelect, onBegin }: { selected: string | null
               <motion.button className="lg-back" onClick={() => onSelect(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={out} transition={{ delay: 0.6 }}>
                 {tr(`Not ${we ? "us" : "me"}: switch profile`, `No ${we ? "somos nosotros" : "soy yo"}: cambiar de perfil`)}
               </motion.button>
+              {/* forget this family's climb (flags, the promised step, where they were) and start fresh */}
+              {back && (
+                <motion.button
+                  className="lg-back lg-reset"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={out}
+                  transition={{ delay: 0.7 }}
+                  onClick={() => {
+                    if (!confirm(tr("Start over? Cordi will forget this family's progress in this browser.", "¿Empezar de cero? Cordi olvidará el progreso de esta familia en este navegador."))) return;
+                    forget(selected!);
+                    const u = new URL(location.href);
+                    u.searchParams.set("case", selected!);
+                    u.searchParams.delete("days");
+                    u.searchParams.delete("reset");
+                    location.replace(u.toString());
+                  }}
+                >
+                  {tr("Start over", "Empezar de cero")}
+                </motion.button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

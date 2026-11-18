@@ -3891,3 +3891,7 @@ select {
     transform: scaleX(1);
   }
 }
+.lg-reset {
+  margin-top: 0.2rem;
+  color: var(--bad);
+}

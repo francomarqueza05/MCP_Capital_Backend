@@ -27,6 +27,7 @@ import { ExplainButton } from "@/explain/ExplainUI";
 import { beatsFor } from "@/explain/beats";
 import { explain, inTheater } from "@/explain/player";
 import { tr } from "@/lib/lang";
+import { resumeCamp } from "@/commit/memory";
 
 const HOVER = 78; // Cordi floats this far above the trail, in world units
 const MOOD: Record<Step["status"], Emotion> = { good: "happy", warn: "thinking", bad: "concerned", goal: "happy" };
@@ -698,11 +699,13 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
       cc.k = 5;
       cc.kz = undefined;
     }, 1100);
-    const i = Math.max(0, idx);
+    // coming back: the climb resumes at the camp they were at, not at base camp
+    const back = idx < 0 ? steps.findIndex((s) => s.id === resumeCamp()) : -1;
+    const i = idx >= 0 ? idx : Math.max(0, back);
     cordi.current = { mode: "camp", at: campU(i, n) };
     setPhase("tour");
     arrive(i, false);
-  }, [idx, n, arrive, setPhase]);
+  }, [idx, n, arrive, setPhase, steps]);
 
   // the whole mountain after the intro: the guided tour starts by itself after a moment
   useEffect(() => {
@@ -998,7 +1001,7 @@ export const Expedition = forwardRef<ExpeditionHandle, { c: Case; onPhase?: (p: 
               onClick={guide}
             >
               {idx < 0 && !auto && <span className="auto-fill" aria-hidden />}
-              <span className="auto-label">{idx < 0 ? tr("Start the guided tour", "Empezar la visita guiada") : tr("Continue the guided tour", "Seguir la visita guiada")}</span>
+              <span className="auto-label">{idx < 0 && !resumeCamp() ? tr("Start the guided tour", "Empezar la visita guiada") : tr("Continue where you left off", "Seguir donde lo dejaste")}</span>
             </button>
           </div>
         </section>
